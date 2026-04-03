@@ -30,3 +30,37 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Reading content styles for novel pages */
+.reading-content {
+  line-height: 1.9;
+  word-break: break-word;
+}
+
+.reading-content p {
+  margin-bottom: 1.25em;
+}
+
+.reading-content a {
+  color: #6366f1;
+  text-decoration: underline;
+}
+
+.dark .reading-content {
+  color: #e5e7eb !important;
+}
+
+.dark .reading-content p,
+.dark .reading-content span,
+.dark .reading-content div {
+  color: #e5e7eb !important;
+}
+
+.dark .reading-content a {
+  color: #818cf8;
+}
+
+.dark .reading-content strong,
+.dark .reading-content b {
+  color: #f3f4f6;
+}

@@ -2,6 +2,7 @@ import pool from '@/lib/db';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { RowDataPacket } from 'mysql2';
+import ThemeToggle from '@/components/ThemeToggle';
 
 async function getEpisode(episodeId: string) {
     const [rows] = await pool.query<RowDataPacket[]>(`
@@ -54,22 +55,23 @@ export default async function ReadEpisode({ params }: { params: Promise<{ id: st
     await pool.query('UPDATE comic_episodes SET views = views + 1 WHERE id = ?', [episodeId]);
 
     return (
-        <div className="min-h-screen bg-gray-900">
+        <div className="min-h-screen bg-[#f9f9f9] dark:bg-gray-900 transition-colors duration-200">
             {/* Header */}
-            <div className="sticky top-0 z-50 bg-gray-900/95 backdrop-blur border-b border-gray-800">
+            <div className="sticky top-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-b border-gray-200 dark:border-gray-800 transition-colors duration-200">
                 <div className="container mx-auto px-4 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <Link href={`/comic/${comicId}`} className="text-gray-400 hover:text-white transition">
+                        <Link href={`/comic/${comicId}`} className="text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-white transition">
                             ← กลับ
                         </Link>
                         <div>
-                            <p className="text-gray-400 text-sm">{episode.comic_title}</p>
-                            <h1 className="text-white font-bold">{episode.title}</h1>
+                            <p className="text-gray-500 dark:text-gray-400 text-sm">{episode.comic_title}</p>
+                            <h1 className="text-gray-900 dark:text-white font-bold">{episode.title}</h1>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
+                        <ThemeToggle />
                         {prev && (
-                            <Link href={`/comic/${comicId}/read/${prev}`} className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition">
+                            <Link href={`/comic/${comicId}/read/${prev}`} className="px-4 py-2 bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-700 transition">
                                 ← ตอนก่อนหน้า
                             </Link>
                         )}
@@ -96,7 +98,7 @@ export default async function ReadEpisode({ params }: { params: Promise<{ id: st
                         ))}
                     </div>
                 ) : (
-                    <div className="text-center py-20 text-gray-500">
+                    <div className="text-center py-20 text-gray-400 dark:text-gray-500">
                         <p className="text-6xl mb-4">🎨</p>
                         <p>ยังไม่มีหน้าในตอนนี้</p>
                     </div>
@@ -104,14 +106,14 @@ export default async function ReadEpisode({ params }: { params: Promise<{ id: st
             </div>
 
             {/* Bottom Navigation */}
-            <div className="sticky bottom-0 bg-gray-900/95 backdrop-blur border-t border-gray-800 py-4">
+            <div className="sticky bottom-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-t border-gray-200 dark:border-gray-800 py-4 transition-colors duration-200">
                 <div className="container mx-auto px-4 flex items-center justify-center gap-4">
                     {prev && (
-                        <Link href={`/comic/${comicId}/read/${prev}`} className="px-6 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition">
+                        <Link href={`/comic/${comicId}/read/${prev}`} className="px-6 py-3 bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-700 transition">
                             ← ตอนก่อนหน้า
                         </Link>
                     )}
-                    <Link href={`/comic/${comicId}`} className="px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition">
+                    <Link href={`/comic/${comicId}`} className="px-6 py-3 bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg hover:bg-gray-400 dark:hover:bg-gray-600 transition">
                         รายการตอน
                     </Link>
                     {next && (

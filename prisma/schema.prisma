@@ -1,5 +1,3 @@
-// prisma/schema.prisma
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,204 +7,258 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
-  VISITOR
-  READER
-  AUTHOR
-  ADMIN
+model author_requests {
+  id             String                  @id @db.VarChar(36)
+  user_id        String                  @db.VarChar(36)
+  prefix         String?                 @db.VarChar(20)
+  first_name     String                  @db.VarChar(100)
+  last_name      String                  @db.VarChar(100)
+  id_card_number String                  @db.VarChar(20)
+  address        String                  @db.Text
+  province       String                  @db.VarChar(100)
+  district       String                  @db.VarChar(100)
+  sub_district   String                  @db.VarChar(100)
+  postal_code    String                  @db.VarChar(10)
+  phone          String                  @db.VarChar(20)
+  status         author_requests_status? @default(PENDING)
+  admin_note     String?                 @db.Text
+  created_at     DateTime                @default(now()) @db.Timestamp(0)
+  updated_at     DateTime                @default(now()) @db.Timestamp(0)
+  users          users                   @relation(fields: [user_id], references: [id], onUpdate: Restrict, map: "author_requests_ibfk_1")
+
+  @@index([user_id], map: "user_id")
 }
 
-enum ContentStatus {
+model bookmarks {
+  id         String   @id @db.VarChar(36)
+  user_id    String?  @db.VarChar(36)
+  novel_id   String?  @db.VarChar(36)
+  comic_id   String?  @db.VarChar(36)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  users      users?   @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "bookmarks_ibfk_1")
+  novels     novels?  @relation(fields: [novel_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "bookmarks_ibfk_2")
+  comics     comics?  @relation(fields: [comic_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "bookmarks_ibfk_3")
+
+  @@index([comic_id], map: "comic_id")
+  @@index([novel_id], map: "novel_id")
+  @@index([user_id], map: "user_id")
+}
+
+model categories {
+  id     String   @id @db.VarChar(36)
+  name   String?  @unique(map: "name") @db.VarChar(255)
+  slug   String?  @unique(map: "slug") @db.VarChar(255)
+  comics comics[]
+  novels novels[]
+}
+
+model chapters {
+  id            String   @id @db.VarChar(36)
+  title         String   @db.VarChar(255)
+  content       String?  @db.LongText
+  chapter_order Int?
+  novel_id      String?  @db.VarChar(36)
+  views         Int?     @default(0)
+  created_at    DateTime @default(now()) @db.Timestamp(0)
+  updated_at    DateTime @default(now()) @db.Timestamp(0)
+  novels        novels?  @relation(fields: [novel_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "chapters_ibfk_1")
+
+  @@index([novel_id], map: "novel_id")
+}
+
+model comic_episodes {
+  id            String        @id @db.VarChar(36)
+  title         String        @db.VarChar(255)
+  episode_order Int?
+  comic_id      String?       @db.VarChar(36)
+  views         Int?          @default(0)
+  created_at    DateTime      @default(now()) @db.Timestamp(0)
+  updated_at    DateTime      @default(now()) @db.Timestamp(0)
+  comics        comics?       @relation(fields: [comic_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "comic_episodes_ibfk_1")
+  comic_pages   comic_pages[]
+
+  @@index([comic_id], map: "comic_id")
+}
+
+model comic_pages {
+  id             String          @id @db.VarChar(36)
+  image_url      String          @db.VarChar(255)
+  page_order     Int?
+  episode_id     String?         @db.VarChar(36)
+  comic_episodes comic_episodes? @relation(fields: [episode_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "comic_pages_ibfk_1")
+
+  @@index([episode_id], map: "episode_id")
+}
+
+model comics {
+  id             String           @id @db.VarChar(36)
+  title          String           @db.VarChar(255)
+  description    String?          @db.Text
+  cover_image    String?          @db.VarChar(255)
+  status         comics_status?   @default(DRAFT)
+  author_id      String?          @db.VarChar(36)
+  category_id    String?          @db.VarChar(36)
+  views          Int?             @default(0)
+  created_at     DateTime         @default(now()) @db.Timestamp(0)
+  updated_at     DateTime         @default(now()) @db.Timestamp(0)
+  bookmarks      bookmarks[]
+  comic_episodes comic_episodes[]
+  users          users?           @relation(fields: [author_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "comics_ibfk_1")
+  categories     categories?      @relation(fields: [category_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "comics_ibfk_2")
+
+  @@index([author_id], map: "author_id")
+  @@index([category_id], map: "category_id")
+}
+
+model novels {
+  id          String         @id @db.VarChar(36)
+  title       String         @db.VarChar(255)
+  description String?        @db.Text
+  cover_image String?        @db.VarChar(255)
+  status      novels_status? @default(DRAFT)
+  author_id   String?        @db.VarChar(36)
+  category_id String?        @db.VarChar(36)
+  views       Int?           @default(0)
+  created_at  DateTime       @default(now()) @db.Timestamp(0)
+  updated_at  DateTime       @default(now()) @db.Timestamp(0)
+  bookmarks   bookmarks[]
+  chapters    chapters[]
+  users       users?         @relation(fields: [author_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "novels_ibfk_1")
+  categories  categories?    @relation(fields: [category_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "novels_ibfk_2")
+
+  @@index([author_id], map: "author_id")
+  @@index([category_id], map: "category_id")
+}
+
+model reports {
+  id          String              @id @db.VarChar(36)
+  reporter_id String?             @db.VarChar(36)
+  target_id   String?             @db.VarChar(36)
+  target_type reports_target_type
+  reason      String?             @db.Text
+  status      reports_status?     @default(PENDING)
+  created_at  DateTime            @default(now()) @db.Timestamp(0)
+  users       users?              @relation(fields: [reporter_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "reports_ibfk_1")
+
+  @@index([reporter_id], map: "reporter_id")
+}
+
+model system_settings {
+  id               String   @id @db.VarChar(36)
+  site_name        String?  @default("LoveRead") @db.VarChar(255)
+  site_description String?  @db.Text
+  contact_email    String?  @db.VarChar(255)
+  maintenance_mode Boolean? @default(false)
+  updated_at       DateTime @default(now()) @db.Timestamp(0)
+}
+
+model users {
+  id              String            @id @db.VarChar(36)
+  name            String?           @db.VarChar(255)
+  email           String?           @unique(map: "email") @db.VarChar(255)
+  password        String?           @db.VarChar(255)
+  image           String?           @db.VarChar(255)
+  role            users_role?       @default(READER)
+  created_at      DateTime          @default(now()) @db.Timestamp(0)
+  updated_at      DateTime          @default(now()) @db.Timestamp(0)
+  author_requests author_requests[]
+  bookmarks       bookmarks[]
+  comics          comics[]
+  novels          novels[]
+  reports         reports[]
+  withdrawals     withdrawals[]
+  writer_profiles writer_profiles?
+}
+
+model withdrawals {
+  id                  String              @id @db.VarChar(36)
+  user_id             String?             @db.VarChar(36)
+  amount              Decimal             @db.Decimal(10, 2)
+  bank_name           String?             @db.VarChar(100)
+  bank_account_number String?             @db.VarChar(50)
+  bank_account_name   String?             @db.VarChar(255)
+  status              withdrawals_status? @default(PENDING)
+  slip_image          String?             @db.VarChar(255)
+  rejection_reason    String?             @db.Text
+  created_at          DateTime            @default(now()) @db.Timestamp(0)
+  updated_at          DateTime            @default(now()) @db.Timestamp(0)
+  users               users?              @relation(fields: [user_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "withdrawals_ibfk_1")
+
+  @@index([user_id], map: "user_id")
+}
+
+model writer_profiles {
+  user_id             String                  @id @db.VarChar(36)
+  title               String?                 @db.VarChar(50)
+  first_name          String?                 @db.VarChar(255)
+  last_name           String?                 @db.VarChar(255)
+  id_card_number      String?                 @db.VarChar(20)
+  address             String?                 @db.Text
+  province            String?                 @db.VarChar(100)
+  district            String?                 @db.VarChar(100)
+  sub_district        String?                 @db.VarChar(100)
+  postal_code         String?                 @db.VarChar(20)
+  phone_number        String?                 @db.VarChar(20)
+  bank_name           String?                 @db.VarChar(100)
+  bank_account_name   String?                 @db.VarChar(255)
+  bank_account_number String?                 @db.VarChar(50)
+  id_card_image       String?                 @db.VarChar(255)
+  bank_book_image     String?                 @db.VarChar(255)
+  status              writer_profiles_status? @default(PENDING)
+  rejection_reason    String?                 @db.Text
+  created_at          DateTime                @default(now()) @db.Timestamp(0)
+  updated_at          DateTime                @default(now()) @db.Timestamp(0)
+  users               users                   @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "writer_profiles_ibfk_1")
+}
+
+enum reports_target_type {
+  NOVEL
+  COMIC
+  USER
+  COMMENT
+}
+
+enum comics_status {
   DRAFT
   PUBLISHED
   ARCHIVED
   BANNED
 }
 
-enum ContentType {
-  NOVEL
-  COMIC
+enum novels_status {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+  BANNED
 }
 
-model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  role          Role      @default(READER)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  novels        Novel[]
-  comics        Comic[]
-  comments      Comment[]
-  bookmarks     Bookmark[]
-  reports       Report[]
-  
-  accounts      Account[]
-  sessions      Session[]
+enum reports_status {
+  PENDING
+  RESOLVED
+  IGNORED
 }
 
-model Account {
-  id                 String  @id @default(cuid())
-  userId             String
-  type               String
-  provider           String
-  providerAccountId  String
-  refresh_token      String? @db.Text
-  access_token       String? @db.Text
-  expires_at         Int?
-  token_type         String?
-  scope              String?
-  id_token           String? @db.Text
-  session_state      String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
+enum users_role {
+  VISITOR
+  READER
+  AUTHOR
+  ADMIN
 }
 
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+enum withdrawals_status {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
-model Category {
-  id    String @id @default(cuid())
-  name  String @unique
-  slug  String @unique
-  
-  novels Novel[]
-  comics Comic[]
+enum author_requests_status {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
-model Tag {
-  id    String @id @default(cuid())
-  name  String @unique
-  
-  novels Novel[]
-  comics Comic[]
-}
-
-model Novel {
-  id          String        @id @default(cuid())
-  title       String
-  description String        @db.Text
-  coverImage  String?
-  status      ContentStatus @default(DRAFT)
-  authorId    String
-  categoryId  String?
-  views       Int           @default(0)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-
-  author      User          @relation(fields: [authorId], references: [id])
-  category    Category?     @relation(fields: [categoryId], references: [id])
-  chapters    Chapter[]
-  tags        Tag[]
-  bookmarks   Bookmark[]
-  comments    Comment[]
-  reports     Report[]
-}
-
-model Chapter {
-  id        String   @id @default(cuid())
-  title     String
-  content   String   @db.LongText // HTML or Markdown content
-  order     Int
-  novelId   String
-  views     Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  novel     Novel    @relation(fields: [novelId], references: [id], onDelete: Cascade)
-}
-
-model Comic {
-  id          String        @id @default(cuid())
-  title       String
-  description String        @db.Text
-  coverImage  String?
-  status      ContentStatus @default(DRAFT)
-  authorId    String
-  categoryId  String?
-  views       Int           @default(0)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-
-  author      User          @relation(fields: [authorId], references: [id])
-  category    Category?     @relation(fields: [categoryId], references: [id])
-  episodes    ComicEpisode[]
-  tags        Tag[]
-  bookmarks   Bookmark[]
-  comments    Comment[]
-  reports     Report[]
-}
-
-model ComicEpisode {
-  id        String   @id @default(cuid())
-  title     String
-  order     Int
-  comicId   String
-  views     Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  comic     Comic       @relation(fields: [comicId], references: [id], onDelete: Cascade)
-  pages     ComicPage[]
-}
-
-model ComicPage {
-  id        String @id @default(cuid())
-  imageUrl  String
-  order     Int
-  episodeId String
-
-  episode   ComicEpisode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
-}
-
-model Bookmark {
-  id        String      @id @default(cuid())
-  userId    String
-  novelId   String?
-  comicId   String?
-  createdAt DateTime    @default(now())
-
-  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  novel     Novel?      @relation(fields: [novelId], references: [id])
-  comic     Comic?      @relation(fields: [comicId], references: [id])
-
-  @@unique([userId, novelId])
-  @@unique([userId, comicId])
-}
-
-model Comment {
-  id        String   @id @default(cuid())
-  content   String   @db.Text
-  userId    String
-  novelId   String?
-  comicId   String?
-  createdAt DateTime @default(now())
-
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  novel     Novel?   @relation(fields: [novelId], references: [id])
-  comic     Comic?   @relation(fields: [comicId], references: [id])
-}
-
-model Report {
-  id        String   @id @default(cuid())
-  reason    String
-  userId    String
-  novelId   String?
-  comicId   String?
-  status    String   @default("PENDING") // PENDING, RESOLVED, REJECTED
-  createdAt DateTime @default(now())
-
-  user      User     @relation(fields: [userId], references: [id])
-  novel     Novel?   @relation(fields: [novelId], references: [id])
-  comic     Comic?   @relation(fields: [comicId], references: [id])
+enum writer_profiles_status {
+  PENDING
+  APPROVED
+  REJECTED
 }

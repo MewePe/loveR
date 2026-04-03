@@ -2,6 +2,7 @@ import pool from '@/lib/db';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { RowDataPacket } from 'mysql2';
+import BookmarkButton from '@/components/BookmarkButton';
 
 async function getNovel(id: string) {
     const [rows] = await pool.query<RowDataPacket[]>(`
@@ -73,9 +74,7 @@ export default async function NovelDetail({ params }: { params: Promise<{ id: st
                                         ยังไม่มีบท
                                     </button>
                                 )}
-                                <button className="bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 px-8 py-3 rounded-lg font-bold hover:border-indigo-600 hover:text-indigo-600 transition">
-                                    เพิ่มไปยังชั้นหนังสือ
-                                </button>
+                                <BookmarkButton contentType="novel" contentId={id} accentColor="indigo" />
                             </div>
 
                             <div className="prose max-w-none text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 p-6 rounded-xl border border-gray-100 dark:border-gray-600">
