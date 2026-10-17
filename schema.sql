@@ -202,3 +202,14 @@ CREATE TABLE IF NOT EXISTS purchases (
     FOREIGN KEY (episode_id) REFERENCES comic_episodes(id) ON DELETE SET NULL,
     FOREIGN KEY (author_id) REFERENCES users(id)
 );
+
+-- Failed login attempts (rate limiting, see lib/loginThrottle.ts). Rows older than a day are pruned automatically.
+CREATE TABLE IF NOT EXISTS login_attempts (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(255) NOT NULL,
+    ip VARCHAR(64) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_email_time (email, created_at),
+    INDEX idx_ip_time (ip, created_at),
+    INDEX idx_time (created_at)
+);

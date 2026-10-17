@@ -54,6 +54,7 @@ npx tsx scripts/drop_author_requests.ts      # สำรองข้อมูล
 npx tsx scripts/add_coin_system.ts           # ระบบเหรียญ/ขายตอน
 npx tsx scripts/add_banned_role.ts           # role BANNED
 npx tsx scripts/move_comic_pages_private.ts  # ย้ายรูปหน้าการ์ตูนไปเก็บแบบ private
+npx tsx scripts/add_login_attempts.ts        # จำกัดการล็อกอินผิด
 ```
 
 ### รัน

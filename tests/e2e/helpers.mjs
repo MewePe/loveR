@@ -43,7 +43,12 @@ export async function ensureServer() {
 
 // Cookie-keeping HTTP client that can log in through NextAuth's credentials provider
 export class Client {
-    constructor() { this.cookies = {}; }
+    // extraHeaders are sent with every request, e.g. { 'x-forwarded-for': '203.0.113.7' } to simulate a client IP
+    constructor(extraHeaders = {}) {
+        this.cookies = {};
+        this.extraHeaders = extraHeaders;
+        this.lastLoginCode = null; // NextAuth error code of the last failed login, e.g. 'credentials' or 'rate_limited'
+    }
 
     cookieHeader() { return Object.entries(this.cookies).map(([k, v]) => `${k}=${v}`).join('; '); }
 
@@ -57,7 +62,7 @@ export class Client {
 
     // body: object (sent as JSON) or FormData (sent as multipart)
     async req(method, url, body) {
-        const headers = { cookie: this.cookieHeader() };
+        const headers = { ...this.extraHeaders, cookie: this.cookieHeader() };
         let payload;
         if (body instanceof FormData) payload = body;
         else if (body !== undefined) { headers['Content-Type'] = 'application/json'; payload = JSON.stringify(body); }
@@ -79,11 +84,13 @@ export class Client {
         const csrf = await this.get('/api/auth/csrf');
         const res = await fetch(`${BASE}/api/auth/callback/credentials`, {
             method: 'POST',
-            headers: { cookie: this.cookieHeader(), 'Content-Type': 'application/x-www-form-urlencoded' },
+            headers: { ...this.extraHeaders, cookie: this.cookieHeader(), 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams({ csrfToken: csrf.json.csrfToken, email, password }),
             redirect: 'manual',
         });
         this.store(res);
+        const location = res.headers.get('location');
+        this.lastLoginCode = location ? new URL(location, BASE).searchParams.get('code') : null;
         const session = await this.get('/api/auth/session');
         return session.json?.user?.email === email;
     }
