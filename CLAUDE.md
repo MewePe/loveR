@@ -42,7 +42,7 @@ npx tsx scripts/update_schema.ts   # รัน schema.sql (CREATE TABLE IF NOT E
 
 **Auth** (`lib/auth.ts`): NextAuth v5 beta, Credentials provider กับ bcrypt, session แบบ JWT callback `jwt` จะอ่าน `role` จาก DB ใหม่ทุก request ทำให้เปลี่ยน role แล้วมีผลทันทีโดยไม่ต้องล็อกอินใหม่ type ของ `session.user.id` และ `session.user.role` อยู่ใน `types/next-auth.d.ts` หน้า sign-in คือ `/login`
 
-**API routes** (`app/api/**/route.ts`) เขียนตามรูปแบบเดียวกัน: `const session = await auth()` แล้วเช็ก role หรือความเป็นเจ้าของ รัน SQL แล้วคืน `NextResponse.json(...)` กรณี error คืน `{ error }` พร้อม status route ฝั่งแอดมินใน `app/api/admin/` เช็ก `session?.user?.role !== 'ADMIN'` เองทุกไฟล์ ไม่มี middleware params ของ dynamic route มี type เป็น `{ params: Promise<{ id: string }> }` และต้อง await (Next 15)
+**API routes** (`app/api/**/route.ts`) เขียนตามรูปแบบเดียวกัน: `const session = await auth()` แล้วเช็ก role หรือความเป็นเจ้าของ รัน SQL แล้วคืน `NextResponse.json(...)` กรณี error คืน `{ error }` พร้อม status route ฝั่งแอดมินใน `app/api/admin/` เช็ก `session?.user?.role !== 'ADMIN'` เองทุกไฟล์ (middleware ไม่ได้ทำหน้าที่ตรวจสิทธิ์) params ของ dynamic route มี type เป็น `{ params: Promise<{ id: string }> }` และต้อง await (Next 15)
 
 **Pages** เกือบทั้งหมดเป็น client component (`"use client"`) ที่ดึงข้อมูลจาก `/api/*` ส่วน `components/Providers.tsx` ครอบแอปด้วย `SessionProvider` + `next-themes` (dark mode แบบ `attribute="class"` ใช้คลาส `dark:` ของ Tailwind v4)
 
@@ -56,9 +56,10 @@ npx tsx scripts/update_schema.ts   # รัน schema.sql (CREATE TABLE IF NOT E
 
 **อัปโหลดไฟล์**: ใช้ `saveImageUpload(file, subdir)` ใน `lib/upload.ts` ทุกครั้งที่รับไฟล์รูป ฟังก์ชันนี้รับเฉพาะ JPG/PNG/WEBP/GIF ไม่เกิน 10MB ตรวจชนิดจาก magic bytes และตั้งนามสกุลตามชนิดที่ตรวจได้ `POST /api/upload` (multipart field `file`, ต้องล็อกอิน) คืน `{ url: "/uploads/..." }` เอกสารนักเขียนเก็บใน `public/uploads/writers/` และ `public/uploads/` ไม่ถูก track ใน git
 
+**Maintenance mode**: `middleware.ts` ใช้ runtime `nodejs` (เพื่อ query MySQL ได้) อ่าน `system_settings.maintenance_mode` แล้ว cache ไว้ 10 วินาที ถ้าเปิดอยู่ ผู้ที่ไม่ใช่ ADMIN จะถูก rewrite ไป `/maintenance` (API ได้ 503) ยกเว้น path ใน `ALWAYS_ALLOWED` ตรวจ role จาก JWT ด้วย `getToken` ไม่ได้เรียก `auth()`
+
+**รายงานเนื้อหา**: `components/ReportButton.tsx` (อยู่ในหน้านิยาย/การ์ตูน) → `POST /api/reports` (NOVEL/COMIC เท่านั้น ห้ามรายงานซ้ำขณะที่ยัง PENDING) แอดมินจัดการที่ `/admin` แท็บ Reports
+
 ## ส่วนที่ยังไม่เสร็จ
 
 - แท็บรายได้และกระเป๋าเงินใน `app/author/page.tsx` เป็นแค่ UI ที่ฝังค่า (`฿0.00`) ตาราง `withdrawals` ยังไม่มี API
-- แอดมินดูและจัดการรายงานได้ แต่ยังไม่มี endpoint ให้ผู้ใช้ส่งรายงาน
-- `system_settings.maintenance_mode` บันทึกได้ แต่ยังไม่มีการบังคับใช้จริง
-- `app/author/novel/create/page.tsx` ใช้รูปปกชั่วคราวและไม่ได้ดึงหมวดหมู่จาก DB

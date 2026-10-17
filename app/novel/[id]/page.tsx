@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { RowDataPacket } from 'mysql2';
 import BookmarkButton from '@/components/BookmarkButton';
+import ReportButton from '@/components/ReportButton';
 
 async function getNovel(id: string) {
     const [rows] = await pool.query<RowDataPacket[]>(`
@@ -75,6 +76,7 @@ export default async function NovelDetail({ params }: { params: Promise<{ id: st
                                     </button>
                                 )}
                                 <BookmarkButton contentType="novel" contentId={id} accentColor="indigo" />
+                                <ReportButton targetType="NOVEL" targetId={id} />
                             </div>
 
                             <div className="prose max-w-none text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 p-6 rounded-xl border border-gray-100 dark:border-gray-600">

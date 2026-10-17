@@ -58,7 +58,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         async jwt({ token, user }) {
             if (user) {
                 token.role = user.role;
-                token.id = user.id;
+                token.id = user.id as string; // always set by authorize()
             } else if (token.email) {
                 // Fetch fresh role from DB to ensure it's up to date
                 try {
