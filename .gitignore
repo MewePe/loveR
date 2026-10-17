@@ -40,7 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# local logs / debug output
+mysql_log*.txt
+port_check.txt
 
-
-PROJECT_DOCS.md
-README.md
+# user uploads (runtime data)
+/public/uploads/

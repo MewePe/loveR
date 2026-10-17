@@ -1,5 +1,0 @@
-﻿2026-04-03 12:31:30 0 [Note] InnoDB: Waiting for purge to start
-2026-04-03 12:31:30 0 [Note] InnoDB: 10.4.32 started; log sequence number 1185037; transaction id 1495
-2026-04-03 12:31:30 0 [Note] InnoDB: Loading buffer pool(s) from D:\xampp\htdocs\mysql\data\ib_buffer_pool
-2026-04-03 12:31:30 0 [Note] Plugin 'FEEDBACK' is disabled.
-2026-04-03 12:31:31 0 [Note] Server socket created on IP: '0.0.0.0'.
