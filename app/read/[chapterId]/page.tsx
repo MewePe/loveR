@@ -26,8 +26,9 @@ async function getAdjacentChapters(novelId: string, currentOrder: number) {
     return { prev: prev[0], next: next[0] };
 }
 
-export default async function ReadChapter({ params }: { params: { chapterId: string } }) {
-    const chapter = await getChapter(params.chapterId);
+export default async function ReadChapter({ params }: { params: Promise<{ chapterId: string }> }) {
+    const { chapterId } = await params;
+    const chapter = await getChapter(chapterId);
 
     if (!chapter) notFound();
 

@@ -45,6 +45,9 @@ export default function AuthorDashboard() {
     const [showEditComicModal, setShowEditComicModal] = useState(false);
     const [editingComic, setEditingComic] = useState<any>(null);
 
+    // Categories state
+    const [categories, setCategories] = useState<{ id: string; name: string; slug: string }[]>([]);
+
     useEffect(() => {
         if (status === 'unauthenticated') {
             router.push('/login');
@@ -84,6 +87,12 @@ export default function AuthorDashboard() {
                 setProfile(data);
                 if (data.id_card_image) setPreviews(prev => ({ ...prev, id_card: data.id_card_image }));
                 if (data.bank_book_image) setPreviews(prev => ({ ...prev, bank_book: data.bank_book_image }));
+            }
+
+            // Fetch categories
+            const catsRes = await fetch('/api/categories');
+            if (catsRes.ok) {
+                setCategories(await catsRes.json());
             }
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -1056,6 +1065,9 @@ export default function AuthorDashboard() {
                                     className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                                 >
                                     <option value="">ไม่ระบุหมวดหมู่</option>
+                                    {categories.map((cat) => (
+                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                    ))}
                                 </select>
                             </div>
                             <div className="flex gap-3 pt-4">
@@ -1137,6 +1149,19 @@ export default function AuthorDashboard() {
                                     </div>
                                 </div>
                             </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">หมวดหมู่ (ไม่บังคับ)</label>
+                                <select
+                                    value={newNovel.categoryId}
+                                    onChange={(e) => setNewNovel({ ...newNovel, categoryId: e.target.value })}
+                                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                >
+                                    <option value="">ไม่ระบุหมวดหมู่</option>
+                                    {categories.map((cat) => (
+                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                    ))}
+                                </select>
+                            </div>
                             <div className="flex gap-3 pt-4">
                                 <button
                                     type="button"
@@ -1189,6 +1214,19 @@ export default function AuthorDashboard() {
                                     <div className="text-sm text-gray-500 dark:text-gray-400"><p>รูปปกการ์ตูน</p><p className="text-xs">แนะนำ 400x600 px</p></div>
                                 </div>
                             </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">หมวดหมู่ (ไม่บังคับ)</label>
+                                <select
+                                    value={newComic.categoryId}
+                                    onChange={(e) => setNewComic({ ...newComic, categoryId: e.target.value })}
+                                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-pink-500 outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                >
+                                    <option value="">ไม่ระบุหมวดหมู่</option>
+                                    {categories.map((cat) => (
+                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                    ))}
+                                </select>
+                            </div>
                             <div className="flex gap-3 pt-4">
                                 <button type="button" onClick={() => { setShowComicModal(false); setCoverFile(null); setCoverPreview(null); }} className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">ยกเลิก</button>
                                 <button type="submit" disabled={saving} className="flex-1 bg-pink-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-pink-700 transition disabled:opacity-50">{saving ? 'กำลังสร้าง...' : 'สร้างการ์ตูน'}</button>
@@ -1228,6 +1266,19 @@ export default function AuthorDashboard() {
                                     )}
                                     <div className="text-sm text-gray-500 dark:text-gray-400"><p>รูปปกการ์ตูน</p><p className="text-xs">แนะนำ 400x600 px</p></div>
                                 </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">หมวดหมู่ (ไม่บังคับ)</label>
+                                <select
+                                    value={newComic.categoryId}
+                                    onChange={(e) => setNewComic({ ...newComic, categoryId: e.target.value })}
+                                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-pink-500 outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                >
+                                    <option value="">ไม่ระบุหมวดหมู่</option>
+                                    {categories.map((cat) => (
+                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                    ))}
+                                </select>
                             </div>
                             <div className="flex gap-3 pt-4">
                                 <button type="button" onClick={() => { setShowEditComicModal(false); setEditingComic(null); setCoverFile(null); setCoverPreview(null); }} className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">ยกเลิก</button>
