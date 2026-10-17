@@ -7,28 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model author_requests {
-  id             String                  @id @db.VarChar(36)
-  user_id        String                  @db.VarChar(36)
-  prefix         String?                 @db.VarChar(20)
-  first_name     String                  @db.VarChar(100)
-  last_name      String                  @db.VarChar(100)
-  id_card_number String                  @db.VarChar(20)
-  address        String                  @db.Text
-  province       String                  @db.VarChar(100)
-  district       String                  @db.VarChar(100)
-  sub_district   String                  @db.VarChar(100)
-  postal_code    String                  @db.VarChar(10)
-  phone          String                  @db.VarChar(20)
-  status         author_requests_status? @default(PENDING)
-  admin_note     String?                 @db.Text
-  created_at     DateTime                @default(now()) @db.Timestamp(0)
-  updated_at     DateTime                @default(now()) @db.Timestamp(0)
-  users          users                   @relation(fields: [user_id], references: [id], onUpdate: Restrict, map: "author_requests_ibfk_1")
-
-  @@index([user_id], map: "user_id")
-}
-
 model bookmarks {
   id         String   @id @db.VarChar(36)
   user_id    String?  @db.VarChar(36)
@@ -168,7 +146,6 @@ model users {
   coins           Int               @default(0)
   created_at      DateTime          @default(now()) @db.Timestamp(0)
   updated_at      DateTime          @default(now()) @db.Timestamp(0)
-  author_requests author_requests[]
   bookmarks       bookmarks[]
   coin_topups     coin_topups[]
   comics          comics[]
@@ -299,12 +276,6 @@ enum users_role {
 }
 
 enum withdrawals_status {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
-enum author_requests_status {
   PENDING
   APPROVED
   REJECTED

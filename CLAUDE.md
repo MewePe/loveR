@@ -41,6 +41,7 @@ npx tsx scripts/update_schema.ts   # รัน schema.sql (CREATE TABLE IF NOT E
 npx tsx scripts/add_coin_system.ts # migration ระบบเหรียญ/ขายตอน (รันซ้ำได้)
 npx tsx scripts/move_comic_pages_private.ts [--delete-originals] # ย้ายรูปหน้าการ์ตูนเก่าจาก public/uploads ไป storage/ (รันซ้ำได้)
 npx tsx scripts/add_banned_role.ts # เพิ่ม BANNED ใน users.role (รันซ้ำได้)
+npx tsx scripts/drop_author_requests.ts # สำรองข้อมูลไป storage/backups/ แล้วลบตาราง author_requests (รันซ้ำได้)
 ```
 
 `reset_db.ts` และ `drop_old_db.ts` ลบข้อมูล
@@ -51,7 +52,9 @@ npx tsx scripts/add_banned_role.ts # เพิ่ม BANNED ใน users.role (�
 
 ## สถาปัตยกรรม
 
-**เข้าถึงข้อมูลด้วย raw SQL ผ่าน `mysql2` ไม่ใช่ Prisma** ทุก API route และ `lib/auth.ts` ใช้ pool จาก `lib/db.ts` ในรูปแบบ `pool.query<RowDataPacket[]>(sql, params)` และใช้ placeholder `?` ไฟล์ `lib/prisma.ts` มีอยู่แต่ไม่มีที่ไหน import ส่วน `prisma/schema.prisma` (introspect มาจาก DB) อธิบายตารางได้ครบที่สุด `schema.sql` เป็น SQL สำหรับสร้างตารางเริ่มต้น ตาราง `author_requests` (มีใน `schema.prisma` แต่ไม่มีใน `schema.sql`) เลิกใช้แล้ว ข้อมูลย้ายไป `writer_profiles` ด้วย `scripts/migrate_author_requests.ts` เมื่อแก้ schema ให้แก้ทั้ง `schema.sql` และ `schema.prisma` ให้ตรงกัน
+**เข้าถึงข้อมูลด้วย raw SQL ผ่าน `mysql2` ไม่ใช่ Prisma** ทุก API route และ `lib/auth.ts` ใช้ pool จาก `lib/db.ts` ในรูปแบบ `pool.query<RowDataPacket[]>(sql, params)` และใช้ placeholder `?` ไม่มี Prisma client ใน runtime ส่วน `prisma/schema.prisma` ใช้เป็นเอกสารอ้างอิงโครงสร้างตาราง (ตรวจด้วย `npx prisma validate`) `schema.sql` ใช้สร้างฐานข้อมูลใหม่ได้ครบ ส่วน DB เก่าให้อัปเกรดด้วยสคริปต์ใน `scripts/` ตามลำดับที่ระบุใน README เมื่อแก้ schema ให้แก้ทั้ง `schema.sql` และ `schema.prisma` ให้ตรงกัน และถ้า DB เก่าต้องเปลี่ยนตาม ให้เพิ่มสคริปต์ migration ที่รันซ้ำได้ ตาราง `author_requests` ถูกลบแล้ว (ใช้ `writer_profiles` แทน)
+
+- `bookmarks` มีคอลัมน์ `novel_id` หรือ `comic_id` อย่างใดอย่างหนึ่ง แต่ API ใช้รูปแบบ `{ content_type: 'novel' | 'comic', content_id }`
 
 - Primary key เป็น UUID แบบ `VARCHAR(36)` สร้างในโค้ดด้วย `v4()` จากแพ็กเกจ `uuid` ชื่อคอลัมน์เป็น snake_case
 - enum สถานะเนื้อหา: `DRAFT | PUBLISHED | ARCHIVED | BANNED` ดูกฎการมองเห็นในหัวข้อ "การมองเห็นเนื้อหา"
@@ -65,9 +68,11 @@ npx tsx scripts/add_banned_role.ts # เพิ่ม BANNED ใน users.role (�
 
 **Pages** เกือบทั้งหมดเป็น client component (`"use client"`) ที่ดึงข้อมูลจาก `/api/*` ส่วน `components/Providers.tsx` ครอบแอปด้วย `SessionProvider` + `next-themes` (dark mode แบบ `attribute="class"` ใช้คลาส `dark:` ของ Tailwind v4)
 
-**ส่วนนักเขียน**: `app/author/page.tsx` เป็นแดชบอร์ดไฟล์เดียวขนาดใหญ่แบบแท็บ (dashboard/novels/comics/earnings/wallet/profile) `/author/dashboard` แค่ redirect ไป `/author` หน้าแก้ไขบท/ตอน/หน้าการ์ตูนอยู่ใน route ย่อยใต้ `app/author/novel/[id]/...` และ `app/author/comic/[id]/...`
+**แอดมิน**: ทุกอย่างอยู่ที่ `app/admin/page.tsx` ซึ่งเป็นแดชบอร์ดแบบแท็บ (แท็บการเงินแยกไว้ใน `components/admin/PaymentsPanel.tsx`) หน้าเก่าอย่าง `/admin/users`, `/admin/content` ฯลฯ แค่ redirect ไป `/admin`
 
-**การสมัครเป็นนักเขียน** ใช้ตาราง `writer_profiles` ตารางเดียว (1 แถวต่อ user, key คือ `user_id`) ผ่าน `/api/author/profile` (GET/POST แบบ multipart) ทั้งหน้า `/become-author` และฟอร์มข้อมูลนักเขียนใน `/author` + `/author/profile`
+**ส่วนนักเขียน**: `app/author/page.tsx` เป็นแดชบอร์ดไฟล์เดียวขนาดใหญ่แบบแท็บ (dashboard/novels/comics/earnings/wallet/profile) แท็บรายได้และกระเป๋าเงินอยู่ใน `components/author/` ส่วน `/author/dashboard` และ `/author/profile` แค่ redirect ไป `/author` หน้าแก้ไขบท/ตอน/หน้าการ์ตูนอยู่ใน route ย่อยใต้ `app/author/novel/[id]/...` และ `app/author/comic/[id]/...`
+
+**การสมัครเป็นนักเขียน** ใช้ตาราง `writer_profiles` ตารางเดียว (1 แถวต่อ user, key คือ `user_id`) ผ่าน `/api/author/profile` (GET/POST แบบ multipart) ทั้งหน้า `/become-author` และแท็บ "ข้อมูลนักเขียน" ใน `/author`
 - ถ้า READER เป็นคนส่ง ถือเป็นการสมัคร: ต้องกรอกข้อมูลส่วนตัวครบ และระบบตั้ง `status = 'PENDING'` ให้ (ถ้าเคยถูกปฏิเสธก็ส่งใหม่ได้)
 - ถ้า AUTHOR/ADMIN เป็นคนส่ง แค่แก้ข้อมูล ไม่เปลี่ยนสถานะ
 - ฟิลด์ที่ผู้ใช้ตั้งเองได้ถูกจำกัดด้วย whitelist (`TEXT_FIELDS`/`FILE_FIELDS`) ห้ามสร้างชื่อคอลัมน์จาก input โดยตรง
