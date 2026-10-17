@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { CheckCircle, XCircle, Upload } from 'lucide-react';
+import { useConfirm } from '@/components/ConfirmDialog';
 
 interface Topup { id: string; user_name: string; email: string; amount: number; slip_image: string; status: string; rejection_reason: string | null; created_at: string; }
 interface Withdrawal { id: string; user_name: string; email: string; amount: string; bank_name: string; bank_account_number: string; bank_account_name: string; status: string; slip_image: string | null; rejection_reason: string | null; created_at: string; }
@@ -17,6 +18,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function PaymentsPanel() {
+    const confirm = useConfirm();
     const [tab, setTab] = useState<'topups' | 'withdrawals'>('topups');
     const [topups, setTopups] = useState<Topup[]>([]);
     const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
@@ -43,7 +45,7 @@ export default function PaymentsPanel() {
     }
 
     async function handleTopup(t: Topup, status: 'APPROVED' | 'REJECTED') {
-        if (status === 'APPROVED' && !confirm(`ยืนยันว่าได้รับเงิน ${t.amount} บาท จาก ${t.user_name} แล้ว?`)) return;
+        if (status === 'APPROVED' && !(await confirm(`ยืนยันว่าได้รับเงิน ${t.amount} บาท จาก ${t.user_name} แล้ว?`))) return;
         const reason = status === 'REJECTED' ? prompt('เหตุผลที่ปฏิเสธ:') : null;
         if (status === 'REJECTED' && reason === null) return;
         setBusyId(t.id);
@@ -52,7 +54,7 @@ export default function PaymentsPanel() {
     }
 
     async function approveWithdrawal(w: Withdrawal, file: File) {
-        if (!confirm(`ยืนยันว่าโอนเงิน ${Number(w.amount).toFixed(2)} บาท ให้ ${w.bank_account_name} แล้ว?`)) return;
+        if (!(await confirm(`ยืนยันว่าโอนเงิน ${Number(w.amount).toFixed(2)} บาท ให้ ${w.bank_account_name} แล้ว?`))) return;
         setBusyId(w.id);
         try {
             const fd = new FormData();

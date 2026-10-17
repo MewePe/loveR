@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import EarningsPanel from '@/components/author/EarningsPanel';
 import WalletPanel from '@/components/author/WalletPanel';
+import { useConfirm } from '@/components/ConfirmDialog';
 
 type TabType = 'dashboard' | 'novels' | 'comics' | 'earnings' | 'wallet' | 'profile';
 
@@ -19,6 +20,7 @@ const menuItems = [
 ];
 
 export default function AuthorDashboard() {
+    const confirm = useConfirm();
     const { data: session, status } = useSession();
     const router = useRouter();
     const [activeTab, setActiveTab] = useState<TabType>('dashboard');
@@ -317,7 +319,7 @@ export default function AuthorDashboard() {
     }
 
     async function handlePublishNovel(novelId: string) {
-        if (!confirm('ต้องการเผยแพร่นิยายนี้หรือไม่?')) return;
+        if (!(await confirm('ต้องการเผยแพร่นิยายนี้หรือไม่?'))) return;
         try {
             const res = await fetch(`/api/novels/${novelId}`, {
                 method: 'PATCH',
@@ -337,7 +339,7 @@ export default function AuthorDashboard() {
     }
 
     async function handleDeleteNovel(novelId: string) {
-        if (!confirm('ต้องการลบนิยายนี้หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้')) return;
+        if (!(await confirm('ต้องการลบนิยายนี้หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้', { danger: true }))) return;
         try {
             const res = await fetch(`/api/novels/${novelId}`, {
                 method: 'DELETE',
@@ -440,7 +442,7 @@ export default function AuthorDashboard() {
     }
 
     async function handlePublishComic(comicId: string) {
-        if (!confirm('ต้องการเผยแพร่การ์ตูนนี้หรือไม่?')) return;
+        if (!(await confirm('ต้องการเผยแพร่การ์ตูนนี้หรือไม่?'))) return;
         try {
             const res = await fetch(`/api/comics/${comicId}`, {
                 method: 'PATCH',
@@ -460,7 +462,7 @@ export default function AuthorDashboard() {
     }
 
     async function handleDeleteComic(comicId: string) {
-        if (!confirm('ต้องการลบการ์ตูนนี้หรือไม่?')) return;
+        if (!(await confirm('ต้องการลบการ์ตูนนี้หรือไม่?', { danger: true }))) return;
         try {
             const res = await fetch(`/api/comics/${comicId}`, { method: 'DELETE', credentials: 'include' });
             if (res.ok) {

@@ -7,6 +7,7 @@ import {
     ImageIcon, Save, Loader2, Check, X, MoveUp, MoveDown
 } from 'lucide-react';
 import Image from 'next/image';
+import { useConfirm } from '@/components/ConfirmDialog';
 
 interface ComicPage {
     id: string;
@@ -22,6 +23,7 @@ interface Episode {
 }
 
 export default function PageManagement() {
+    const confirm = useConfirm();
     const { status } = useSession();
     const router = useRouter();
     const params = useParams();
@@ -144,7 +146,7 @@ export default function PageManagement() {
 
     // ---------- Delete a saved page ----------
     async function handleDeletePage(pageId: string) {
-        if (!confirm('ต้องการลบหน้านี้หรือไม่?')) return;
+        if (!(await confirm('ต้องการลบหน้านี้หรือไม่?', { danger: true }))) return;
         try {
             const res = await fetch(
                 `/api/comics/${comicId}/episodes/${episodeId}/pages?pageId=${pageId}`,

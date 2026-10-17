@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { BookOpen, FileText, CheckCircle, Ban, Eye } from 'lucide-react';
 import Link from 'next/link';
+import { useConfirm } from '@/components/ConfirmDialog';
 
 interface ContentItem {
     id: string;
@@ -14,6 +15,7 @@ interface ContentItem {
 }
 
 export default function AdminContent() {
+    const confirm = useConfirm();
     const { data: session } = useSession();
     const router = useRouter();
     const [activeTab, setActiveTab] = useState<'novels' | 'comics'>('novels');
@@ -39,7 +41,7 @@ export default function AdminContent() {
     }
 
     async function updateStatus(id: string, newStatus: string) {
-        if (!confirm(`Change status to ${newStatus}?`)) return;
+        if (!(await confirm(`Change status to ${newStatus}?`))) return;
 
         try {
             const res = await fetch(`/api/admin/content/${id}`, {

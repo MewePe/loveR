@@ -23,8 +23,6 @@ export default function Paywall({ kind, itemId, price, loggedIn }: PaywallProps)
             router.push("/login");
             return;
         }
-        if (!confirm(`ใช้ ${price} เหรียญเพื่อปลดล็อก${kind === "chapter" ? "บท" : "ตอน"}นี้?`)) return;
-
         setBuying(true);
         setError(null);
         try {

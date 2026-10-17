@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Search, Shield, Ban, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
+import { useConfirm } from '@/components/ConfirmDialog';
 
 interface User {
     id: string;
@@ -14,6 +15,7 @@ interface User {
 }
 
 export default function AdminUsers() {
+    const confirm = useConfirm();
     const { data: session } = useSession();
     const router = useRouter();
     const [users, setUsers] = useState<User[]>([]);
@@ -38,7 +40,7 @@ export default function AdminUsers() {
     }
 
     async function updateUserRole(id: string, newRole: string) {
-        if (!confirm(`Are you sure you want to change this user's role to ${newRole}?`)) return;
+        if (!(await confirm(`Are you sure you want to change this user's role to ${newRole}?`))) return;
 
         try {
             const res = await fetch(`/api/admin/users/${id}`, {

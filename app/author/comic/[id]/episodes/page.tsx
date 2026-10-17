@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Plus, Edit, Trash2, Save, X, GripVertical, Eye, Upload, ImageIcon } from 'lucide-react';
 import Image from 'next/image';
+import { useConfirm } from '@/components/ConfirmDialog';
 
 interface Episode {
     id: string;
@@ -22,6 +23,7 @@ interface Comic {
 }
 
 export default function EpisodeManagement() {
+    const confirm = useConfirm();
     const { data: session, status } = useSession();
     const router = useRouter();
     const params = useParams();
@@ -140,7 +142,7 @@ export default function EpisodeManagement() {
     }
 
     async function handleDelete(episodeId: string) {
-        if (!confirm('ต้องการลบตอนนี้หรือไม่?')) return;
+        if (!(await confirm('ต้องการลบตอนนี้หรือไม่?', { danger: true }))) return;
 
         try {
             const res = await fetch(`/api/comics/${comicId}/episodes/${episodeId}`, {

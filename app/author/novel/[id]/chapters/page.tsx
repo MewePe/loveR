@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Plus, Edit, Trash2, Save, X, GripVertical, Eye } from 'lucide-react';
+import { useConfirm } from '@/components/ConfirmDialog';
 
 interface Chapter {
     id: string;
@@ -21,6 +22,7 @@ interface Novel {
 }
 
 export default function ChapterManagement() {
+    const confirm = useConfirm();
     const { data: session, status } = useSession();
     const router = useRouter();
     const params = useParams();
@@ -107,7 +109,7 @@ export default function ChapterManagement() {
     }
 
     async function handleDelete(chapterId: string) {
-        if (!confirm('ต้องการลบบทนี้หรือไม่?')) return;
+        if (!(await confirm('ต้องการลบบทนี้หรือไม่?', { danger: true }))) return;
 
         try {
             const res = await fetch(`/api/novels/${novelId}/chapters/${chapterId}`, {

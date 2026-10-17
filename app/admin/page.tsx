@@ -7,6 +7,7 @@ import { BarChart3, Users, BookOpen, AlertTriangle, Tag, Settings, LogOut, Searc
 import PaymentsPanel from '@/components/admin/PaymentsPanel';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import Image from 'next/image';
+import { useConfirm } from '@/components/ConfirmDialog';
 
 type TabType = 'dashboard' | 'users' | 'content' | 'reports' | 'writers' | 'payments' | 'categories' | 'settings';
 
@@ -29,6 +30,7 @@ interface WriterRequest { user_id: string; user_name: string; email: string; tit
 interface Category { id: string; name: string; slug: string; }
 
 export default function AdminPanel() {
+    const confirm = useConfirm();
     const { data: session, status } = useSession();
     const router = useRouter();
     const [activeTab, setActiveTab] = useState<TabType>('dashboard');
@@ -120,14 +122,14 @@ export default function AdminPanel() {
 
     // Action handlers
     async function updateUserRole(id: string, newRole: string) {
-        if (!confirm(`Change role to ${newRole}?`)) return;
+        if (!(await confirm(`Change role to ${newRole}?`))) return;
         const res = await fetch(`/api/admin/users/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role: newRole }), credentials: 'include' });
         if (res.ok) fetchTabData();
         else alert('Failed to update user');
     }
 
     async function updateContentStatus(id: string, newStatus: string) {
-        if (!confirm(`Change status to ${newStatus}?`)) return;
+        if (!(await confirm(`Change status to ${newStatus}?`))) return;
         const res = await fetch(`/api/admin/content/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus, type: contentTab }), credentials: 'include' });
         if (res.ok) fetchTabData();
         else alert('Failed to update');
@@ -148,7 +150,7 @@ export default function AdminPanel() {
     }
 
     async function deleteCategory(id: string) {
-        if (!confirm('Delete this category?')) return;
+        if (!(await confirm('Delete this category?', { danger: true }))) return;
         const res = await fetch(`/api/admin/categories/${id}`, { method: 'DELETE', credentials: 'include' });
         if (res.ok) fetchTabData();
     }

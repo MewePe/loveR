@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { Trash2, Plus, Tag } from 'lucide-react';
 import Link from 'next/link';
+import { useConfirm } from '@/components/ConfirmDialog';
 
 interface Category {
     id: string;
@@ -11,6 +12,7 @@ interface Category {
 }
 
 export default function AdminCategories() {
+    const confirm = useConfirm();
     const { data: session } = useSession();
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(true);
@@ -59,7 +61,7 @@ export default function AdminCategories() {
     }
 
     async function handleDelete(id: string) {
-        if (!confirm('Are you sure you want to delete this category?')) return;
+        if (!(await confirm('Are you sure you want to delete this category?', { danger: true }))) return;
 
         try {
             const res = await fetch(`/api/admin/categories/${id}`, {
