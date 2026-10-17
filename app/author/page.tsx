@@ -4,6 +4,9 @@ import { LayoutDashboard, BookOpen, DollarSign, Wallet, User, LogOut, Plus, Save
 import { signOut, useSession } from 'next-auth/react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import EarningsPanel from '@/components/author/EarningsPanel';
+import WalletPanel from '@/components/author/WalletPanel';
+import { useConfirm } from '@/components/ConfirmDialog';
 
 type TabType = 'dashboard' | 'novels' | 'comics' | 'earnings' | 'wallet' | 'profile';
 
@@ -17,6 +20,7 @@ const menuItems = [
 ];
 
 export default function AuthorDashboard() {
+    const confirm = useConfirm();
     const { data: session, status } = useSession();
     const router = useRouter();
     const [activeTab, setActiveTab] = useState<TabType>('dashboard');
@@ -44,6 +48,9 @@ export default function AuthorDashboard() {
     const [newComic, setNewComic] = useState({ title: '', description: '', categoryId: '' });
     const [showEditComicModal, setShowEditComicModal] = useState(false);
     const [editingComic, setEditingComic] = useState<any>(null);
+
+    // Categories state
+    const [categories, setCategories] = useState<{ id: string; name: string; slug: string }[]>([]);
 
     useEffect(() => {
         if (status === 'unauthenticated') {
@@ -84,6 +91,12 @@ export default function AuthorDashboard() {
                 setProfile(data);
                 if (data.id_card_image) setPreviews(prev => ({ ...prev, id_card: data.id_card_image }));
                 if (data.bank_book_image) setPreviews(prev => ({ ...prev, bank_book: data.bank_book_image }));
+            }
+
+            // Fetch categories
+            const catsRes = await fetch('/api/categories');
+            if (catsRes.ok) {
+                setCategories(await catsRes.json());
             }
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -306,7 +319,7 @@ export default function AuthorDashboard() {
     }
 
     async function handlePublishNovel(novelId: string) {
-        if (!confirm('ต้องการเผยแพร่นิยายนี้หรือไม่?')) return;
+        if (!(await confirm('ต้องการเผยแพร่นิยายนี้หรือไม่?'))) return;
         try {
             const res = await fetch(`/api/novels/${novelId}`, {
                 method: 'PATCH',
@@ -326,7 +339,7 @@ export default function AuthorDashboard() {
     }
 
     async function handleDeleteNovel(novelId: string) {
-        if (!confirm('ต้องการลบนิยายนี้หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้')) return;
+        if (!(await confirm('ต้องการลบนิยายนี้หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้', { danger: true }))) return;
         try {
             const res = await fetch(`/api/novels/${novelId}`, {
                 method: 'DELETE',
@@ -429,7 +442,7 @@ export default function AuthorDashboard() {
     }
 
     async function handlePublishComic(comicId: string) {
-        if (!confirm('ต้องการเผยแพร่การ์ตูนนี้หรือไม่?')) return;
+        if (!(await confirm('ต้องการเผยแพร่การ์ตูนนี้หรือไม่?'))) return;
         try {
             const res = await fetch(`/api/comics/${comicId}`, {
                 method: 'PATCH',
@@ -449,7 +462,7 @@ export default function AuthorDashboard() {
     }
 
     async function handleDeleteComic(comicId: string) {
-        if (!confirm('ต้องการลบการ์ตูนนี้หรือไม่?')) return;
+        if (!(await confirm('ต้องการลบการ์ตูนนี้หรือไม่?', { danger: true }))) return;
         try {
             const res = await fetch(`/api/comics/${comicId}`, { method: 'DELETE', credentials: 'include' });
             if (res.ok) {
@@ -727,56 +740,11 @@ export default function AuthorDashboard() {
     }
 
     function renderEarnings() {
-        return (
-            <div className="space-y-6">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">รายได้ของฉัน</h1>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border dark:border-gray-700">
-                        <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium">รายได้เดือนนี้</h3>
-                        <p className="text-3xl font-bold text-green-600 mt-2">฿0.00</p>
-                    </div>
-                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border dark:border-gray-700">
-                        <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium">รายได้ทั้งหมด</h3>
-                        <p className="text-3xl font-bold text-indigo-600 mt-2">฿0.00</p>
-                    </div>
-                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border dark:border-gray-700">
-                        <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium">ถอนได้</h3>
-                        <p className="text-3xl font-bold text-orange-600 mt-2">฿0.00</p>
-                    </div>
-                </div>
-
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-6">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">ประวัติรายได้</h3>
-                    <div className="text-center py-12 text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed dark:border-gray-700">
-                        ยังไม่มีข้อมูลรายได้
-                    </div>
-                </div>
-            </div>
-        );
+        return <EarningsPanel />;
     }
 
     function renderWallet() {
-        return (
-            <div className="space-y-6">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">กระเป๋าเงินนักเขียน</h1>
-
-                <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-8 text-white">
-                    <p className="text-sm opacity-80">ยอดเงินคงเหลือ</p>
-                    <p className="text-4xl font-bold mt-2">฿0.00</p>
-                    <button className="mt-6 bg-white text-indigo-600 px-6 py-2 rounded-lg font-semibold hover:bg-gray-100 transition">
-                        ถอนเงิน
-                    </button>
-                </div>
-
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-6">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">ประวัติการถอนเงิน</h3>
-                    <div className="text-center py-12 text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed dark:border-gray-700">
-                        ยังไม่มีประวัติการถอนเงิน
-                    </div>
-                </div>
-            </div>
-        );
+        return <WalletPanel />;
     }
 
     function renderProfile() {
@@ -895,7 +863,7 @@ export default function AuthorDashboard() {
                                 />
                                 {previews.id_card ? (
                                     <div className="relative h-40 w-full mb-2">
-                                        <Image src={previews.id_card} alt="ID Card" fill className="object-contain rounded-lg" />
+                                        <Image src={previews.id_card} alt="ID Card" fill unoptimized className="object-contain rounded-lg" />
                                     </div>
                                 ) : (
                                     <Upload className="w-10 h-10 text-gray-400 mx-auto mb-2" />
@@ -914,7 +882,7 @@ export default function AuthorDashboard() {
                                 />
                                 {previews.bank_book ? (
                                     <div className="relative h-40 w-full mb-2">
-                                        <Image src={previews.bank_book} alt="Bank Book" fill className="object-contain rounded-lg" />
+                                        <Image src={previews.bank_book} alt="Bank Book" fill unoptimized className="object-contain rounded-lg" />
                                     </div>
                                 ) : (
                                     <Upload className="w-10 h-10 text-gray-400 mx-auto mb-2" />
@@ -1056,6 +1024,9 @@ export default function AuthorDashboard() {
                                     className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                                 >
                                     <option value="">ไม่ระบุหมวดหมู่</option>
+                                    {categories.map((cat) => (
+                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                    ))}
                                 </select>
                             </div>
                             <div className="flex gap-3 pt-4">
@@ -1137,6 +1108,19 @@ export default function AuthorDashboard() {
                                     </div>
                                 </div>
                             </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">หมวดหมู่ (ไม่บังคับ)</label>
+                                <select
+                                    value={newNovel.categoryId}
+                                    onChange={(e) => setNewNovel({ ...newNovel, categoryId: e.target.value })}
+                                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                >
+                                    <option value="">ไม่ระบุหมวดหมู่</option>
+                                    {categories.map((cat) => (
+                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                    ))}
+                                </select>
+                            </div>
                             <div className="flex gap-3 pt-4">
                                 <button
                                     type="button"
@@ -1189,6 +1173,19 @@ export default function AuthorDashboard() {
                                     <div className="text-sm text-gray-500 dark:text-gray-400"><p>รูปปกการ์ตูน</p><p className="text-xs">แนะนำ 400x600 px</p></div>
                                 </div>
                             </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">หมวดหมู่ (ไม่บังคับ)</label>
+                                <select
+                                    value={newComic.categoryId}
+                                    onChange={(e) => setNewComic({ ...newComic, categoryId: e.target.value })}
+                                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-pink-500 outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                >
+                                    <option value="">ไม่ระบุหมวดหมู่</option>
+                                    {categories.map((cat) => (
+                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                    ))}
+                                </select>
+                            </div>
                             <div className="flex gap-3 pt-4">
                                 <button type="button" onClick={() => { setShowComicModal(false); setCoverFile(null); setCoverPreview(null); }} className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">ยกเลิก</button>
                                 <button type="submit" disabled={saving} className="flex-1 bg-pink-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-pink-700 transition disabled:opacity-50">{saving ? 'กำลังสร้าง...' : 'สร้างการ์ตูน'}</button>
@@ -1228,6 +1225,19 @@ export default function AuthorDashboard() {
                                     )}
                                     <div className="text-sm text-gray-500 dark:text-gray-400"><p>รูปปกการ์ตูน</p><p className="text-xs">แนะนำ 400x600 px</p></div>
                                 </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">หมวดหมู่ (ไม่บังคับ)</label>
+                                <select
+                                    value={newComic.categoryId}
+                                    onChange={(e) => setNewComic({ ...newComic, categoryId: e.target.value })}
+                                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-pink-500 outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                >
+                                    <option value="">ไม่ระบุหมวดหมู่</option>
+                                    {categories.map((cat) => (
+                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                    ))}
+                                </select>
                             </div>
                             <div className="flex gap-3 pt-4">
                                 <button type="button" onClick={() => { setShowEditComicModal(false); setEditingComic(null); setCoverFile(null); setCoverPreview(null); }} className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">ยกเลิก</button>

@@ -40,7 +40,12 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# local logs / debug output
+mysql_log*.txt
+port_check.txt
 
+# user uploads (runtime data)
+/public/uploads/
 
-PROJECT_DOCS.md
-README.md
+# private comic page images (served via /api/media after an access check)
+/storage/

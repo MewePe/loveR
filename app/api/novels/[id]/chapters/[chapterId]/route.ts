@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
+import { parsePrice } from '@/lib/coins';
 
 // PATCH - Update a chapter
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string; chapterId: string }> }) {
@@ -27,11 +28,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     const body = await req.json();
     const { title, content } = body;
+    const price = parsePrice(body.price);
+    if (price === null) {
+        return NextResponse.json({ error: 'ราคาต้องเป็นจำนวนเต็ม 0-10000 เหรียญ' }, { status: 400 });
+    }
 
     try {
         await pool.query(
-            'UPDATE chapters SET title = ?, content = ? WHERE id = ? AND novel_id = ?',
-            [title, content, chapterId, novelId]
+            'UPDATE chapters SET title = ?, content = ?, price = ? WHERE id = ? AND novel_id = ?',
+            [title, content, price, chapterId, novelId]
         );
 
         return NextResponse.json({ success: true });

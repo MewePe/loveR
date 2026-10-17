@@ -7,28 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model author_requests {
-  id             String                  @id @db.VarChar(36)
-  user_id        String                  @db.VarChar(36)
-  prefix         String?                 @db.VarChar(20)
-  first_name     String                  @db.VarChar(100)
-  last_name      String                  @db.VarChar(100)
-  id_card_number String                  @db.VarChar(20)
-  address        String                  @db.Text
-  province       String                  @db.VarChar(100)
-  district       String                  @db.VarChar(100)
-  sub_district   String                  @db.VarChar(100)
-  postal_code    String                  @db.VarChar(10)
-  phone          String                  @db.VarChar(20)
-  status         author_requests_status? @default(PENDING)
-  admin_note     String?                 @db.Text
-  created_at     DateTime                @default(now()) @db.Timestamp(0)
-  updated_at     DateTime                @default(now()) @db.Timestamp(0)
-  users          users                   @relation(fields: [user_id], references: [id], onUpdate: Restrict, map: "author_requests_ibfk_1")
-
-  @@index([user_id], map: "user_id")
-}
-
 model bookmarks {
   id         String   @id @db.VarChar(36)
   user_id    String?  @db.VarChar(36)
@@ -59,8 +37,10 @@ model chapters {
   chapter_order Int?
   novel_id      String?  @db.VarChar(36)
   views         Int?     @default(0)
+  price         Int      @default(0)
   created_at    DateTime @default(now()) @db.Timestamp(0)
   updated_at    DateTime @default(now()) @db.Timestamp(0)
+  purchases     purchases[]
   novels        novels?  @relation(fields: [novel_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "chapters_ibfk_1")
 
   @@index([novel_id], map: "novel_id")
@@ -72,10 +52,12 @@ model comic_episodes {
   episode_order Int?
   comic_id      String?       @db.VarChar(36)
   views         Int?          @default(0)
+  price         Int           @default(0)
   created_at    DateTime      @default(now()) @db.Timestamp(0)
   updated_at    DateTime      @default(now()) @db.Timestamp(0)
   comics        comics?       @relation(fields: [comic_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "comic_episodes_ibfk_1")
   comic_pages   comic_pages[]
+  purchases     purchases[]
 
   @@index([comic_id], map: "comic_id")
 }
@@ -149,6 +131,8 @@ model system_settings {
   site_description String?  @db.Text
   contact_email    String?  @db.VarChar(255)
   maintenance_mode Boolean? @default(false)
+  author_share_percent Int  @default(70)
+  payment_info     String?  @db.Text
   updated_at       DateTime @default(now()) @db.Timestamp(0)
 }
 
@@ -159,12 +143,15 @@ model users {
   password        String?           @db.VarChar(255)
   image           String?           @db.VarChar(255)
   role            users_role?       @default(READER)
+  coins           Int               @default(0)
   created_at      DateTime          @default(now()) @db.Timestamp(0)
   updated_at      DateTime          @default(now()) @db.Timestamp(0)
-  author_requests author_requests[]
   bookmarks       bookmarks[]
+  coin_topups     coin_topups[]
   comics          comics[]
   novels          novels[]
+  purchases       purchases[]       @relation("purchases_buyer")
+  sales           purchases[]       @relation("purchases_author")
   reports         reports[]
   withdrawals     withdrawals[]
   writer_profiles writer_profiles?
@@ -211,6 +198,48 @@ model writer_profiles {
   users               users                   @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "writer_profiles_ibfk_1")
 }
 
+model coin_topups {
+  id               String              @id @db.VarChar(36)
+  user_id          String              @db.VarChar(36)
+  amount           Int
+  slip_image       String              @db.VarChar(255)
+  status           coin_topups_status? @default(PENDING)
+  rejection_reason String?             @db.Text
+  created_at       DateTime            @default(now()) @db.Timestamp(0)
+  updated_at       DateTime            @default(now()) @db.Timestamp(0)
+  users            users               @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "coin_topups_ibfk_1")
+
+  @@index([user_id], map: "user_id")
+}
+
+model purchases {
+  id             String          @id @db.VarChar(36)
+  user_id        String          @db.VarChar(36)
+  chapter_id     String?         @db.VarChar(36)
+  episode_id     String?         @db.VarChar(36)
+  item_title     String?         @db.VarChar(255)
+  author_id      String          @db.VarChar(36)
+  price          Int
+  author_earning Decimal         @db.Decimal(10, 2)
+  created_at     DateTime        @default(now()) @db.Timestamp(0)
+  buyer          users           @relation("purchases_buyer", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "purchases_ibfk_1")
+  chapters       chapters?       @relation(fields: [chapter_id], references: [id], onDelete: SetNull, onUpdate: Restrict, map: "purchases_ibfk_2")
+  comic_episodes comic_episodes? @relation(fields: [episode_id], references: [id], onDelete: SetNull, onUpdate: Restrict, map: "purchases_ibfk_3")
+  author         users           @relation("purchases_author", fields: [author_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "purchases_ibfk_4")
+
+  @@unique([user_id, chapter_id], map: "uniq_user_chapter")
+  @@unique([user_id, episode_id], map: "uniq_user_episode")
+  @@index([author_id], map: "idx_author")
+  @@index([chapter_id], map: "chapter_id")
+  @@index([episode_id], map: "episode_id")
+}
+
+enum coin_topups_status {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum reports_target_type {
   NOVEL
   COMIC
@@ -243,15 +272,10 @@ enum users_role {
   READER
   AUTHOR
   ADMIN
+  BANNED
 }
 
 enum withdrawals_status {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
-enum author_requests_status {
   PENDING
   APPROVED
   REJECTED

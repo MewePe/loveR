@@ -3,14 +3,17 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { RowDataPacket } from 'mysql2';
 import ThemeToggle from '@/components/ThemeToggle';
+import Paywall from '@/components/Paywall';
+import { auth } from '@/lib/auth';
+import { canAccess, AccessItem } from '@/lib/coins';
 
-async function getEpisode(episodeId: string) {
+async function getEpisode(comicId: string, episodeId: string) {
     const [rows] = await pool.query<RowDataPacket[]>(`
-    SELECT e.*, c.title as comic_title, c.id as comic_id
+    SELECT e.*, c.title as comic_title, c.id as comic_id, c.author_id, c.status as content_status
     FROM comic_episodes e
     JOIN comics c ON e.comic_id = c.id
-    WHERE e.id = ?
-  `, [episodeId]);
+    WHERE e.id = ? AND e.comic_id = ?
+  `, [episodeId, comicId]);
     return rows[0];
 }
 
@@ -44,15 +47,21 @@ async function getNextPrevEpisodes(comicId: string, currentOrder: number) {
 
 export default async function ReadEpisode({ params }: { params: Promise<{ id: string; episodeId: string }> }) {
     const { id: comicId, episodeId } = await params;
-    const episode = await getEpisode(episodeId);
+    const episode = await getEpisode(comicId, episodeId);
 
     if (!episode) notFound();
 
-    const pages = await getPages(episodeId);
+    const session = await auth();
+    const unlocked = await canAccess(session?.user, 'episode', episode as AccessItem);
+    // Only published comics show a paywall; unpublished ones simply don't exist for other users
+    if (!unlocked && episode.content_status !== 'PUBLISHED') notFound();
+    const pages = unlocked ? await getPages(episodeId) : [];
     const { prev, next } = await getNextPrevEpisodes(episode.comic_id, episode.episode_order);
 
     // Update views
-    await pool.query('UPDATE comic_episodes SET views = views + 1 WHERE id = ?', [episodeId]);
+    if (unlocked) {
+        await pool.query('UPDATE comic_episodes SET views = views + 1 WHERE id = ?', [episodeId]);
+    }
 
     return (
         <div className="min-h-screen bg-[#f9f9f9] dark:bg-gray-900 transition-colors duration-200">
@@ -86,7 +95,9 @@ export default async function ReadEpisode({ params }: { params: Promise<{ id: st
 
             {/* Pages */}
             <div className="max-w-4xl mx-auto py-4">
-                {pages.length > 0 ? (
+                {!unlocked ? (
+                    <Paywall kind="episode" itemId={episode.id} price={episode.price} loggedIn={!!session?.user} />
+                ) : pages.length > 0 ? (
                     <div className="space-y-1">
                         {pages.map((page, index) => (
                             <img

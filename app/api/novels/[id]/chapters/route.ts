@@ -3,14 +3,24 @@ import pool from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
 import { v4 as uuidv4 } from 'uuid';
+import { parsePrice } from '@/lib/coins';
+import { canViewContent, isOwnerOrAdmin } from '@/lib/visibility';
 
-// GET - Fetch all chapters for a novel
+// GET - Fetch all chapters for a novel. Content is only included for the author/admin (editor view).
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
     const { id: novelId } = await params;
 
     try {
+        const session = await auth();
+        const [novels] = await pool.query<RowDataPacket[]>('SELECT status, author_id FROM novels WHERE id = ?', [novelId]);
+        if (!novels[0] || !canViewContent(session?.user, novels[0])) {
+            return NextResponse.json({ error: 'Novel not found' }, { status: 404 });
+        }
+        const isOwner = isOwnerOrAdmin(session?.user, novels[0].author_id);
+
         const [chapters] = await pool.query<RowDataPacket[]>(
-            'SELECT * FROM chapters WHERE novel_id = ? ORDER BY chapter_order ASC, created_at ASC',
+            `SELECT ${isOwner ? '*' : 'id, title, chapter_order, novel_id, views, price, created_at, updated_at'}
+             FROM chapters WHERE novel_id = ? ORDER BY chapter_order ASC, created_at ASC`,
             [novelId]
         );
         return NextResponse.json(chapters);
@@ -44,6 +54,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const body = await req.json();
     const { title, content } = body;
+    const price = parsePrice(body.price);
+    if (price === null) {
+        return NextResponse.json({ error: 'ราคาต้องเป็นจำนวนเต็ม 0-10000 เหรียญ' }, { status: 400 });
+    }
     const id = uuidv4();
 
     // Get next chapter order
@@ -55,8 +69,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     try {
         await pool.query(
-            'INSERT INTO chapters (id, title, content, chapter_order, novel_id) VALUES (?, ?, ?, ?, ?)',
-            [id, title, content, nextOrder, novelId]
+            'INSERT INTO chapters (id, title, content, chapter_order, novel_id, price) VALUES (?, ?, ?, ?, ?, ?)',
+            [id, title, content, nextOrder, novelId, price]
         );
 
         return NextResponse.json({ id, title, chapter_order: nextOrder });

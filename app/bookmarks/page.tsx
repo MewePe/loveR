@@ -7,9 +7,9 @@ import Link from "next/link";
 import { Bookmark, BookOpen, Palette, Trash2 } from "lucide-react";
 
 interface BookmarkItem {
-    id: number;
+    id: string;
     content_type: "novel" | "comic";
-    content_id: number;
+    content_id: string;
     title: string;
     cover_image: string | null;
     description: string | null;
@@ -23,7 +23,7 @@ export default function BookmarksPage() {
     const [bookmarks, setBookmarks] = useState<BookmarkItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<"all" | "novel" | "comic">("all");
-    const [removing, setRemoving] = useState<number | null>(null);
+    const [removing, setRemoving] = useState<string | null>(null);
 
     useEffect(() => {
         if (status === "unauthenticated") {
@@ -47,7 +47,7 @@ export default function BookmarksPage() {
         }
     }
 
-    async function removeBookmark(contentType: string, contentId: number, bookmarkId: number) {
+    async function removeBookmark(contentType: string, contentId: string, bookmarkId: string) {
         setRemoving(bookmarkId);
         try {
             const res = await fetch("/api/bookmarks", {

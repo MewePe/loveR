@@ -3,6 +3,11 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { RowDataPacket } from 'mysql2';
 import BookmarkButton from '@/components/BookmarkButton';
+import ReportButton from '@/components/ReportButton';
+import PriceBadge from '@/components/PriceBadge';
+import { auth } from '@/lib/auth';
+import { getPurchasedIds } from '@/lib/coins';
+import { canViewContent, isOwnerOrAdmin } from '@/lib/visibility';
 
 async function getComic(id: string) {
     const [rows] = await pool.query<RowDataPacket[]>(`
@@ -29,9 +34,12 @@ export default async function ComicDetail({ params }: { params: Promise<{ id: st
     const { id } = await params;
     const comic = await getComic(id);
 
-    if (!comic) notFound();
+    const session = await auth();
+    if (!comic || !canViewContent(session?.user, comic)) notFound();
 
     const episodes = await getEpisodes(id);
+    const isOwner = isOwnerOrAdmin(session?.user, comic.author_id);
+    const purchased = await getPurchasedIds(session?.user?.id, 'episode', episodes.filter(e => e.price > 0).map(e => e.id));
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
@@ -75,6 +83,7 @@ export default async function ComicDetail({ params }: { params: Promise<{ id: st
                                     </button>
                                 )}
                                 <BookmarkButton contentType="comic" contentId={id} accentColor="pink" />
+                                <ReportButton targetType="COMIC" targetId={id} />
                             </div>
 
                             <div className="prose max-w-none text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 p-6 rounded-xl border border-gray-100 dark:border-gray-600">
@@ -109,8 +118,9 @@ export default async function ComicDetail({ params }: { params: Promise<{ id: st
                                         <p className="text-sm text-gray-400">{episode.page_count || 0} หน้า</p>
                                     </div>
                                 </div>
-                                <span className="text-sm text-gray-400">
-                                    {new Date(episode.created_at).toLocaleDateString('th-TH')}
+                                <span className="flex items-center gap-4 text-sm">
+                                    <PriceBadge price={episode.price} unlocked={isOwner || purchased.has(episode.id)} />
+                                    <span className="text-gray-400">{new Date(episode.created_at).toLocaleDateString('th-TH')}</span>
                                 </span>
                             </Link>
                         ))}

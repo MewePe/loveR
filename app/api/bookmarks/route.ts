@@ -2,88 +2,60 @@ import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
+import { v4 as uuidv4 } from 'uuid';
+import { canViewContent } from '@/lib/visibility';
 
-// Auto-create table on first use
-let tableCreated = false;
-async function ensureTable() {
-    if (tableCreated) return;
-    try {
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS bookmarks (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id VARCHAR(255) NOT NULL,
-                content_type ENUM('novel', 'comic') NOT NULL,
-                content_id INT NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE KEY unique_bookmark (user_id, content_type, content_id),
-                INDEX idx_user (user_id),
-                INDEX idx_content (content_type, content_id)
-            )
-        `);
-        tableCreated = true;
-    } catch (error) {
-        console.error('Error creating bookmarks table:', error);
-    }
+// The bookmarks table has one row per bookmark with either novel_id or comic_id set.
+// The API speaks in { content_type: 'novel' | 'comic', content_id } so the client doesn't care which column.
+const COLUMN = { novel: 'novel_id', comic: 'comic_id' } as const;
+const TABLE = { novel: 'novels', comic: 'comics' } as const;
+type ContentType = keyof typeof COLUMN;
+
+function isContentType(value: unknown): value is ContentType {
+    return value === 'novel' || value === 'comic';
 }
 
-async function getUserId(session: any): Promise<string | null> {
-    if (session?.user?.id) return session.user.id;
-    if (!session?.user?.email) return null;
-    const [rows] = await pool.query<RowDataPacket[]>(
-        'SELECT id FROM users WHERE email = ?',
-        [session.user.email]
-    );
-    return rows[0]?.id?.toString() || null;
-}
-
-// GET /api/bookmarks — list user's bookmarks or check if specific content is bookmarked
+// GET /api/bookmarks — list the user's bookmarks, or ?content_type=&content_id= to check one
 export async function GET(req: NextRequest) {
-    try {
-        await ensureTable();
-        const session = await auth();
-        const userId = await getUserId(session);
-        if (!userId) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+    const session = await auth();
+    if (!session?.user?.id) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const userId = session.user.id;
 
+    try {
         const { searchParams } = new URL(req.url);
         const contentType = searchParams.get('content_type');
         const contentId = searchParams.get('content_id');
 
-        // Check if specific content is bookmarked
         if (contentType && contentId) {
+            if (!isContentType(contentType)) {
+                return NextResponse.json({ error: 'Invalid content_type' }, { status: 400 });
+            }
             const [rows] = await pool.query<RowDataPacket[]>(
-                'SELECT id FROM bookmarks WHERE user_id = ? AND content_type = ? AND content_id = ?',
-                [userId, contentType, contentId]
+                `SELECT id FROM bookmarks WHERE user_id = ? AND ${COLUMN[contentType]} = ?`,
+                [userId, contentId]
             );
             return NextResponse.json({ bookmarked: rows.length > 0 });
         }
 
-        // List all bookmarks with content details
+        // Unpublished content (other than the user's own) is left out
         const [bookmarks] = await pool.query<RowDataPacket[]>(`
-            SELECT b.*, 
-                CASE 
-                    WHEN b.content_type = 'novel' THEN n.title
-                    WHEN b.content_type = 'comic' THEN c.title
-                END as title,
-                CASE 
-                    WHEN b.content_type = 'novel' THEN n.cover_image
-                    WHEN b.content_type = 'comic' THEN c.cover_image
-                END as cover_image,
-                CASE 
-                    WHEN b.content_type = 'novel' THEN n.description
-                    WHEN b.content_type = 'comic' THEN c.description
-                END as description,
-                CASE 
-                    WHEN b.content_type = 'novel' THEN (SELECT u.name FROM users u WHERE u.id = n.author_id)
-                    WHEN b.content_type = 'comic' THEN (SELECT u.name FROM users u WHERE u.id = c.author_id)
-                END as author_name
+            SELECT b.id, b.created_at,
+                   CASE WHEN b.novel_id IS NOT NULL THEN 'novel' ELSE 'comic' END AS content_type,
+                   COALESCE(b.novel_id, b.comic_id) AS content_id,
+                   COALESCE(n.title, c.title) AS title,
+                   COALESCE(n.cover_image, c.cover_image) AS cover_image,
+                   COALESCE(n.description, c.description) AS description,
+                   u.name AS author_name
             FROM bookmarks b
-            LEFT JOIN novels n ON b.content_type = 'novel' AND b.content_id = n.id
-            LEFT JOIN comics c ON b.content_type = 'comic' AND b.content_id = c.id
+            LEFT JOIN novels n ON b.novel_id = n.id
+            LEFT JOIN comics c ON b.comic_id = c.id
+            LEFT JOIN users u ON u.id = COALESCE(n.author_id, c.author_id)
             WHERE b.user_id = ?
+              AND (COALESCE(n.status, c.status) = 'PUBLISHED' OR COALESCE(n.author_id, c.author_id) = ?)
             ORDER BY b.created_at DESC
-        `, [userId]);
+        `, [userId, userId]);
 
         return NextResponse.json({ bookmarks });
     } catch (error) {
@@ -92,30 +64,39 @@ export async function GET(req: NextRequest) {
     }
 }
 
-// POST /api/bookmarks — add a bookmark
+// POST /api/bookmarks — add a bookmark. Body: { content_type, content_id }
 export async function POST(req: NextRequest) {
+    const session = await auth();
+    if (!session?.user?.id) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const userId = session.user.id;
+
     try {
-        await ensureTable();
-        const session = await auth();
-        const userId = await getUserId(session);
-        if (!userId) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
         const { content_type, content_id } = await req.json();
-
-        if (!content_type || !content_id) {
-            return NextResponse.json({ error: 'Missing content_type or content_id' }, { status: 400 });
+        if (!isContentType(content_type) || typeof content_id !== 'string') {
+            return NextResponse.json({ error: 'Invalid content_type or content_id' }, { status: 400 });
         }
 
-        if (!['novel', 'comic'].includes(content_type)) {
-            return NextResponse.json({ error: 'Invalid content_type' }, { status: 400 });
-        }
-
-        await pool.query(
-            'INSERT IGNORE INTO bookmarks (user_id, content_type, content_id) VALUES (?, ?, ?)',
-            [userId, content_type, content_id]
+        const [content] = await pool.query<RowDataPacket[]>(
+            `SELECT status, author_id FROM ${TABLE[content_type]} WHERE id = ?`,
+            [content_id]
         );
+        if (!content[0] || !canViewContent(session.user, content[0])) {
+            return NextResponse.json({ error: 'Content not found' }, { status: 404 });
+        }
+
+        const column = COLUMN[content_type];
+        const [existing] = await pool.query<RowDataPacket[]>(
+            `SELECT id FROM bookmarks WHERE user_id = ? AND ${column} = ?`,
+            [userId, content_id]
+        );
+        if (existing.length === 0) {
+            await pool.query(
+                `INSERT INTO bookmarks (id, user_id, ${column}) VALUES (?, ?, ?)`,
+                [uuidv4(), userId, content_id]
+            );
+        }
 
         return NextResponse.json({ success: true, bookmarked: true });
     } catch (error) {
@@ -124,25 +105,22 @@ export async function POST(req: NextRequest) {
     }
 }
 
-// DELETE /api/bookmarks — remove a bookmark
+// DELETE /api/bookmarks — remove a bookmark. Body: { content_type, content_id }
 export async function DELETE(req: NextRequest) {
+    const session = await auth();
+    if (!session?.user?.id) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     try {
-        await ensureTable();
-        const session = await auth();
-        const userId = await getUserId(session);
-        if (!userId) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
         const { content_type, content_id } = await req.json();
-
-        if (!content_type || !content_id) {
-            return NextResponse.json({ error: 'Missing content_type or content_id' }, { status: 400 });
+        if (!isContentType(content_type) || typeof content_id !== 'string') {
+            return NextResponse.json({ error: 'Invalid content_type or content_id' }, { status: 400 });
         }
 
         await pool.query(
-            'DELETE FROM bookmarks WHERE user_id = ? AND content_type = ? AND content_id = ?',
-            [userId, content_type, content_id]
+            `DELETE FROM bookmarks WHERE user_id = ? AND ${COLUMN[content_type]} = ?`,
+            [session.user.id, content_id]
         );
 
         return NextResponse.json({ success: true, bookmarked: false });

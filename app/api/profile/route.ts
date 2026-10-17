@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
+import { isPublicUploadUrl } from '@/lib/upload';
 
 export async function GET() {
     try {
@@ -12,7 +13,7 @@ export async function GET() {
 
         // Get user profile
         const [users] = await pool.query<RowDataPacket[]>(
-            'SELECT id, name, email, image, role, created_at FROM users WHERE email = ?',
+            'SELECT id, name, email, image, role, coins, created_at FROM users WHERE email = ?',
             [session.user.email]
         );
 
@@ -50,6 +51,13 @@ export async function PATCH(req: Request) {
 
         const body = await req.json();
         const { name, image } = body;
+
+        if (name !== undefined && (typeof name !== 'string' || !name.trim() || name.length > 100)) {
+            return NextResponse.json({ error: 'ชื่อต้องมี 1-100 ตัวอักษร' }, { status: 400 });
+        }
+        if (image && !isPublicUploadUrl(image)) {
+            return NextResponse.json({ error: 'Invalid image' }, { status: 400 });
+        }
 
         const updates: string[] = [];
         const values: any[] = [];

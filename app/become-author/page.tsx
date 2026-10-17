@@ -11,6 +11,7 @@ export default function BecomeAuthorPage() {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [existingRequest, setExistingRequest] = useState<any>(null);
+    const [reapplying, setReapplying] = useState(false);
     const [formData, setFormData] = useState({
         prefix: 'นาย',
         firstName: '',
@@ -35,11 +36,25 @@ export default function BecomeAuthorPage() {
     async function checkExistingRequest() {
         setLoading(true);
         try {
-            const res = await fetch('/api/author-request', { credentials: 'include' });
+            const res = await fetch('/api/author/profile', { credentials: 'include' });
             if (res.ok) {
                 const data = await res.json();
-                if (data.request) {
-                    setExistingRequest(data.request);
+                if (data.status) {
+                    setExistingRequest(data);
+                    setReapplying(false);
+                    // Prefill the form so a rejected applicant can fix and resubmit
+                    setFormData({
+                        prefix: data.title || 'นาย',
+                        firstName: data.first_name || '',
+                        lastName: data.last_name || '',
+                        idCardNumber: data.id_card_number || '',
+                        address: data.address || '',
+                        province: data.province || '',
+                        district: data.district || '',
+                        subDistrict: data.sub_district || '',
+                        postalCode: data.postal_code || '',
+                        phone: data.phone_number || ''
+                    });
                 }
             }
         } catch (error) {
@@ -54,10 +69,21 @@ export default function BecomeAuthorPage() {
         setSubmitting(true);
 
         try {
-            const res = await fetch('/api/author-request', {
+            const body = new FormData();
+            body.append('title', formData.prefix);
+            body.append('first_name', formData.firstName);
+            body.append('last_name', formData.lastName);
+            body.append('id_card_number', formData.idCardNumber);
+            body.append('address', formData.address);
+            body.append('province', formData.province);
+            body.append('district', formData.district);
+            body.append('sub_district', formData.subDistrict);
+            body.append('postal_code', formData.postalCode);
+            body.append('phone_number', formData.phone);
+
+            const res = await fetch('/api/author/profile', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData),
+                body,
                 credentials: 'include'
             });
 
@@ -103,7 +129,7 @@ export default function BecomeAuthorPage() {
     }
 
     // Has existing request
-    if (existingRequest) {
+    if (existingRequest && !reapplying) {
         const statusColors: any = {
             PENDING: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300',
             APPROVED: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
@@ -131,15 +157,23 @@ export default function BecomeAuthorPage() {
                     <span className={`inline-block px-4 py-2 rounded-full text-sm font-medium ${statusColors[existingRequest.status]}`}>
                         {statusText[existingRequest.status]}
                     </span>
-                    {existingRequest.admin_note && (
+                    {existingRequest.rejection_reason && (
                         <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-left">
                             <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">หมายเหตุจากแอดมิน:</p>
-                            <p className="text-gray-700 dark:text-gray-300">{existingRequest.admin_note}</p>
+                            <p className="text-gray-700 dark:text-gray-300">{existingRequest.rejection_reason}</p>
                         </div>
                     )}
                     <p className="text-gray-600 dark:text-gray-400 mt-6 text-sm">
-                        ส่งเมื่อ: {new Date(existingRequest.created_at).toLocaleDateString('th-TH')}
+                        ส่งเมื่อ: {new Date(existingRequest.updated_at || existingRequest.created_at).toLocaleDateString('th-TH')}
                     </p>
+                    {existingRequest.status === 'REJECTED' && (
+                        <button
+                            onClick={() => setReapplying(true)}
+                            className="block w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 transition mt-6"
+                        >
+                            แก้ไขข้อมูลและส่งคำขอใหม่
+                        </button>
+                    )}
                     <Link href="/" className="block w-full border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 py-3 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition mt-6">
                         กลับหน้าแรก
                     </Link>

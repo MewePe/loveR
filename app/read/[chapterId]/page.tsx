@@ -3,15 +3,25 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { RowDataPacket } from 'mysql2';
 import ThemeToggle from '@/components/ThemeToggle';
+import Paywall from '@/components/Paywall';
+import { auth } from '@/lib/auth';
+import { canAccess, AccessItem } from '@/lib/coins';
 
+// Content is loaded separately, only after the access check, so a locked chapter's text is never
+// fetched for the request (React dev mode also serializes awaited query results into the page).
 async function getChapter(id: string) {
     const [rows] = await pool.query<RowDataPacket[]>(`
-    SELECT c.*, n.title as novel_title 
-    FROM chapters c 
-    JOIN novels n ON c.novel_id = n.id 
+    SELECT c.id, c.title, c.chapter_order, c.novel_id, c.price, n.title as novel_title, n.author_id, n.status as content_status
+    FROM chapters c
+    JOIN novels n ON c.novel_id = n.id
     WHERE c.id = ?
   `, [id]);
     return rows[0];
+}
+
+async function getChapterContent(id: string) {
+    const [rows] = await pool.query<RowDataPacket[]>('SELECT content FROM chapters WHERE id = ?', [id]);
+    return rows[0]?.content as string | null;
 }
 
 async function getAdjacentChapters(novelId: string, currentOrder: number) {
@@ -26,12 +36,19 @@ async function getAdjacentChapters(novelId: string, currentOrder: number) {
     return { prev: prev[0], next: next[0] };
 }
 
-export default async function ReadChapter({ params }: { params: { chapterId: string } }) {
-    const chapter = await getChapter(params.chapterId);
+export default async function ReadChapter({ params }: { params: Promise<{ chapterId: string }> }) {
+    const { chapterId } = await params;
+    const chapter = await getChapter(chapterId);
 
     if (!chapter) notFound();
 
+    const session = await auth();
+    const unlocked = await canAccess(session?.user, 'chapter', chapter as AccessItem);
+    // Only published novels show a paywall; unpublished ones simply don't exist for other users
+    if (!unlocked && chapter.content_status !== 'PUBLISHED') notFound();
+
     const { prev, next } = await getAdjacentChapters(chapter.novel_id, chapter.chapter_order);
+    const content = unlocked ? await getChapterContent(chapter.id) : null;
 
     return (
         <div className="min-h-screen bg-[#f9f9f9] dark:bg-gray-900 text-gray-800 dark:text-gray-100 font-serif transition-colors duration-200">
@@ -49,10 +66,15 @@ export default async function ReadChapter({ params }: { params: { chapterId: str
 
             {/* Content */}
             <div className="max-w-3xl mx-auto px-6 py-12 md:py-20">
-                <div
-                    className="reading-content text-lg md:text-xl leading-relaxed text-gray-800 dark:text-gray-100"
-                    dangerouslySetInnerHTML={{ __html: chapter.content }}
-                />
+                {unlocked ? (
+                    // Rendered as plain text (never as HTML): chapter content is author input, and HTML here
+                    // would let an author run scripts in readers' browsers
+                    <div className="reading-content whitespace-pre-line text-lg md:text-xl leading-relaxed text-gray-800 dark:text-gray-100">
+                        {content || ''}
+                    </div>
+                ) : (
+                    <Paywall kind="chapter" itemId={chapter.id} price={chapter.price} loggedIn={!!session?.user} />
+                )}
             </div>
 
             {/* Bottom Navigation */}

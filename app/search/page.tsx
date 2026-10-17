@@ -1,7 +1,7 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Search, BookOpen, ImageIcon, Filter, X, ChevronDown } from 'lucide-react';
+import { Search, BookOpen, ImageIcon, X, ChevronDown } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -34,22 +34,55 @@ export default function SearchPage() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const [query, setQuery] = useState(searchParams.get('q') || '');
-    const [type, setType] = useState<'all' | 'novels' | 'comics'>(searchParams.get('type') as any || 'all');
+    const validTypes = ['all', 'novels', 'comics'] as const;
+    const rawType = searchParams.get('type');
+    const [type, setType] = useState<'all' | 'novels' | 'comics'>(
+        validTypes.includes(rawType as 'all' | 'novels' | 'comics') ? (rawType as 'all' | 'novels' | 'comics') : 'all'
+    );
     const [categoryId, setCategoryId] = useState(searchParams.get('category') || '');
     const [novels, setNovels] = useState<Novel[]>([]);
     const [comics, setComics] = useState<Comic[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(false);
-    const [showFilters, setShowFilters] = useState(false);
+
+
+    const handleSearch = useCallback(async () => {
+        setLoading(true);
+        try {
+            const p = new URLSearchParams();
+            if (query) p.set('search', query);
+            if (categoryId) p.set('categoryId', categoryId);
+            p.set('status', 'PUBLISHED');
+
+            if (type === 'all' || type === 'novels') {
+                const res = await fetch(`/api/novels?${p}`);
+                if (res.ok) setNovels(await res.json());
+            } else {
+                setNovels([]);
+            }
+
+            if (type === 'all' || type === 'comics') {
+                const res = await fetch(`/api/comics?${p}`);
+                if (res.ok) setComics(await res.json());
+            } else {
+                setComics([]);
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoading(false);
+        }
+    }, [query, type, categoryId]);
 
     useEffect(() => {
         fetchCategories();
         handleSearch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     useEffect(() => {
         handleSearch();
-    }, [type, categoryId]);
+    }, [type, categoryId, handleSearch]);
 
     async function fetchCategories() {
         try {
@@ -60,43 +93,16 @@ export default function SearchPage() {
         }
     }
 
-    async function handleSearch() {
-        setLoading(true);
-        try {
-            const params = new URLSearchParams();
-            if (query) params.set('search', query);
-            if (categoryId) params.set('categoryId', categoryId);
-            params.set('status', 'PUBLISHED');
 
-            if (type === 'all' || type === 'novels') {
-                const res = await fetch(`/api/novels?${params}`);
-                if (res.ok) setNovels(await res.json());
-            } else {
-                setNovels([]);
-            }
-
-            if (type === 'all' || type === 'comics') {
-                const res = await fetch(`/api/comics?${params}`);
-                if (res.ok) setComics(await res.json());
-            } else {
-                setComics([]);
-            }
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setLoading(false);
-        }
-    }
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         handleSearch();
-        // Update URL
-        const params = new URLSearchParams();
-        if (query) params.set('q', query);
-        if (type !== 'all') params.set('type', type);
-        if (categoryId) params.set('category', categoryId);
-        router.push(`/search?${params}`);
+        const p = new URLSearchParams();
+        if (query) p.set('q', query);
+        if (type !== 'all') p.set('type', type);
+        if (categoryId) p.set('category', categoryId);
+        router.push(`/search?${p}`);
     }
 
     const totalResults = novels.length + comics.length;

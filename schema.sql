@@ -10,7 +10,8 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(255) UNIQUE,
     password VARCHAR(255), -- For credentials provider
     image VARCHAR(255),
-    role ENUM('VISITOR', 'READER', 'AUTHOR', 'ADMIN') DEFAULT 'READER',
+    role ENUM('VISITOR', 'READER', 'AUTHOR', 'ADMIN', 'BANNED') DEFAULT 'READER',
+    coins INT NOT NULL DEFAULT 0, -- reader coin balance (1 coin = 1 baht)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -46,6 +47,7 @@ CREATE TABLE IF NOT EXISTS chapters (
     chapter_order INT,
     novel_id VARCHAR(36),
     views INT DEFAULT 0,
+    price INT NOT NULL DEFAULT 0, -- coins; 0 = free
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (novel_id) REFERENCES novels(id) ON DELETE CASCADE
@@ -74,6 +76,7 @@ CREATE TABLE IF NOT EXISTS comic_episodes (
     episode_order INT,
     comic_id VARCHAR(36),
     views INT DEFAULT 0,
+    price INT NOT NULL DEFAULT 0, -- coins; 0 = free
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (comic_id) REFERENCES comics(id) ON DELETE CASCADE
@@ -118,6 +121,8 @@ CREATE TABLE IF NOT EXISTS system_settings (
     site_description TEXT,
     contact_email VARCHAR(255),
     maintenance_mode BOOLEAN DEFAULT FALSE,
+    author_share_percent INT NOT NULL DEFAULT 70,
+    payment_info TEXT, -- bank / PromptPay details shown on the coin top-up page
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
@@ -163,4 +168,37 @@ CREATE TABLE IF NOT EXISTS withdrawals (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+-- Coin Top-ups Table (bank transfer slip, approved by admin)
+CREATE TABLE IF NOT EXISTS coin_topups (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    amount INT NOT NULL,
+    slip_image VARCHAR(255) NOT NULL,
+    status ENUM('PENDING', 'APPROVED', 'REJECTED') DEFAULT 'PENDING',
+    rejection_reason TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Purchases Table (one row per unlocked chapter/episode; also the author earnings ledger)
+CREATE TABLE IF NOT EXISTS purchases (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    chapter_id VARCHAR(36),
+    episode_id VARCHAR(36),
+    item_title VARCHAR(255),
+    author_id VARCHAR(36) NOT NULL,
+    price INT NOT NULL,
+    author_earning DECIMAL(10, 2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uniq_user_chapter (user_id, chapter_id),
+    UNIQUE KEY uniq_user_episode (user_id, episode_id),
+    INDEX idx_author (author_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (chapter_id) REFERENCES chapters(id) ON DELETE SET NULL,
+    FOREIGN KEY (episode_id) REFERENCES comic_episodes(id) ON DELETE SET NULL,
+    FOREIGN KEY (author_id) REFERENCES users(id)
 );

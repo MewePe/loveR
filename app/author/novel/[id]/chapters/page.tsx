@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Plus, Edit, Trash2, Save, X, GripVertical, Eye } from 'lucide-react';
+import { useConfirm } from '@/components/ConfirmDialog';
 
 interface Chapter {
     id: string;
@@ -10,6 +11,7 @@ interface Chapter {
     content: string;
     chapter_order: number;
     views: number;
+    price: number;
     created_at: string;
 }
 
@@ -20,6 +22,7 @@ interface Novel {
 }
 
 export default function ChapterManagement() {
+    const confirm = useConfirm();
     const { data: session, status } = useSession();
     const router = useRouter();
     const params = useParams();
@@ -30,7 +33,7 @@ export default function ChapterManagement() {
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [editingChapter, setEditingChapter] = useState<Chapter | null>(null);
-    const [formData, setFormData] = useState({ title: '', content: '' });
+    const [formData, setFormData] = useState({ title: '', content: '', price: 0 });
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
@@ -64,13 +67,13 @@ export default function ChapterManagement() {
 
     function openCreateModal() {
         setEditingChapter(null);
-        setFormData({ title: '', content: '' });
+        setFormData({ title: '', content: '', price: 0 });
         setShowModal(true);
     }
 
     function openEditModal(chapter: Chapter) {
         setEditingChapter(chapter);
-        setFormData({ title: chapter.title, content: chapter.content || '' });
+        setFormData({ title: chapter.title, content: chapter.content || '', price: chapter.price || 0 });
         setShowModal(true);
     }
 
@@ -95,7 +98,8 @@ export default function ChapterManagement() {
                 setShowModal(false);
                 fetchData();
             } else {
-                alert('เกิดข้อผิดพลาด');
+                const data = await res.json().catch(() => ({}));
+                alert(data.error || 'เกิดข้อผิดพลาด');
             }
         } catch (error) {
             console.error(error);
@@ -105,7 +109,7 @@ export default function ChapterManagement() {
     }
 
     async function handleDelete(chapterId: string) {
-        if (!confirm('ต้องการลบบทนี้หรือไม่?')) return;
+        if (!(await confirm('ต้องการลบบทนี้หรือไม่?', { danger: true }))) return;
 
         try {
             const res = await fetch(`/api/novels/${novelId}/chapters/${chapterId}`, {
@@ -175,6 +179,9 @@ export default function ChapterManagement() {
                                                 <Eye className="w-4 h-4" />
                                                 {chapter.views || 0} views
                                             </span>
+                                            <span className={chapter.price > 0 ? 'text-amber-600 dark:text-amber-400' : ''}>
+                                                {chapter.price > 0 ? `🔒 ${chapter.price} เหรียญ` : 'ฟรี'}
+                                            </span>
                                             <span>{new Date(chapter.created_at).toLocaleDateString('th-TH')}</span>
                                         </div>
                                     </div>
@@ -241,6 +248,21 @@ export default function ChapterManagement() {
                                     className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
                                     placeholder="เช่น บทที่ 1: จุดเริ่มต้น"
                                 />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    ราคา (เหรียญ)
+                                </label>
+                                <input
+                                    type="number"
+                                    min={0}
+                                    max={10000}
+                                    step={1}
+                                    value={formData.price}
+                                    onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                                    className="w-40 px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                                />
+                                <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">0 = อ่านฟรี (1 เหรียญ = 1 บาท)</span>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">

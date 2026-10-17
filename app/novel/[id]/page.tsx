@@ -3,6 +3,11 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { RowDataPacket } from 'mysql2';
 import BookmarkButton from '@/components/BookmarkButton';
+import ReportButton from '@/components/ReportButton';
+import PriceBadge from '@/components/PriceBadge';
+import { auth } from '@/lib/auth';
+import { getPurchasedIds } from '@/lib/coins';
+import { canViewContent, isOwnerOrAdmin } from '@/lib/visibility';
 
 async function getNovel(id: string) {
     const [rows] = await pool.query<RowDataPacket[]>(`
@@ -17,8 +22,8 @@ async function getNovel(id: string) {
 
 async function getChapters(novelId: string) {
     const [rows] = await pool.query<RowDataPacket[]>(`
-    SELECT id, title, chapter_order, created_at 
-    FROM chapters 
+    SELECT id, title, chapter_order, price, created_at
+    FROM chapters
     WHERE novel_id = ? 
     ORDER BY chapter_order ASC
   `, [novelId]);
@@ -29,9 +34,12 @@ export default async function NovelDetail({ params }: { params: Promise<{ id: st
     const { id } = await params;
     const novel = await getNovel(id);
 
-    if (!novel) notFound();
+    const session = await auth();
+    if (!novel || !canViewContent(session?.user, novel)) notFound();
 
     const chapters = await getChapters(id);
+    const isOwner = isOwnerOrAdmin(session?.user, novel.author_id);
+    const purchased = await getPurchasedIds(session?.user?.id, 'chapter', chapters.filter(c => c.price > 0).map(c => c.id));
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
@@ -75,6 +83,7 @@ export default async function NovelDetail({ params }: { params: Promise<{ id: st
                                     </button>
                                 )}
                                 <BookmarkButton contentType="novel" contentId={id} accentColor="indigo" />
+                                <ReportButton targetType="NOVEL" targetId={id} />
                             </div>
 
                             <div className="prose max-w-none text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 p-6 rounded-xl border border-gray-100 dark:border-gray-600">
@@ -106,8 +115,9 @@ export default async function NovelDetail({ params }: { params: Promise<{ id: st
                                         {chapter.title}
                                     </span>
                                 </div>
-                                <span className="text-sm text-gray-400">
-                                    {new Date(chapter.created_at).toLocaleDateString('th-TH')}
+                                <span className="flex items-center gap-4 text-sm">
+                                    <PriceBadge price={chapter.price} unlocked={isOwner || purchased.has(chapter.id)} />
+                                    <span className="text-gray-400">{new Date(chapter.created_at).toLocaleDateString('th-TH')}</span>
                                 </span>
                             </Link>
                         ))}

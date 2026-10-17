@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { auth } from '@/lib/auth';
+import { ResultSetHeader } from 'mysql2';
 
 export async function PATCH(
     req: Request,
@@ -23,15 +24,19 @@ export async function PATCH(
         await connection.beginTransaction();
 
         // Update writer profile status
-        await connection.query(
+        const [result] = await connection.query<ResultSetHeader>(
             'UPDATE writer_profiles SET status = ?, rejection_reason = ? WHERE user_id = ?',
             [status, reason || null, id]
         );
+        if (result.affectedRows === 0) {
+            await connection.rollback();
+            return NextResponse.json({ error: 'Writer profile not found' }, { status: 404 });
+        }
 
-        // If approved, update user role to AUTHOR
+        // If approved, promote readers to AUTHOR (never touch ADMIN or un-ban BANNED users)
         if (status === 'APPROVED') {
             await connection.query(
-                'UPDATE users SET role = "AUTHOR" WHERE id = ?',
+                'UPDATE users SET role = "AUTHOR" WHERE id = ? AND role = "READER"',
                 [id]
             );
         }

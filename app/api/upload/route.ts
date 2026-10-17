@@ -1,28 +1,39 @@
 import { NextResponse } from 'next/server';
-import { writeFile } from 'fs/promises';
-import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import { auth } from '@/lib/auth';
+import { saveImageUpload, savePrivateComicPage } from '@/lib/upload';
 
+// POST - multipart `file`. With `purpose=comic-page` the image is stored privately (served via /api/media after an
+// access check); everything else (covers, avatars, slips...) goes to public/uploads.
 export async function POST(req: Request) {
+    const session = await auth();
+    if (!session?.user?.id) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     try {
         const formData = await req.formData();
-        const file = formData.get('file') as File;
+        const file = formData.get('file');
 
-        if (!file) {
+        if (!file || !(file instanceof File)) {
             return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
         }
 
-        const buffer = Buffer.from(await file.arrayBuffer());
-        const filename = `${uuidv4()}${path.extname(file.name)}`;
-        const uploadDir = path.join(process.cwd(), 'public/uploads');
+        let result;
+        if (formData.get('purpose') === 'comic-page') {
+            if (session.user.role !== 'AUTHOR' && session.user.role !== 'ADMIN') {
+                return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            }
+            result = await savePrivateComicPage(file, session.user.id);
+        } else {
+            result = await saveImageUpload(file);
+        }
 
-        // Ensure directory exists (basic check, usually handled by setup)
-        // await mkdir(uploadDir, { recursive: true });
-
-        await writeFile(path.join(uploadDir, filename), buffer);
+        if ('error' in result) {
+            return NextResponse.json({ error: result.error }, { status: result.status });
+        }
 
         return NextResponse.json({
-            url: `/uploads/${filename}`,
+            url: result.url,
             success: true
         });
     } catch (error) {

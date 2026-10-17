@@ -39,6 +39,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     );
 
                     if (!isValid) return null;
+                    if (user.role === "BANNED") return null;
 
                     return {
                         id: user.id,
@@ -58,14 +59,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         async jwt({ token, user }) {
             if (user) {
                 token.role = user.role;
-                token.id = user.id;
+                token.id = user.id as string; // always set by authorize()
             } else if (token.email) {
                 // Fetch fresh role from DB to ensure it's up to date
                 try {
                     const [rows] = await pool.query<User[]>("SELECT role FROM users WHERE email = ?", [token.email]);
-                    if (rows[0]) {
-                        token.role = rows[0].role;
-                    }
+                    // Returning null ends the session: banned or deleted users are logged out on their next request
+                    if (!rows[0] || rows[0].role === "BANNED") return null;
+                    token.role = rows[0].role;
                 } catch (error) {
                     console.error("Error fetching fresh role:", error);
                 }

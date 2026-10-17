@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
+import { AUTHOR_SETTABLE_STATUSES, canViewContent } from '@/lib/visibility';
+import { isPublicUploadUrl } from '@/lib/upload';
 
 // GET - Fetch single novel
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -17,7 +19,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             [id]
         );
 
-        if (!novels[0]) {
+        const session = await auth();
+        if (!novels[0] || !canViewContent(session?.user, novels[0])) {
             return NextResponse.json({ error: 'Novel not found' }, { status: 404 });
         }
 
@@ -51,6 +54,18 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     const body = await req.json();
     const { title, description, status, categoryId, coverImage } = body;
+    if (coverImage && !isPublicUploadUrl(coverImage)) {
+        return NextResponse.json({ error: 'Invalid cover image' }, { status: 400 });
+    }
+
+    if (status !== undefined) {
+        if (novels[0].status === 'BANNED') {
+            return NextResponse.json({ error: 'นิยายนี้ถูกระงับโดยผู้ดูแล ไม่สามารถเปลี่ยนสถานะได้' }, { status: 403 });
+        }
+        if (!(AUTHOR_SETTABLE_STATUSES as readonly string[]).includes(status)) {
+            return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+        }
+    }
 
     try {
         const updates: string[] = [];

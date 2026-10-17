@@ -3,11 +3,13 @@ import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'next-auth/react';
-import { BarChart3, Users, BookOpen, AlertTriangle, Tag, Settings, LogOut, Search, Shield, Ban, CheckCircle, XCircle, Eye, Trash2, Plus, Save, FileText } from 'lucide-react';
+import { BarChart3, Users, BookOpen, AlertTriangle, Tag, Settings, LogOut, Search, Shield, Ban, CheckCircle, XCircle, Eye, Trash2, Plus, Save, FileText, Wallet } from 'lucide-react';
+import PaymentsPanel from '@/components/admin/PaymentsPanel';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import Image from 'next/image';
+import { useConfirm } from '@/components/ConfirmDialog';
 
-type TabType = 'dashboard' | 'users' | 'content' | 'reports' | 'writers' | 'categories' | 'settings';
+type TabType = 'dashboard' | 'users' | 'content' | 'reports' | 'writers' | 'payments' | 'categories' | 'settings';
 
 const menuItems = [
     { name: 'Dashboard', key: 'dashboard' as TabType, icon: BarChart3 },
@@ -15,6 +17,7 @@ const menuItems = [
     { name: 'Content', key: 'content' as TabType, icon: BookOpen },
     { name: 'Reports', key: 'reports' as TabType, icon: AlertTriangle },
     { name: 'Writer Requests', key: 'writers' as TabType, icon: Users },
+    { name: 'การเงิน', key: 'payments' as TabType, icon: Wallet },
     { name: 'Categories', key: 'categories' as TabType, icon: Tag },
     { name: 'Settings', key: 'settings' as TabType, icon: Settings },
 ];
@@ -22,11 +25,12 @@ const menuItems = [
 interface AdminStats { users: number; novels: number; chapters: number; comics: number; reports: number; }
 interface User { id: string; name: string; email: string; role: string; created_at: string; }
 interface ContentItem { id: string; title: string; author_name: string; status: string; created_at: string; }
-interface Report { id: string; reporter_name: string; target_type: string; target_id: string; reason: string; status: string; created_at: string; }
-interface WriterRequest { id: string; user_id: string; user_name: string; user_email: string; prefix: string; first_name: string; last_name: string; id_card_number: string; phone: string; province: string; status: string; admin_note: string; created_at: string; }
+interface Report { id: string; reporter_name: string; target_type: string; target_id: string; target_title: string | null; reason: string; status: string; created_at: string; }
+interface WriterRequest { user_id: string; user_name: string; email: string; title: string; first_name: string; last_name: string; id_card_number: string; phone_number: string; province: string; bank_name: string; bank_account_name: string; bank_account_number: string; id_card_image: string; bank_book_image: string; status: string; rejection_reason: string; created_at: string; }
 interface Category { id: string; name: string; slug: string; }
 
 export default function AdminPanel() {
+    const confirm = useConfirm();
     const { data: session, status } = useSession();
     const router = useRouter();
     const [activeTab, setActiveTab] = useState<TabType>('dashboard');
@@ -55,7 +59,7 @@ export default function AdminPanel() {
     const [newCategory, setNewCategory] = useState({ name: '', slug: '' });
 
     // Settings state
-    const [settings, setSettings] = useState({ site_name: '', site_description: '', contact_email: '', maintenance_mode: false });
+    const [settings, setSettings] = useState({ site_name: '', site_description: '', contact_email: '', maintenance_mode: false, author_share_percent: 70, payment_info: '' });
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
@@ -99,7 +103,7 @@ export default function AdminPanel() {
                 if (reportsRes.ok) setReports(await reportsRes.json());
                 break;
             case 'writers':
-                const writersRes = await fetch('/api/admin/author-requests', { credentials: 'include' });
+                const writersRes = await fetch('/api/admin/writers', { credentials: 'include' });
                 if (writersRes.ok) setWriterRequests(await writersRes.json());
                 break;
             case 'categories':
@@ -110,7 +114,7 @@ export default function AdminPanel() {
                 const settingsRes = await fetch('/api/admin/settings', { credentials: 'include' });
                 if (settingsRes.ok) {
                     const data = await settingsRes.json();
-                    setSettings({ site_name: data.site_name || '', site_description: data.site_description || '', contact_email: data.contact_email || '', maintenance_mode: !!data.maintenance_mode });
+                    setSettings({ site_name: data.site_name || '', site_description: data.site_description || '', contact_email: data.contact_email || '', maintenance_mode: !!data.maintenance_mode, author_share_percent: data.author_share_percent ?? 70, payment_info: data.payment_info || '' });
                 }
                 break;
         }
@@ -118,14 +122,14 @@ export default function AdminPanel() {
 
     // Action handlers
     async function updateUserRole(id: string, newRole: string) {
-        if (!confirm(`Change role to ${newRole}?`)) return;
+        if (!(await confirm(`Change role to ${newRole}?`))) return;
         const res = await fetch(`/api/admin/users/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role: newRole }), credentials: 'include' });
         if (res.ok) fetchTabData();
         else alert('Failed to update user');
     }
 
     async function updateContentStatus(id: string, newStatus: string) {
-        if (!confirm(`Change status to ${newStatus}?`)) return;
+        if (!(await confirm(`Change status to ${newStatus}?`))) return;
         const res = await fetch(`/api/admin/content/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus, type: contentTab }), credentials: 'include' });
         if (res.ok) fetchTabData();
         else alert('Failed to update');
@@ -146,7 +150,7 @@ export default function AdminPanel() {
     }
 
     async function deleteCategory(id: string) {
-        if (!confirm('Delete this category?')) return;
+        if (!(await confirm('Delete this category?', { danger: true }))) return;
         const res = await fetch(`/api/admin/categories/${id}`, { method: 'DELETE', credentials: 'include' });
         if (res.ok) fetchTabData();
     }
@@ -160,16 +164,17 @@ export default function AdminPanel() {
         setSaving(false);
     }
 
-    async function handleWriterAction(requestId: string, action: 'APPROVED' | 'REJECTED', note?: string) {
-        const adminNote = action === 'REJECTED' ? prompt('หมายเหตุสำหรับการปฏิเสธ (ถ้ามี):') : null;
-        const res = await fetch('/api/admin/author-requests', {
+    async function handleWriterAction(userId: string, action: 'APPROVED' | 'REJECTED') {
+        const reason = action === 'REJECTED' ? prompt('หมายเหตุสำหรับการปฏิเสธ (ถ้ามี):') : null;
+        const res = await fetch(`/api/admin/writers/${userId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ requestId, action, adminNote }),
+            body: JSON.stringify({ status: action, reason }),
             credentials: 'include'
         });
         if (res.ok) {
             alert(action === 'APPROVED' ? 'อนุมัติเรียบร้อย' : 'ปฏิเสธเรียบร้อย');
+            setSelectedWriter(null);
             fetchTabData();
         } else {
             alert('เกิดข้อผิดพลาด');
@@ -200,6 +205,7 @@ export default function AdminPanel() {
             case 'content': return renderContentSection();
             case 'reports': return renderReports();
             case 'writers': return renderWriters();
+            case 'payments': return <PaymentsPanel />;
             case 'categories': return renderCategories();
             case 'settings': return renderSettings();
             default: return null;
@@ -294,7 +300,7 @@ export default function AdminPanel() {
                             {reports.map((report) => (
                                 <tr key={report.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                     <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{report.reporter_name}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400"><span className="font-semibold text-indigo-600 dark:text-indigo-400">{report.target_type}</span>: {report.target_id}</td>
+                                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400"><span className="font-semibold text-indigo-600 dark:text-indigo-400">{report.target_type}</span>: {report.target_title ? <a href={`/${report.target_type === 'COMIC' ? 'comic' : 'novel'}/${report.target_id}`} target="_blank" rel="noreferrer" className="hover:underline">{report.target_title}</a> : report.target_id}</td>
                                     <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{report.reason}</td>
                                     <td className="px-6 py-4"><span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${report.status === 'RESOLVED' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : report.status === 'IGNORED' ? 'bg-gray-100 text-gray-800 dark:bg-gray-700' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'}`}>{report.status}</span></td>
                                     <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{new Date(report.created_at).toLocaleDateString()}</td>
@@ -325,18 +331,18 @@ export default function AdminPanel() {
                         <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 text-xs uppercase"><tr><th className="px-6 py-3">ชื่อ</th><th className="px-6 py-3">อีเมล</th><th className="px-6 py-3">เบอร์โทร</th><th className="px-6 py-3">จังหวัด</th><th className="px-6 py-3">สถานะ</th><th className="px-6 py-3">วันที่</th><th className="px-6 py-3 text-right">จัดการ</th></tr></thead>
                         <tbody className="divide-y dark:divide-gray-700">
                             {writerRequests.map((req) => (
-                                <tr key={req.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                    <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{req.prefix}{req.first_name} {req.last_name}</td>
-                                    <td className="px-6 py-4 text-gray-500 dark:text-gray-400">{req.user_email}</td>
-                                    <td className="px-6 py-4 text-gray-500 dark:text-gray-400">{req.phone}</td>
+                                <tr key={req.user_id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                    <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{req.title}{req.first_name} {req.last_name}</td>
+                                    <td className="px-6 py-4 text-gray-500 dark:text-gray-400">{req.email}</td>
+                                    <td className="px-6 py-4 text-gray-500 dark:text-gray-400">{req.phone_number}</td>
                                     <td className="px-6 py-4 text-gray-500 dark:text-gray-400">{req.province}</td>
                                     <td className="px-6 py-4"><span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[req.status]}`}>{statusText[req.status]}</span></td>
                                     <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{new Date(req.created_at).toLocaleDateString('th-TH')}</td>
                                     <td className="px-6 py-4 text-right space-x-2">
                                         <button onClick={() => setSelectedWriter(req)} className="text-gray-400 hover:text-blue-600"><Eye className="w-4 h-4" /></button>
                                         {req.status === 'PENDING' && (<>
-                                            <button onClick={() => handleWriterAction(req.id, 'APPROVED')} className="text-gray-400 hover:text-green-600" title="อนุมัติ"><CheckCircle className="w-4 h-4" /></button>
-                                            <button onClick={() => handleWriterAction(req.id, 'REJECTED')} className="text-gray-400 hover:text-red-600" title="ปฏิเสธ"><XCircle className="w-4 h-4" /></button>
+                                            <button onClick={() => handleWriterAction(req.user_id, 'APPROVED')} className="text-gray-400 hover:text-green-600" title="อนุมัติ"><CheckCircle className="w-4 h-4" /></button>
+                                            <button onClick={() => handleWriterAction(req.user_id, 'REJECTED')} className="text-gray-400 hover:text-red-600" title="ปฏิเสธ"><XCircle className="w-4 h-4" /></button>
                                         </>)}
                                     </td>
                                 </tr>
@@ -350,18 +356,22 @@ export default function AdminPanel() {
                         <div className="bg-white dark:bg-gray-800 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
                             <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">รายละเอียดคำขอ</h2>
                             <div className="grid grid-cols-2 gap-4 mb-6">
-                                <div><label className="text-sm text-gray-500">ชื่อ-นามสกุล</label><div className="font-medium dark:text-white">{selectedWriter.prefix}{selectedWriter.first_name} {selectedWriter.last_name}</div></div>
-                                <div><label className="text-sm text-gray-500">อีเมล</label><div className="font-medium dark:text-white">{selectedWriter.user_email}</div></div>
+                                <div><label className="text-sm text-gray-500">ชื่อ-นามสกุล</label><div className="font-medium dark:text-white">{selectedWriter.title}{selectedWriter.first_name} {selectedWriter.last_name}</div></div>
+                                <div><label className="text-sm text-gray-500">อีเมล</label><div className="font-medium dark:text-white">{selectedWriter.email}</div></div>
                                 <div><label className="text-sm text-gray-500">เลขบัตรประชาชน</label><div className="font-medium dark:text-white">{selectedWriter.id_card_number}</div></div>
-                                <div><label className="text-sm text-gray-500">เบอร์โทร</label><div className="font-medium dark:text-white">{selectedWriter.phone}</div></div>
+                                <div><label className="text-sm text-gray-500">เบอร์โทร</label><div className="font-medium dark:text-white">{selectedWriter.phone_number}</div></div>
                                 <div><label className="text-sm text-gray-500">จังหวัด</label><div className="font-medium dark:text-white">{selectedWriter.province}</div></div>
                                 <div><label className="text-sm text-gray-500">สถานะ</label><div className="font-medium dark:text-white">{selectedWriter.status}</div></div>
-                                {selectedWriter.admin_note && <div className="col-span-2"><label className="text-sm text-gray-500">หมายเหตุ</label><div className="font-medium dark:text-white bg-gray-100 dark:bg-gray-700 p-2 rounded mt-1">{selectedWriter.admin_note}</div></div>}
+                                <div><label className="text-sm text-gray-500">ธนาคาร</label><div className="font-medium dark:text-white">{selectedWriter.bank_name || '-'}</div></div>
+                                <div><label className="text-sm text-gray-500">เลขที่บัญชี / ชื่อบัญชี</label><div className="font-medium dark:text-white">{selectedWriter.bank_account_number || '-'} {selectedWriter.bank_account_name}</div></div>
+                                <div><label className="text-sm text-gray-500">สำเนาบัตรประชาชน</label><div className="font-medium">{selectedWriter.id_card_image ? <a href={selectedWriter.id_card_image} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline">ดูไฟล์</a> : <span className="dark:text-white">-</span>}</div></div>
+                                <div><label className="text-sm text-gray-500">สำเนาบัญชีธนาคาร</label><div className="font-medium">{selectedWriter.bank_book_image ? <a href={selectedWriter.bank_book_image} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline">ดูไฟล์</a> : <span className="dark:text-white">-</span>}</div></div>
+                                {selectedWriter.rejection_reason && <div className="col-span-2"><label className="text-sm text-gray-500">หมายเหตุ</label><div className="font-medium dark:text-white bg-gray-100 dark:bg-gray-700 p-2 rounded mt-1">{selectedWriter.rejection_reason}</div></div>}
                             </div>
                             <div className="flex justify-end gap-3">
                                 <button onClick={() => setSelectedWriter(null)} className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">ปิด</button>
-                                {selectedWriter.status === 'PENDING' && <><button onClick={() => handleWriterAction(selectedWriter.id, 'REJECTED')} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">ปฏิเสธ</button>
-                                    <button onClick={() => handleWriterAction(selectedWriter.id, 'APPROVED')} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">อนุมัติ</button></>}
+                                {selectedWriter.status === 'PENDING' && <><button onClick={() => handleWriterAction(selectedWriter.user_id, 'REJECTED')} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">ปฏิเสธ</button>
+                                    <button onClick={() => handleWriterAction(selectedWriter.user_id, 'APPROVED')} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">อนุมัติ</button></>}
                             </div>
                         </div>
                     </div>
@@ -413,6 +423,8 @@ export default function AdminPanel() {
                         <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Site Name</label><input type="text" value={settings.site_name} onChange={(e) => setSettings({ ...settings, site_name: e.target.value })} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" /></div>
                         <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Site Description</label><textarea value={settings.site_description} onChange={(e) => setSettings({ ...settings, site_description: e.target.value })} rows={3} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" /></div>
                         <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contact Email</label><input type="email" value={settings.contact_email} onChange={(e) => setSettings({ ...settings, contact_email: e.target.value })} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" /></div>
+                        <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ส่วนแบ่งรายได้นักเขียน (%)</label><input type="number" min={0} max={100} step={1} value={settings.author_share_percent} onChange={(e) => setSettings({ ...settings, author_share_percent: Number(e.target.value) })} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" /><p className="text-xs text-gray-500 dark:text-gray-400 mt-1">ใช้กับการซื้อตอนครั้งถัดไป ไม่ย้อนหลัง</p></div>
+                        <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ข้อมูลการชำระเงิน (แสดงในหน้าเติมเหรียญ)</label><textarea value={settings.payment_info} onChange={(e) => setSettings({ ...settings, payment_info: e.target.value })} rows={3} placeholder={'เช่น ธนาคารกสิกรไทย 123-4-56789-0 ชื่อบัญชี ...\nPromptPay 08x-xxx-xxxx'} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" /></div>
                         <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg"><div><div className="font-medium text-gray-900 dark:text-white">Maintenance Mode</div><div className="text-sm text-gray-500 dark:text-gray-400">Disable site access for non-admins</div></div><label className="relative inline-flex items-center cursor-pointer"><input type="checkbox" checked={settings.maintenance_mode} onChange={(e) => setSettings({ ...settings, maintenance_mode: e.target.checked })} className="sr-only peer" /><div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div></label></div>
                         <div className="pt-4 border-t dark:border-gray-700"><button type="submit" disabled={saving} className="w-full flex justify-center items-center gap-2 bg-indigo-600 text-white py-2.5 rounded-lg hover:bg-indigo-700 disabled:opacity-50"><Save className="w-4 h-4" />{saving ? 'Saving...' : 'Save Settings'}</button></div>
                     </form>
