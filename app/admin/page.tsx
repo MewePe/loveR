@@ -23,7 +23,7 @@ interface AdminStats { users: number; novels: number; chapters: number; comics: 
 interface User { id: string; name: string; email: string; role: string; created_at: string; }
 interface ContentItem { id: string; title: string; author_name: string; status: string; created_at: string; }
 interface Report { id: string; reporter_name: string; target_type: string; target_id: string; reason: string; status: string; created_at: string; }
-interface WriterRequest { id: string; user_id: string; user_name: string; user_email: string; prefix: string; first_name: string; last_name: string; id_card_number: string; phone: string; province: string; status: string; admin_note: string; created_at: string; }
+interface WriterRequest { user_id: string; user_name: string; email: string; title: string; first_name: string; last_name: string; id_card_number: string; phone_number: string; province: string; bank_name: string; bank_account_name: string; bank_account_number: string; id_card_image: string; bank_book_image: string; status: string; rejection_reason: string; created_at: string; }
 interface Category { id: string; name: string; slug: string; }
 
 export default function AdminPanel() {
@@ -99,7 +99,7 @@ export default function AdminPanel() {
                 if (reportsRes.ok) setReports(await reportsRes.json());
                 break;
             case 'writers':
-                const writersRes = await fetch('/api/admin/author-requests', { credentials: 'include' });
+                const writersRes = await fetch('/api/admin/writers', { credentials: 'include' });
                 if (writersRes.ok) setWriterRequests(await writersRes.json());
                 break;
             case 'categories':
@@ -160,16 +160,17 @@ export default function AdminPanel() {
         setSaving(false);
     }
 
-    async function handleWriterAction(requestId: string, action: 'APPROVED' | 'REJECTED', note?: string) {
-        const adminNote = action === 'REJECTED' ? prompt('หมายเหตุสำหรับการปฏิเสธ (ถ้ามี):') : null;
-        const res = await fetch('/api/admin/author-requests', {
+    async function handleWriterAction(userId: string, action: 'APPROVED' | 'REJECTED') {
+        const reason = action === 'REJECTED' ? prompt('หมายเหตุสำหรับการปฏิเสธ (ถ้ามี):') : null;
+        const res = await fetch(`/api/admin/writers/${userId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ requestId, action, adminNote }),
+            body: JSON.stringify({ status: action, reason }),
             credentials: 'include'
         });
         if (res.ok) {
             alert(action === 'APPROVED' ? 'อนุมัติเรียบร้อย' : 'ปฏิเสธเรียบร้อย');
+            setSelectedWriter(null);
             fetchTabData();
         } else {
             alert('เกิดข้อผิดพลาด');
@@ -325,18 +326,18 @@ export default function AdminPanel() {
                         <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 text-xs uppercase"><tr><th className="px-6 py-3">ชื่อ</th><th className="px-6 py-3">อีเมล</th><th className="px-6 py-3">เบอร์โทร</th><th className="px-6 py-3">จังหวัด</th><th className="px-6 py-3">สถานะ</th><th className="px-6 py-3">วันที่</th><th className="px-6 py-3 text-right">จัดการ</th></tr></thead>
                         <tbody className="divide-y dark:divide-gray-700">
                             {writerRequests.map((req) => (
-                                <tr key={req.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                    <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{req.prefix}{req.first_name} {req.last_name}</td>
-                                    <td className="px-6 py-4 text-gray-500 dark:text-gray-400">{req.user_email}</td>
-                                    <td className="px-6 py-4 text-gray-500 dark:text-gray-400">{req.phone}</td>
+                                <tr key={req.user_id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                    <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{req.title}{req.first_name} {req.last_name}</td>
+                                    <td className="px-6 py-4 text-gray-500 dark:text-gray-400">{req.email}</td>
+                                    <td className="px-6 py-4 text-gray-500 dark:text-gray-400">{req.phone_number}</td>
                                     <td className="px-6 py-4 text-gray-500 dark:text-gray-400">{req.province}</td>
                                     <td className="px-6 py-4"><span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[req.status]}`}>{statusText[req.status]}</span></td>
                                     <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{new Date(req.created_at).toLocaleDateString('th-TH')}</td>
                                     <td className="px-6 py-4 text-right space-x-2">
                                         <button onClick={() => setSelectedWriter(req)} className="text-gray-400 hover:text-blue-600"><Eye className="w-4 h-4" /></button>
                                         {req.status === 'PENDING' && (<>
-                                            <button onClick={() => handleWriterAction(req.id, 'APPROVED')} className="text-gray-400 hover:text-green-600" title="อนุมัติ"><CheckCircle className="w-4 h-4" /></button>
-                                            <button onClick={() => handleWriterAction(req.id, 'REJECTED')} className="text-gray-400 hover:text-red-600" title="ปฏิเสธ"><XCircle className="w-4 h-4" /></button>
+                                            <button onClick={() => handleWriterAction(req.user_id, 'APPROVED')} className="text-gray-400 hover:text-green-600" title="อนุมัติ"><CheckCircle className="w-4 h-4" /></button>
+                                            <button onClick={() => handleWriterAction(req.user_id, 'REJECTED')} className="text-gray-400 hover:text-red-600" title="ปฏิเสธ"><XCircle className="w-4 h-4" /></button>
                                         </>)}
                                     </td>
                                 </tr>
@@ -350,18 +351,22 @@ export default function AdminPanel() {
                         <div className="bg-white dark:bg-gray-800 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
                             <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">รายละเอียดคำขอ</h2>
                             <div className="grid grid-cols-2 gap-4 mb-6">
-                                <div><label className="text-sm text-gray-500">ชื่อ-นามสกุล</label><div className="font-medium dark:text-white">{selectedWriter.prefix}{selectedWriter.first_name} {selectedWriter.last_name}</div></div>
-                                <div><label className="text-sm text-gray-500">อีเมล</label><div className="font-medium dark:text-white">{selectedWriter.user_email}</div></div>
+                                <div><label className="text-sm text-gray-500">ชื่อ-นามสกุล</label><div className="font-medium dark:text-white">{selectedWriter.title}{selectedWriter.first_name} {selectedWriter.last_name}</div></div>
+                                <div><label className="text-sm text-gray-500">อีเมล</label><div className="font-medium dark:text-white">{selectedWriter.email}</div></div>
                                 <div><label className="text-sm text-gray-500">เลขบัตรประชาชน</label><div className="font-medium dark:text-white">{selectedWriter.id_card_number}</div></div>
-                                <div><label className="text-sm text-gray-500">เบอร์โทร</label><div className="font-medium dark:text-white">{selectedWriter.phone}</div></div>
+                                <div><label className="text-sm text-gray-500">เบอร์โทร</label><div className="font-medium dark:text-white">{selectedWriter.phone_number}</div></div>
                                 <div><label className="text-sm text-gray-500">จังหวัด</label><div className="font-medium dark:text-white">{selectedWriter.province}</div></div>
                                 <div><label className="text-sm text-gray-500">สถานะ</label><div className="font-medium dark:text-white">{selectedWriter.status}</div></div>
-                                {selectedWriter.admin_note && <div className="col-span-2"><label className="text-sm text-gray-500">หมายเหตุ</label><div className="font-medium dark:text-white bg-gray-100 dark:bg-gray-700 p-2 rounded mt-1">{selectedWriter.admin_note}</div></div>}
+                                <div><label className="text-sm text-gray-500">ธนาคาร</label><div className="font-medium dark:text-white">{selectedWriter.bank_name || '-'}</div></div>
+                                <div><label className="text-sm text-gray-500">เลขที่บัญชี / ชื่อบัญชี</label><div className="font-medium dark:text-white">{selectedWriter.bank_account_number || '-'} {selectedWriter.bank_account_name}</div></div>
+                                <div><label className="text-sm text-gray-500">สำเนาบัตรประชาชน</label><div className="font-medium">{selectedWriter.id_card_image ? <a href={selectedWriter.id_card_image} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline">ดูไฟล์</a> : <span className="dark:text-white">-</span>}</div></div>
+                                <div><label className="text-sm text-gray-500">สำเนาบัญชีธนาคาร</label><div className="font-medium">{selectedWriter.bank_book_image ? <a href={selectedWriter.bank_book_image} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline">ดูไฟล์</a> : <span className="dark:text-white">-</span>}</div></div>
+                                {selectedWriter.rejection_reason && <div className="col-span-2"><label className="text-sm text-gray-500">หมายเหตุ</label><div className="font-medium dark:text-white bg-gray-100 dark:bg-gray-700 p-2 rounded mt-1">{selectedWriter.rejection_reason}</div></div>}
                             </div>
                             <div className="flex justify-end gap-3">
                                 <button onClick={() => setSelectedWriter(null)} className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">ปิด</button>
-                                {selectedWriter.status === 'PENDING' && <><button onClick={() => handleWriterAction(selectedWriter.id, 'REJECTED')} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">ปฏิเสธ</button>
-                                    <button onClick={() => handleWriterAction(selectedWriter.id, 'APPROVED')} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">อนุมัติ</button></>}
+                                {selectedWriter.status === 'PENDING' && <><button onClick={() => handleWriterAction(selectedWriter.user_id, 'REJECTED')} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">ปฏิเสธ</button>
+                                    <button onClick={() => handleWriterAction(selectedWriter.user_id, 'APPROVED')} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">อนุมัติ</button></>}
                             </div>
                         </div>
                     </div>

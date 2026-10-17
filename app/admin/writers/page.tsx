@@ -30,7 +30,7 @@ export default function AdminWriters() {
 
     async function fetchRequests() {
         try {
-            const res = await fetch('/api/admin/writers');
+            const res = await fetch('/api/admin/writers?status=PENDING');
             if (res.ok) {
                 const data = await res.json();
                 setRequests(data);

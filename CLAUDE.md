@@ -34,7 +34,7 @@ npx tsx scripts/update_schema.ts   # รัน schema.sql (CREATE TABLE IF NOT E
 
 ## สถาปัตยกรรม
 
-**เข้าถึงข้อมูลด้วย raw SQL ผ่าน `mysql2` ไม่ใช่ Prisma** ทุก API route และ `lib/auth.ts` ใช้ pool จาก `lib/db.ts` ในรูปแบบ `pool.query<RowDataPacket[]>(sql, params)` และใช้ placeholder `?` ไฟล์ `lib/prisma.ts` มีอยู่แต่ไม่มีที่ไหน import ส่วน `prisma/schema.prisma` (introspect มาจาก DB) อธิบายตารางได้ครบที่สุด `schema.sql` เป็น SQL สำหรับสร้างตารางเริ่มต้น แต่ยังไม่มีตาราง `author_requests` ซึ่ง `app/api/author-request/route.ts` สร้างเองตอนรัน เมื่อแก้ schema ให้แก้ทั้ง `schema.sql` และ `schema.prisma` ให้ตรงกัน
+**เข้าถึงข้อมูลด้วย raw SQL ผ่าน `mysql2` ไม่ใช่ Prisma** ทุก API route และ `lib/auth.ts` ใช้ pool จาก `lib/db.ts` ในรูปแบบ `pool.query<RowDataPacket[]>(sql, params)` และใช้ placeholder `?` ไฟล์ `lib/prisma.ts` มีอยู่แต่ไม่มีที่ไหน import ส่วน `prisma/schema.prisma` (introspect มาจาก DB) อธิบายตารางได้ครบที่สุด `schema.sql` เป็น SQL สำหรับสร้างตารางเริ่มต้น ตาราง `author_requests` (มีใน `schema.prisma` แต่ไม่มีใน `schema.sql`) เลิกใช้แล้ว ข้อมูลย้ายไป `writer_profiles` ด้วย `scripts/migrate_author_requests.ts` เมื่อแก้ schema ให้แก้ทั้ง `schema.sql` และ `schema.prisma` ให้ตรงกัน
 
 - Primary key เป็น UUID แบบ `VARCHAR(36)` สร้างในโค้ดด้วย `v4()` จากแพ็กเกจ `uuid` ชื่อคอลัมน์เป็น snake_case
 - enum สถานะเนื้อหา: `DRAFT | PUBLISHED | ARCHIVED | BANNED` endpoint สาธารณะที่แสดงรายการจะใช้ `PUBLISHED` เป็นค่าเริ่มต้น
@@ -48,9 +48,13 @@ npx tsx scripts/update_schema.ts   # รัน schema.sql (CREATE TABLE IF NOT E
 
 **ส่วนนักเขียน**: `app/author/page.tsx` เป็นแดชบอร์ดไฟล์เดียวขนาดใหญ่แบบแท็บ (dashboard/novels/comics/earnings/wallet/profile) `/author/dashboard` แค่ redirect ไป `/author` หน้าแก้ไขบท/ตอน/หน้าการ์ตูนอยู่ใน route ย่อยใต้ `app/author/novel/[id]/...` และ `app/author/comic/[id]/...`
 
-**การสมัครเป็นนักเขียนมีสองระบบซ้อนกัน**: `author_requests` (`/become-author` → `/api/author-request` อนุมัติผ่าน `/api/admin/author-requests` ซึ่งหน้า `/admin` หลักใช้อยู่) และ `writer_profiles` (`/author/profile` → `/api/author/profile` อนุมัติผ่าน `/api/admin/writers`) ก่อนแก้ให้ดูก่อนว่าฟีเจอร์นั้นเกี่ยวกับระบบไหน
+**การสมัครเป็นนักเขียน** ใช้ตาราง `writer_profiles` ตารางเดียว (1 แถวต่อ user, key คือ `user_id`) ผ่าน `/api/author/profile` (GET/POST แบบ multipart) ทั้งหน้า `/become-author` และฟอร์มข้อมูลนักเขียนใน `/author` + `/author/profile`
+- ถ้า READER เป็นคนส่ง ถือเป็นการสมัคร: ต้องกรอกข้อมูลส่วนตัวครบ และระบบตั้ง `status = 'PENDING'` ให้ (ถ้าเคยถูกปฏิเสธก็ส่งใหม่ได้)
+- ถ้า AUTHOR/ADMIN เป็นคนส่ง แค่แก้ข้อมูล ไม่เปลี่ยนสถานะ
+- ฟิลด์ที่ผู้ใช้ตั้งเองได้ถูกจำกัดด้วย whitelist (`TEXT_FIELDS`/`FILE_FIELDS`) ห้ามสร้างชื่อคอลัมน์จาก input โดยตรง
+- แอดมินอนุมัติหรือปฏิเสธผ่าน `PATCH /api/admin/writers/[userId]` (`{ status, reason }`) ถ้าอนุมัติจะเปลี่ยน `users.role` เป็น `AUTHOR` ใน transaction เดียวกัน
 
-**อัปโหลดไฟล์**: `POST /api/upload` (multipart field `file`) เขียนไฟล์ลง `public/uploads/<uuid>.<ext>` แล้วคืน `{ url: "/uploads/..." }` ต้องล็อกอิน รับเฉพาะรูป JPG/PNG/WEBP/GIF ไม่เกิน 10MB (ตรวจชนิดจาก magic bytes และตั้งนามสกุลไฟล์ตามชนิดที่ตรวจได้) `public/uploads/` ไม่ถูก track ใน git
+**อัปโหลดไฟล์**: ใช้ `saveImageUpload(file, subdir)` ใน `lib/upload.ts` ทุกครั้งที่รับไฟล์รูป ฟังก์ชันนี้รับเฉพาะ JPG/PNG/WEBP/GIF ไม่เกิน 10MB ตรวจชนิดจาก magic bytes และตั้งนามสกุลตามชนิดที่ตรวจได้ `POST /api/upload` (multipart field `file`, ต้องล็อกอิน) คืน `{ url: "/uploads/..." }` เอกสารนักเขียนเก็บใน `public/uploads/writers/` และ `public/uploads/` ไม่ถูก track ใน git
 
 ## ส่วนที่ยังไม่เสร็จ
 
