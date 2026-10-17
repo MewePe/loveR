@@ -42,6 +42,7 @@ npx tsx scripts/add_coin_system.ts # migration ระบบเหรียญ/�
 npx tsx scripts/move_comic_pages_private.ts [--delete-originals] # ย้ายรูปหน้าการ์ตูนเก่าจาก public/uploads ไป storage/ (รันซ้ำได้)
 npx tsx scripts/add_banned_role.ts # เพิ่ม BANNED ใน users.role (รันซ้ำได้)
 npx tsx scripts/drop_author_requests.ts # สำรองข้อมูลไป storage/backups/ แล้วลบตาราง author_requests (รันซ้ำได้)
+npx tsx scripts/add_login_attempts.ts # ตาราง login_attempts สำหรับจำกัดการล็อกอินผิด (รันซ้ำได้)
 ```
 
 `reset_db.ts` และ `drop_old_db.ts` ลบข้อมูล
@@ -60,7 +61,14 @@ npx tsx scripts/drop_author_requests.ts # สำรองข้อมูลไ�
 - enum สถานะเนื้อหา: `DRAFT | PUBLISHED | ARCHIVED | BANNED` ดูกฎการมองเห็นในหัวข้อ "การมองเห็นเนื้อหา"
 - ลำดับชั้นเนื้อหา: `novels → chapters` (`chapter_order`), `comics → comic_episodes` (`episode_order`) `→ comic_pages` (`page_order`, `image_url`)
 
-**Auth** (`lib/auth.ts`): NextAuth v5 beta, Credentials provider กับ bcrypt, session แบบ JWT callback `jwt` จะอ่าน `role` จาก DB ใหม่ทุก request ทำให้เปลี่ยน role แล้วมีผลทันทีโดยไม่ต้องล็อกอินใหม่ ถ้าผู้ใช้ถูกลบหรือเป็น `BANNED` callback จะคืน `null` ซึ่งทำให้ session สิ้นสุด และ `authorize()` ก็ไม่ให้ผู้ใช้ BANNED ล็อกอิน แอดมินเปลี่ยน role ของตัวเองไม่ได้ type ของ `session.user.id` และ `session.user.role` อยู่ใน `types/next-auth.d.ts` หน้า sign-in คือ `/login`
+**Auth** (`lib/auth.ts`): NextAuth v5 beta, Credentials provider กับ bcrypt, session แบบ JWT callback `jwt` จะอ่าน `role` จาก DB ใหม่ทุก request ทำให้เปลี่ยน role แล้วมีผลทันทีโดยไม่ต้องล็อกอินใหม่ ถ้าผู้ใช้ถูกลบหรือเป็น `BANNED` callback จะคืน `null` ซึ่งทำให้ session สิ้นสุด และ `authorize()` ก็ไม่ให้ผู้ใช้ BANNED ล็อกอิน แอดมินเปลี่ยน role ของตัวเองไม่ได้
+
+**จำกัดการล็อกอินผิด** (`lib/loginThrottle.ts`):
+- ตาราง `login_attempts` เก็บเฉพาะครั้งที่ล็อกอินผิด (อีเมลที่ไม่มีอยู่จริงก็นับ เพื่อไม่ให้เดาได้ว่ามีบัญชีไหนบ้าง)
+- ผิดเกิน 5 ครั้งต่ออีเมล หรือ 20 ครั้งต่อ IP ใน 15 นาที → `authorize()` throw `TooManyAttempts` แม้รหัสถูกก็ตาม ฝั่ง client จะได้ `code: 'rate_limited'` จาก `signIn()`
+- ล็อกอินสำเร็จจะล้างตัวนับของอีเมลนั้น
+- IP อ่านจาก `x-forwarded-for` ถ้าไม่มีจะเป็น `'unknown'` ซึ่งจะ**ไม่**ใช้ limit ต่อ IP (ไม่งั้นจะล็อกทุกคนพร้อมกัน) ถ้า deploy หลัง reverse proxy ต้องให้ proxy ตั้ง header นี้
+- ถ้าตารางยังไม่มี (ยังไม่ได้รัน migration) จะ log error แล้วยังเช็กรหัสผ่านตามปกติ ไม่ล็อกทุกคนออก type ของ `session.user.id` และ `session.user.role` อยู่ใน `types/next-auth.d.ts` หน้า sign-in คือ `/login`
 
 **API routes** (`app/api/**/route.ts`) เขียนตามรูปแบบเดียวกัน: `const session = await auth()` แล้วเช็ก role หรือความเป็นเจ้าของ รัน SQL แล้วคืน `NextResponse.json(...)` กรณี error คืน `{ error }` พร้อม status route ฝั่งแอดมินใน `app/api/admin/` เช็ก `session?.user?.role !== 'ADMIN'` เองทุกไฟล์ (middleware ไม่ได้ทำหน้าที่ตรวจสิทธิ์) params ของ dynamic route มี type เป็น `{ params: Promise<{ id: string }> }` และต้อง await (Next 15)
 

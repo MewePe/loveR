@@ -92,6 +92,17 @@ model comics {
   @@index([category_id], map: "category_id")
 }
 
+model login_attempts {
+  id         BigInt   @id @default(autoincrement())
+  email      String   @db.VarChar(255)
+  ip         String   @db.VarChar(64)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([email, created_at], map: "idx_email_time")
+  @@index([ip, created_at], map: "idx_ip_time")
+  @@index([created_at], map: "idx_time")
+}
+
 model novels {
   id          String         @id @db.VarChar(36)
   title       String         @db.VarChar(255)
