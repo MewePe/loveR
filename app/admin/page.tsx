@@ -3,11 +3,12 @@ import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'next-auth/react';
-import { BarChart3, Users, BookOpen, AlertTriangle, Tag, Settings, LogOut, Search, Shield, Ban, CheckCircle, XCircle, Eye, Trash2, Plus, Save, FileText } from 'lucide-react';
+import { BarChart3, Users, BookOpen, AlertTriangle, Tag, Settings, LogOut, Search, Shield, Ban, CheckCircle, XCircle, Eye, Trash2, Plus, Save, FileText, Wallet } from 'lucide-react';
+import PaymentsPanel from '@/components/admin/PaymentsPanel';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import Image from 'next/image';
 
-type TabType = 'dashboard' | 'users' | 'content' | 'reports' | 'writers' | 'categories' | 'settings';
+type TabType = 'dashboard' | 'users' | 'content' | 'reports' | 'writers' | 'payments' | 'categories' | 'settings';
 
 const menuItems = [
     { name: 'Dashboard', key: 'dashboard' as TabType, icon: BarChart3 },
@@ -15,6 +16,7 @@ const menuItems = [
     { name: 'Content', key: 'content' as TabType, icon: BookOpen },
     { name: 'Reports', key: 'reports' as TabType, icon: AlertTriangle },
     { name: 'Writer Requests', key: 'writers' as TabType, icon: Users },
+    { name: 'การเงิน', key: 'payments' as TabType, icon: Wallet },
     { name: 'Categories', key: 'categories' as TabType, icon: Tag },
     { name: 'Settings', key: 'settings' as TabType, icon: Settings },
 ];
@@ -55,7 +57,7 @@ export default function AdminPanel() {
     const [newCategory, setNewCategory] = useState({ name: '', slug: '' });
 
     // Settings state
-    const [settings, setSettings] = useState({ site_name: '', site_description: '', contact_email: '', maintenance_mode: false });
+    const [settings, setSettings] = useState({ site_name: '', site_description: '', contact_email: '', maintenance_mode: false, author_share_percent: 70, payment_info: '' });
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
@@ -110,7 +112,7 @@ export default function AdminPanel() {
                 const settingsRes = await fetch('/api/admin/settings', { credentials: 'include' });
                 if (settingsRes.ok) {
                     const data = await settingsRes.json();
-                    setSettings({ site_name: data.site_name || '', site_description: data.site_description || '', contact_email: data.contact_email || '', maintenance_mode: !!data.maintenance_mode });
+                    setSettings({ site_name: data.site_name || '', site_description: data.site_description || '', contact_email: data.contact_email || '', maintenance_mode: !!data.maintenance_mode, author_share_percent: data.author_share_percent ?? 70, payment_info: data.payment_info || '' });
                 }
                 break;
         }
@@ -201,6 +203,7 @@ export default function AdminPanel() {
             case 'content': return renderContentSection();
             case 'reports': return renderReports();
             case 'writers': return renderWriters();
+            case 'payments': return <PaymentsPanel />;
             case 'categories': return renderCategories();
             case 'settings': return renderSettings();
             default: return null;
@@ -418,6 +421,8 @@ export default function AdminPanel() {
                         <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Site Name</label><input type="text" value={settings.site_name} onChange={(e) => setSettings({ ...settings, site_name: e.target.value })} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" /></div>
                         <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Site Description</label><textarea value={settings.site_description} onChange={(e) => setSettings({ ...settings, site_description: e.target.value })} rows={3} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" /></div>
                         <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contact Email</label><input type="email" value={settings.contact_email} onChange={(e) => setSettings({ ...settings, contact_email: e.target.value })} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" /></div>
+                        <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ส่วนแบ่งรายได้นักเขียน (%)</label><input type="number" min={0} max={100} step={1} value={settings.author_share_percent} onChange={(e) => setSettings({ ...settings, author_share_percent: Number(e.target.value) })} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" /><p className="text-xs text-gray-500 dark:text-gray-400 mt-1">ใช้กับการซื้อตอนครั้งถัดไป ไม่ย้อนหลัง</p></div>
+                        <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ข้อมูลการชำระเงิน (แสดงในหน้าเติมเหรียญ)</label><textarea value={settings.payment_info} onChange={(e) => setSettings({ ...settings, payment_info: e.target.value })} rows={3} placeholder={'เช่น ธนาคารกสิกรไทย 123-4-56789-0 ชื่อบัญชี ...\nPromptPay 08x-xxx-xxxx'} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" /></div>
                         <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg"><div><div className="font-medium text-gray-900 dark:text-white">Maintenance Mode</div><div className="text-sm text-gray-500 dark:text-gray-400">Disable site access for non-admins</div></div><label className="relative inline-flex items-center cursor-pointer"><input type="checkbox" checked={settings.maintenance_mode} onChange={(e) => setSettings({ ...settings, maintenance_mode: e.target.checked })} className="sr-only peer" /><div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div></label></div>
                         <div className="pt-4 border-t dark:border-gray-700"><button type="submit" disabled={saving} className="w-full flex justify-center items-center gap-2 bg-indigo-600 text-white py-2.5 rounded-lg hover:bg-indigo-700 disabled:opacity-50"><Save className="w-4 h-4" />{saving ? 'Saving...' : 'Save Settings'}</button></div>
                     </form>

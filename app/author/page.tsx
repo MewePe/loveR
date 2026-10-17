@@ -4,6 +4,8 @@ import { LayoutDashboard, BookOpen, DollarSign, Wallet, User, LogOut, Plus, Save
 import { signOut, useSession } from 'next-auth/react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import EarningsPanel from '@/components/author/EarningsPanel';
+import WalletPanel from '@/components/author/WalletPanel';
 
 type TabType = 'dashboard' | 'novels' | 'comics' | 'earnings' | 'wallet' | 'profile';
 
@@ -736,56 +738,11 @@ export default function AuthorDashboard() {
     }
 
     function renderEarnings() {
-        return (
-            <div className="space-y-6">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">รายได้ของฉัน</h1>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border dark:border-gray-700">
-                        <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium">รายได้เดือนนี้</h3>
-                        <p className="text-3xl font-bold text-green-600 mt-2">฿0.00</p>
-                    </div>
-                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border dark:border-gray-700">
-                        <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium">รายได้ทั้งหมด</h3>
-                        <p className="text-3xl font-bold text-indigo-600 mt-2">฿0.00</p>
-                    </div>
-                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border dark:border-gray-700">
-                        <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium">ถอนได้</h3>
-                        <p className="text-3xl font-bold text-orange-600 mt-2">฿0.00</p>
-                    </div>
-                </div>
-
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-6">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">ประวัติรายได้</h3>
-                    <div className="text-center py-12 text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed dark:border-gray-700">
-                        ยังไม่มีข้อมูลรายได้
-                    </div>
-                </div>
-            </div>
-        );
+        return <EarningsPanel />;
     }
 
     function renderWallet() {
-        return (
-            <div className="space-y-6">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">กระเป๋าเงินนักเขียน</h1>
-
-                <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-8 text-white">
-                    <p className="text-sm opacity-80">ยอดเงินคงเหลือ</p>
-                    <p className="text-4xl font-bold mt-2">฿0.00</p>
-                    <button className="mt-6 bg-white text-indigo-600 px-6 py-2 rounded-lg font-semibold hover:bg-gray-100 transition">
-                        ถอนเงิน
-                    </button>
-                </div>
-
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-6">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">ประวัติการถอนเงิน</h3>
-                    <div className="text-center py-12 text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed dark:border-gray-700">
-                        ยังไม่มีประวัติการถอนเงิน
-                    </div>
-                </div>
-            </div>
-        );
+        return <WalletPanel />;
     }
 
     function renderProfile() {

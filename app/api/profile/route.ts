@@ -12,7 +12,7 @@ export async function GET() {
 
         // Get user profile
         const [users] = await pool.query<RowDataPacket[]>(
-            'SELECT id, name, email, image, role, created_at FROM users WHERE email = ?',
+            'SELECT id, name, email, image, role, coins, created_at FROM users WHERE email = ?',
             [session.user.email]
         );
 

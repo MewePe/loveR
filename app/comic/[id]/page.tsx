@@ -4,6 +4,9 @@ import { notFound } from 'next/navigation';
 import { RowDataPacket } from 'mysql2';
 import BookmarkButton from '@/components/BookmarkButton';
 import ReportButton from '@/components/ReportButton';
+import PriceBadge from '@/components/PriceBadge';
+import { auth } from '@/lib/auth';
+import { getPurchasedIds } from '@/lib/coins';
 
 async function getComic(id: string) {
     const [rows] = await pool.query<RowDataPacket[]>(`
@@ -33,6 +36,9 @@ export default async function ComicDetail({ params }: { params: Promise<{ id: st
     if (!comic) notFound();
 
     const episodes = await getEpisodes(id);
+    const session = await auth();
+    const isOwner = !!session?.user && (session.user.role === 'ADMIN' || session.user.id === comic.author_id);
+    const purchased = await getPurchasedIds(session?.user?.id, 'episode', episodes.filter(e => e.price > 0).map(e => e.id));
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
@@ -111,8 +117,9 @@ export default async function ComicDetail({ params }: { params: Promise<{ id: st
                                         <p className="text-sm text-gray-400">{episode.page_count || 0} หน้า</p>
                                     </div>
                                 </div>
-                                <span className="text-sm text-gray-400">
-                                    {new Date(episode.created_at).toLocaleDateString('th-TH')}
+                                <span className="flex items-center gap-4 text-sm">
+                                    <PriceBadge price={episode.price} unlocked={isOwner || purchased.has(episode.id)} />
+                                    <span className="text-gray-400">{new Date(episode.created_at).toLocaleDateString('th-TH')}</span>
                                 </span>
                             </Link>
                         ))}

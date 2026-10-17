@@ -23,7 +23,8 @@ npx tsc --noEmit       # ตรวจ type
 npx tsx scripts/create_admin.ts <email> [password] [name]
 npx tsx scripts/set_admin.ts <email>
 npx tsx scripts/check_user.ts <email>
-npx tsx scripts/update_schema.ts   # รัน schema.sql (CREATE TABLE IF NOT EXISTS)
+npx tsx scripts/update_schema.ts   # รัน schema.sql (CREATE TABLE IF NOT EXISTS) — ไม่เพิ่มคอลัมน์ให้ตารางที่มีอยู่แล้ว
+npx tsx scripts/add_coin_system.ts # migration ระบบเหรียญ/ขายตอน (รันซ้ำได้)
 ```
 
 `reset_db.ts` และ `drop_old_db.ts` ลบข้อมูล
@@ -60,6 +61,16 @@ npx tsx scripts/update_schema.ts   # รัน schema.sql (CREATE TABLE IF NOT E
 
 **รายงานเนื้อหา**: `components/ReportButton.tsx` (อยู่ในหน้านิยาย/การ์ตูน) → `POST /api/reports` (NOVEL/COMIC เท่านั้น ห้ามรายงานซ้ำขณะที่ยัง PENDING) แอดมินจัดการที่ `/admin` แท็บ Reports
 
+**ระบบเหรียญและขายตอน** (logic หลักอยู่ใน `lib/coins.ts`):
+- 1 เหรียญ = 1 บาท ยอดเหรียญของผู้อ่านอยู่ที่ `users.coins` แต่ละบท/ตอนมี `price` (0 = ฟรี)
+- **เติมเหรียญ**: ผู้อ่านอัปโหลดสลิปที่ `/coins` → แถวใน `coin_topups` (PENDING) → แอดมินอนุมัติที่ `/admin` แท็บการเงิน แล้วเหรียญจึงเพิ่ม
+- **ซื้อตอน**: `purchaseItem()` ทำใน transaction ที่ lock แถว user (`FOR UPDATE`) แล้วบันทึกลง `purchases` พร้อม `author_earning` = ราคา × `system_settings.author_share_percent` ณ ตอนซื้อ (เปลี่ยนส่วนแบ่งแล้วไม่มีผลย้อนหลัง)
+- **ยอดของนักเขียนคำนวณสดเสมอ** ด้วย `getAuthorBalance()` = SUM(`purchases.author_earning`) − SUM(`withdrawals` ที่เป็น PENDING/APPROVED) ไม่มีคอลัมน์ยอดคงเหลือ ถ้าปฏิเสธการถอน เงินจะกลับเข้ายอดเอง
+- **ถอนเงิน**: ต้องมี `writer_profiles` ที่อนุมัติแล้วและกรอกบัญชีธนาคาร แอดมินโอนเงินแล้วแนบสลิปเพื่ออนุมัติ
+- **การเปลี่ยนสถานะเงินทุกแบบ** (อนุมัติเติมเหรียญ, อนุมัติ/ปฏิเสธการถอน) ต้องมีเงื่อนไข `WHERE status = 'PENDING'` เพื่อกันการทำซ้ำ
+- **ทุกที่ที่ส่งเนื้อหาบท/ตอนออกไป** ต้องผ่าน `canAccess()` ได้แก่ `app/read/[chapterId]`, `app/comic/[id]/read/[episodeId]`, `/api/chapters`, `/api/novels/[id]/chapters` (ส่ง `content` ให้เฉพาะเจ้าของ), `/api/comics/[id]/episodes/[episodeId]` และ `.../pages` ถ้าเพิ่ม endpoint ใหม่ที่คืนเนื้อหา ต้องเช็กเหมือนกัน
+- **ข้อจำกัด**: รูปหน้าการ์ตูนเป็นไฟล์ static ใน `public/uploads/` ใครมี URL ก็เปิดได้โดยตรง ระบบนี้แค่ไม่เปิดเผย URL ให้คนที่ยังไม่ได้ซื้อ
+
 ## ส่วนที่ยังไม่เสร็จ
 
-- แท็บรายได้และกระเป๋าเงินใน `app/author/page.tsx` เป็นแค่ UI ที่ฝังค่า (`฿0.00`) ตาราง `withdrawals` ยังไม่มี API
+- หน้า `/novel/[id]` และ `/comic/[id]` ยังแสดงเรื่องที่เป็นฉบับร่างได้ถ้ารู้ URL

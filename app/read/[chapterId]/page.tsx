@@ -3,11 +3,14 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { RowDataPacket } from 'mysql2';
 import ThemeToggle from '@/components/ThemeToggle';
+import Paywall from '@/components/Paywall';
+import { auth } from '@/lib/auth';
+import { canAccess } from '@/lib/coins';
 
 async function getChapter(id: string) {
     const [rows] = await pool.query<RowDataPacket[]>(`
-    SELECT c.*, n.title as novel_title 
-    FROM chapters c 
+    SELECT c.*, n.title as novel_title, n.author_id
+    FROM chapters c
     JOIN novels n ON c.novel_id = n.id 
     WHERE c.id = ?
   `, [id]);
@@ -33,6 +36,8 @@ export default async function ReadChapter({ params }: { params: Promise<{ chapte
     if (!chapter) notFound();
 
     const { prev, next } = await getAdjacentChapters(chapter.novel_id, chapter.chapter_order);
+    const session = await auth();
+    const unlocked = await canAccess(session?.user, 'chapter', chapter as { id: string; price: number; author_id: string });
 
     return (
         <div className="min-h-screen bg-[#f9f9f9] dark:bg-gray-900 text-gray-800 dark:text-gray-100 font-serif transition-colors duration-200">
@@ -50,10 +55,14 @@ export default async function ReadChapter({ params }: { params: Promise<{ chapte
 
             {/* Content */}
             <div className="max-w-3xl mx-auto px-6 py-12 md:py-20">
-                <div
-                    className="reading-content text-lg md:text-xl leading-relaxed text-gray-800 dark:text-gray-100"
-                    dangerouslySetInnerHTML={{ __html: chapter.content }}
-                />
+                {unlocked ? (
+                    <div
+                        className="reading-content text-lg md:text-xl leading-relaxed text-gray-800 dark:text-gray-100"
+                        dangerouslySetInnerHTML={{ __html: chapter.content }}
+                    />
+                ) : (
+                    <Paywall kind="chapter" itemId={chapter.id} price={chapter.price} loggedIn={!!session?.user} />
+                )}
             </div>
 
             {/* Bottom Navigation */}

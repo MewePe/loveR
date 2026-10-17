@@ -3,6 +3,7 @@ import pool from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
 import { v4 as uuidv4 } from 'uuid';
+import { parsePrice } from '@/lib/coins';
 
 // GET - Fetch all episodes for a comic
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -47,6 +48,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const body = await req.json();
     const { title, pages } = body;
+    const price = parsePrice(body.price);
+    if (price === null) {
+        return NextResponse.json({ error: 'ราคาต้องเป็นจำนวนเต็ม 0-10000 เหรียญ' }, { status: 400 });
+    }
     const episodeId = uuidv4();
 
     // Get next episode order
@@ -59,8 +64,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     try {
         // Create episode
         await pool.query(
-            'INSERT INTO comic_episodes (id, title, episode_order, comic_id) VALUES (?, ?, ?, ?)',
-            [episodeId, title, nextOrder, comicId]
+            'INSERT INTO comic_episodes (id, title, episode_order, comic_id, price) VALUES (?, ?, ?, ?, ?)',
+            [episodeId, title, nextOrder, comicId, price]
         );
 
         // Add pages if provided

@@ -3,15 +3,24 @@ import pool from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
 import { v4 as uuidv4 } from 'uuid';
+import { canAccess, parsePrice } from '@/lib/coins';
 
 // GET - Fetch single episode with pages
 export async function GET(req: Request, { params }: { params: Promise<{ id: string; episodeId: string }> }) {
-    const { episodeId } = await params;
+    const { id: comicId, episodeId } = await params;
 
     try {
-        const [episodes] = await pool.query<RowDataPacket[]>('SELECT * FROM comic_episodes WHERE id = ?', [episodeId]);
+        const [episodes] = await pool.query<RowDataPacket[]>(
+            'SELECT e.*, c.author_id FROM comic_episodes e JOIN comics c ON e.comic_id = c.id WHERE e.id = ? AND e.comic_id = ?',
+            [episodeId, comicId]
+        );
         if (!episodes[0]) {
             return NextResponse.json({ error: 'Episode not found' }, { status: 404 });
+        }
+
+        const session = await auth();
+        if (!(await canAccess(session?.user, 'episode', episodes[0] as { id: string; price: number; author_id: string }))) {
+            return NextResponse.json({ ...episodes[0], pages: [], locked: true });
         }
 
         const [pages] = await pool.query<RowDataPacket[]>(
@@ -47,13 +56,25 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
     }
 
+    const [owned] = await pool.query<RowDataPacket[]>('SELECT id FROM comic_episodes WHERE id = ? AND comic_id = ?', [episodeId, comicId]);
+    if (!owned[0]) {
+        return NextResponse.json({ error: 'Episode not found' }, { status: 404 });
+    }
+
     const body = await req.json();
     const { title, pages } = body;
+    const price = body.price === undefined ? undefined : parsePrice(body.price);
+    if (price === null) {
+        return NextResponse.json({ error: 'ราคาต้องเป็นจำนวนเต็ม 0-10000 เหรียญ' }, { status: 400 });
+    }
 
     try {
         // Update episode title
         if (title) {
             await pool.query('UPDATE comic_episodes SET title = ? WHERE id = ?', [title, episodeId]);
+        }
+        if (price !== undefined) {
+            await pool.query('UPDATE comic_episodes SET price = ? WHERE id = ?', [price, episodeId]);
         }
 
         // Add new pages if provided
@@ -104,7 +125,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
     try {
         // Pages will be deleted automatically due to CASCADE
-        await pool.query('DELETE FROM comic_episodes WHERE id = ?', [episodeId]);
+        await pool.query('DELETE FROM comic_episodes WHERE id = ? AND comic_id = ?', [episodeId, comicId]);
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Database error:', error);

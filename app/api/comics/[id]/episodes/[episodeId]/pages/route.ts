@@ -3,14 +3,27 @@ import pool from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
 import { v4 as uuidv4 } from 'uuid';
+import { canAccess } from '@/lib/coins';
 
 type Params = { params: Promise<{ id: string; episodeId: string }> };
 
-// GET - Fetch all pages for an episode
+// GET - Fetch all pages for an episode (empty + locked for paid episodes the viewer hasn't bought)
 export async function GET(_req: Request, { params }: Params) {
-    const { episodeId } = await params;
+    const { id: comicId, episodeId } = await params;
 
     try {
+        const [episodes] = await pool.query<RowDataPacket[]>(
+            'SELECT e.id, e.price, c.author_id FROM comic_episodes e JOIN comics c ON e.comic_id = c.id WHERE e.id = ? AND e.comic_id = ?',
+            [episodeId, comicId]
+        );
+        if (!episodes[0]) {
+            return NextResponse.json({ error: 'Episode not found' }, { status: 404 });
+        }
+        const session = await auth();
+        if (!(await canAccess(session?.user, 'episode', episodes[0] as { id: string; price: number; author_id: string }))) {
+            return NextResponse.json({ error: 'Episode is locked', locked: true }, { status: 402 });
+        }
+
         const [pages] = await pool.query<RowDataPacket[]>(
             'SELECT * FROM comic_pages WHERE episode_id = ? ORDER BY page_order ASC',
             [episodeId]
@@ -40,8 +53,9 @@ export async function POST(req: Request, { params }: Params) {
 
     // Verify comic ownership
     const [comics] = await pool.query<RowDataPacket[]>(
-        'SELECT id FROM comics WHERE id = ? AND author_id = ?',
-        [comicId, userId]
+        // Also verify the episode belongs to this comic, so authors can't edit other comics' episodes
+        'SELECT c.id FROM comics c JOIN comic_episodes e ON e.comic_id = c.id WHERE c.id = ? AND c.author_id = ? AND e.id = ?',
+        [comicId, userId, episodeId]
     );
     if (!comics[0]) return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
 
@@ -94,8 +108,9 @@ export async function PATCH(req: Request, { params }: Params) {
     const userId = users[0].id;
 
     const [comics] = await pool.query<RowDataPacket[]>(
-        'SELECT id FROM comics WHERE id = ? AND author_id = ?',
-        [comicId, userId]
+        // Also verify the episode belongs to this comic, so authors can't edit other comics' episodes
+        'SELECT c.id FROM comics c JOIN comic_episodes e ON e.comic_id = c.id WHERE c.id = ? AND c.author_id = ? AND e.id = ?',
+        [comicId, userId, episodeId]
     );
     if (!comics[0]) return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
 
@@ -138,8 +153,9 @@ export async function DELETE(req: Request, { params }: Params) {
     const userId = users[0].id;
 
     const [comics] = await pool.query<RowDataPacket[]>(
-        'SELECT id FROM comics WHERE id = ? AND author_id = ?',
-        [comicId, userId]
+        // Also verify the episode belongs to this comic, so authors can't edit other comics' episodes
+        'SELECT c.id FROM comics c JOIN comic_episodes e ON e.comic_id = c.id WHERE c.id = ? AND c.author_id = ? AND e.id = ?',
+        [comicId, userId, episodeId]
     );
     if (!comics[0]) return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
 

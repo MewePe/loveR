@@ -10,6 +10,7 @@ interface Episode {
     title: string;
     episode_order: number;
     views: number;
+    price: number;
     created_at: string;
     page_count?: number;
 }
@@ -31,7 +32,7 @@ export default function EpisodeManagement() {
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [editingEpisode, setEditingEpisode] = useState<Episode | null>(null);
-    const [formData, setFormData] = useState({ title: '' });
+    const [formData, setFormData] = useState({ title: '', price: 0 });
     const [saving, setSaving] = useState(false);
 
     // Image upload state
@@ -67,7 +68,7 @@ export default function EpisodeManagement() {
 
     function openCreateModal() {
         setEditingEpisode(null);
-        setFormData({ title: '' });
+        setFormData({ title: '', price: 0 });
         setPageFiles([]);
         setPagePreviews([]);
         setShowModal(true);
@@ -75,7 +76,7 @@ export default function EpisodeManagement() {
 
     function openEditModal(episode: Episode) {
         setEditingEpisode(episode);
-        setFormData({ title: episode.title });
+        setFormData({ title: episode.title, price: episode.price || 0 });
         setPageFiles([]);
         setPagePreviews([]);
         setShowModal(true);
@@ -119,7 +120,7 @@ export default function EpisodeManagement() {
             const res = await fetch(url, {
                 method: editingEpisode ? 'PATCH' : 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title: formData.title, pages: uploadedUrls }),
+                body: JSON.stringify({ title: formData.title, price: formData.price, pages: uploadedUrls }),
                 credentials: 'include',
             });
 
@@ -128,7 +129,8 @@ export default function EpisodeManagement() {
                 setShowModal(false);
                 fetchData();
             } else {
-                alert('เกิดข้อผิดพลาด');
+                const data = await res.json().catch(() => ({}));
+                alert(data.error || 'เกิดข้อผิดพลาด');
             }
         } catch (error) {
             console.error(error);
@@ -206,6 +208,9 @@ export default function EpisodeManagement() {
                                                 <ImageIcon className="w-4 h-4" />
                                                 {episode.page_count || 0} หน้า
                                             </span>
+                                            <span className={episode.price > 0 ? 'text-amber-600 dark:text-amber-400' : ''}>
+                                                {episode.price > 0 ? `🔒 ${episode.price} เหรียญ` : 'ฟรี'}
+                                            </span>
                                             <span>{new Date(episode.created_at).toLocaleDateString('th-TH')}</span>
                                         </div>
                                     </div>
@@ -261,6 +266,19 @@ export default function EpisodeManagement() {
                                     className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-pink-500 outline-none"
                                     placeholder="เช่น ตอนที่ 1: เริ่มต้นการผจญภัย"
                                 />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ราคา (เหรียญ)</label>
+                                <input
+                                    type="number"
+                                    min={0}
+                                    max={10000}
+                                    step={1}
+                                    value={formData.price}
+                                    onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                                    className="w-40 px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-pink-500 outline-none"
+                                />
+                                <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">0 = อ่านฟรี (1 เหรียญ = 1 บาท)</span>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">อัพโหลดรูปภาพ</label>

@@ -20,13 +20,25 @@ export async function POST(req: Request) {
     }
 
     try {
-        const { site_name, site_description, contact_email, maintenance_mode } = await req.json();
+        const body = await req.json();
+
+        if (body.author_share_percent !== undefined) {
+            const share = Number(body.author_share_percent);
+            if (!Number.isInteger(share) || share < 0 || share > 100) {
+                return NextResponse.json({ error: 'ส่วนแบ่งนักเขียนต้องเป็นจำนวนเต็ม 0-100' }, { status: 400 });
+            }
+        }
+
+        // Only update fields that were sent, so forms that show a subset of settings don't wipe the rest
+        const fields = ['site_name', 'site_description', 'contact_email', 'maintenance_mode', 'author_share_percent', 'payment_info']
+            .filter(key => body[key] !== undefined);
+        if (fields.length === 0) {
+            return NextResponse.json({ error: 'No settings provided' }, { status: 400 });
+        }
 
         await pool.query(
-            `UPDATE system_settings 
-             SET site_name = ?, site_description = ?, contact_email = ?, maintenance_mode = ? 
-             WHERE id = "1"`,
-            [site_name, site_description, contact_email, maintenance_mode]
+            `UPDATE system_settings SET ${fields.map(key => `${key} = ?`).join(', ')} WHERE id = "1"`,
+            fields.map(key => body[key])
         );
 
         return NextResponse.json({ message: 'Settings updated successfully' });
