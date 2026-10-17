@@ -104,6 +104,7 @@ export default function PageManagement() {
             for (const file of queuedFiles) {
                 const fd = new FormData();
                 fd.append('file', file);
+                fd.append('purpose', 'comic-page');
                 const res = await fetch('/api/upload', {
                     method: 'POST',
                     body: fd,
@@ -397,6 +398,8 @@ export default function PageManagement() {
                                                 src={page.image_url}
                                                 alt={`หน้า ${index + 1}`}
                                                 fill
+                                                // private pages need the viewer's cookies, which the image optimizer doesn't send
+                                                unoptimized
                                                 className="object-cover"
                                             />
                                         </div>

@@ -4,14 +4,22 @@ import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
 import { v4 as uuidv4 } from 'uuid';
 import { parsePrice } from '@/lib/coins';
+import { canViewContent } from '@/lib/visibility';
+import { validatePageUrls } from '@/lib/upload';
 
 // GET - Fetch all episodes for a comic
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
     const { id: comicId } = await params;
 
     try {
+        const session = await auth();
+        const [comics] = await pool.query<RowDataPacket[]>('SELECT status, author_id FROM comics WHERE id = ?', [comicId]);
+        if (!comics[0] || !canViewContent(session?.user, comics[0])) {
+            return NextResponse.json({ error: 'Comic not found' }, { status: 404 });
+        }
+
         const [episodes] = await pool.query<RowDataPacket[]>(
-            `SELECT e.*, 
+            `SELECT e.*,
              (SELECT COUNT(*) FROM comic_pages WHERE episode_id = e.id) as page_count 
              FROM comic_episodes e 
              WHERE e.comic_id = ? 
@@ -51,6 +59,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const price = parsePrice(body.price);
     if (price === null) {
         return NextResponse.json({ error: 'ราคาต้องเป็นจำนวนเต็ม 0-10000 เหรียญ' }, { status: 400 });
+    }
+    const pageError = pages === undefined ? null : validatePageUrls(pages, userId);
+    if (pageError) {
+        return NextResponse.json({ error: pageError }, { status: 400 });
     }
     const episodeId = uuidv4();
 

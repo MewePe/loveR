@@ -5,13 +5,13 @@ import { RowDataPacket } from 'mysql2';
 import ThemeToggle from '@/components/ThemeToggle';
 import Paywall from '@/components/Paywall';
 import { auth } from '@/lib/auth';
-import { canAccess } from '@/lib/coins';
+import { canAccess, AccessItem } from '@/lib/coins';
 
 // Content is loaded separately, only after the access check, so a locked chapter's text is never
 // fetched for the request (React dev mode also serializes awaited query results into the page).
 async function getChapter(id: string) {
     const [rows] = await pool.query<RowDataPacket[]>(`
-    SELECT c.id, c.title, c.chapter_order, c.novel_id, c.price, n.title as novel_title, n.author_id
+    SELECT c.id, c.title, c.chapter_order, c.novel_id, c.price, n.title as novel_title, n.author_id, n.status as content_status
     FROM chapters c
     JOIN novels n ON c.novel_id = n.id
     WHERE c.id = ?
@@ -42,9 +42,12 @@ export default async function ReadChapter({ params }: { params: Promise<{ chapte
 
     if (!chapter) notFound();
 
-    const { prev, next } = await getAdjacentChapters(chapter.novel_id, chapter.chapter_order);
     const session = await auth();
-    const unlocked = await canAccess(session?.user, 'chapter', chapter as { id: string; price: number; author_id: string });
+    const unlocked = await canAccess(session?.user, 'chapter', chapter as AccessItem);
+    // Only published novels show a paywall; unpublished ones simply don't exist for other users
+    if (!unlocked && chapter.content_status !== 'PUBLISHED') notFound();
+
+    const { prev, next } = await getAdjacentChapters(chapter.novel_id, chapter.chapter_order);
     const content = unlocked ? await getChapterContent(chapter.id) : null;
 
     return (

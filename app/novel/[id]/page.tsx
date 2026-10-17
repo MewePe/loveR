@@ -7,6 +7,7 @@ import ReportButton from '@/components/ReportButton';
 import PriceBadge from '@/components/PriceBadge';
 import { auth } from '@/lib/auth';
 import { getPurchasedIds } from '@/lib/coins';
+import { canViewContent, isOwnerOrAdmin } from '@/lib/visibility';
 
 async function getNovel(id: string) {
     const [rows] = await pool.query<RowDataPacket[]>(`
@@ -33,11 +34,11 @@ export default async function NovelDetail({ params }: { params: Promise<{ id: st
     const { id } = await params;
     const novel = await getNovel(id);
 
-    if (!novel) notFound();
+    const session = await auth();
+    if (!novel || !canViewContent(session?.user, novel)) notFound();
 
     const chapters = await getChapters(id);
-    const session = await auth();
-    const isOwner = !!session?.user && (session.user.role === 'ADMIN' || session.user.id === novel.author_id);
+    const isOwner = isOwnerOrAdmin(session?.user, novel.author_id);
     const purchased = await getPurchasedIds(session?.user?.id, 'chapter', chapters.filter(c => c.price > 0).map(c => c.id));
 
     return (

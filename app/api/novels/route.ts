@@ -8,7 +8,8 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const categoryId = searchParams.get('categoryId');
     const search = searchParams.get('search');
-    const status = searchParams.get('status') || 'PUBLISHED';
+    // Public listing is always PUBLISHED only; authors use /api/author/novels, admins /api/admin/content
+    const status = 'PUBLISHED';
 
     let query = `
     SELECT n.*, u.name as author_name, c.name as category_name 

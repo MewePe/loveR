@@ -3,7 +3,8 @@ import pool from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
 import { v4 as uuidv4 } from 'uuid';
-import { canAccess, parsePrice } from '@/lib/coins';
+import { canAccess, parsePrice, AccessItem } from '@/lib/coins';
+import { validatePageUrls } from '@/lib/upload';
 
 // GET - Fetch single episode with pages
 export async function GET(req: Request, { params }: { params: Promise<{ id: string; episodeId: string }> }) {
@@ -11,7 +12,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
     try {
         const [episodes] = await pool.query<RowDataPacket[]>(
-            'SELECT e.*, c.author_id FROM comic_episodes e JOIN comics c ON e.comic_id = c.id WHERE e.id = ? AND e.comic_id = ?',
+            'SELECT e.*, c.author_id, c.status AS content_status FROM comic_episodes e JOIN comics c ON e.comic_id = c.id WHERE e.id = ? AND e.comic_id = ?',
             [episodeId, comicId]
         );
         if (!episodes[0]) {
@@ -19,7 +20,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         }
 
         const session = await auth();
-        if (!(await canAccess(session?.user, 'episode', episodes[0] as { id: string; price: number; author_id: string }))) {
+        if (!(await canAccess(session?.user, 'episode', episodes[0] as AccessItem))) {
+            // Unpublished comics don't exist for other users; published paid episodes are just locked
+            if (episodes[0].content_status !== 'PUBLISHED') {
+                return NextResponse.json({ error: 'Episode not found' }, { status: 404 });
+            }
             return NextResponse.json({ ...episodes[0], pages: [], locked: true });
         }
 
@@ -66,6 +71,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const price = body.price === undefined ? undefined : parsePrice(body.price);
     if (price === null) {
         return NextResponse.json({ error: 'ราคาต้องเป็นจำนวนเต็ม 0-10000 เหรียญ' }, { status: 400 });
+    }
+    const pageError = pages === undefined ? null : validatePageUrls(pages, userId);
+    if (pageError) {
+        return NextResponse.json({ error: pageError }, { status: 400 });
     }
 
     try {

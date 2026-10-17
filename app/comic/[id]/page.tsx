@@ -7,6 +7,7 @@ import ReportButton from '@/components/ReportButton';
 import PriceBadge from '@/components/PriceBadge';
 import { auth } from '@/lib/auth';
 import { getPurchasedIds } from '@/lib/coins';
+import { canViewContent, isOwnerOrAdmin } from '@/lib/visibility';
 
 async function getComic(id: string) {
     const [rows] = await pool.query<RowDataPacket[]>(`
@@ -33,11 +34,11 @@ export default async function ComicDetail({ params }: { params: Promise<{ id: st
     const { id } = await params;
     const comic = await getComic(id);
 
-    if (!comic) notFound();
+    const session = await auth();
+    if (!comic || !canViewContent(session?.user, comic)) notFound();
 
     const episodes = await getEpisodes(id);
-    const session = await auth();
-    const isOwner = !!session?.user && (session.user.role === 'ADMIN' || session.user.id === comic.author_id);
+    const isOwner = isOwnerOrAdmin(session?.user, comic.author_id);
     const purchased = await getPurchasedIds(session?.user?.id, 'episode', episodes.filter(e => e.price > 0).map(e => e.id));
 
     return (

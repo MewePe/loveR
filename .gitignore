@@ -46,3 +46,6 @@ port_check.txt
 
 # user uploads (runtime data)
 /public/uploads/
+
+# private comic page images (served via /api/media after an access check)
+/storage/

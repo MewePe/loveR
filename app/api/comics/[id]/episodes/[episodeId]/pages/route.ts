@@ -3,7 +3,8 @@ import pool from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
 import { v4 as uuidv4 } from 'uuid';
-import { canAccess } from '@/lib/coins';
+import { canAccess, AccessItem } from '@/lib/coins';
+import { validatePageUrls } from '@/lib/upload';
 
 type Params = { params: Promise<{ id: string; episodeId: string }> };
 
@@ -13,14 +14,17 @@ export async function GET(_req: Request, { params }: Params) {
 
     try {
         const [episodes] = await pool.query<RowDataPacket[]>(
-            'SELECT e.id, e.price, c.author_id FROM comic_episodes e JOIN comics c ON e.comic_id = c.id WHERE e.id = ? AND e.comic_id = ?',
+            'SELECT e.id, e.price, c.author_id, c.status AS content_status FROM comic_episodes e JOIN comics c ON e.comic_id = c.id WHERE e.id = ? AND e.comic_id = ?',
             [episodeId, comicId]
         );
         if (!episodes[0]) {
             return NextResponse.json({ error: 'Episode not found' }, { status: 404 });
         }
         const session = await auth();
-        if (!(await canAccess(session?.user, 'episode', episodes[0] as { id: string; price: number; author_id: string }))) {
+        if (!(await canAccess(session?.user, 'episode', episodes[0] as AccessItem))) {
+            if (episodes[0].content_status !== 'PUBLISHED') {
+                return NextResponse.json({ error: 'Episode not found' }, { status: 404 });
+            }
             return NextResponse.json({ error: 'Episode is locked', locked: true }, { status: 402 });
         }
 
@@ -64,6 +68,10 @@ export async function POST(req: Request, { params }: Params) {
 
     if (!imageUrls || imageUrls.length === 0) {
         return NextResponse.json({ error: 'No images provided' }, { status: 400 });
+    }
+    const pageError = validatePageUrls(imageUrls, userId);
+    if (pageError) {
+        return NextResponse.json({ error: pageError }, { status: 400 });
     }
 
     try {

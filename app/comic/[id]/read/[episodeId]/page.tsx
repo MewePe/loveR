@@ -5,15 +5,15 @@ import { RowDataPacket } from 'mysql2';
 import ThemeToggle from '@/components/ThemeToggle';
 import Paywall from '@/components/Paywall';
 import { auth } from '@/lib/auth';
-import { canAccess } from '@/lib/coins';
+import { canAccess, AccessItem } from '@/lib/coins';
 
-async function getEpisode(episodeId: string) {
+async function getEpisode(comicId: string, episodeId: string) {
     const [rows] = await pool.query<RowDataPacket[]>(`
-    SELECT e.*, c.title as comic_title, c.id as comic_id, c.author_id
+    SELECT e.*, c.title as comic_title, c.id as comic_id, c.author_id, c.status as content_status
     FROM comic_episodes e
     JOIN comics c ON e.comic_id = c.id
-    WHERE e.id = ?
-  `, [episodeId]);
+    WHERE e.id = ? AND e.comic_id = ?
+  `, [episodeId, comicId]);
     return rows[0];
 }
 
@@ -47,12 +47,14 @@ async function getNextPrevEpisodes(comicId: string, currentOrder: number) {
 
 export default async function ReadEpisode({ params }: { params: Promise<{ id: string; episodeId: string }> }) {
     const { id: comicId, episodeId } = await params;
-    const episode = await getEpisode(episodeId);
+    const episode = await getEpisode(comicId, episodeId);
 
     if (!episode) notFound();
 
     const session = await auth();
-    const unlocked = await canAccess(session?.user, 'episode', episode as { id: string; price: number; author_id: string });
+    const unlocked = await canAccess(session?.user, 'episode', episode as AccessItem);
+    // Only published comics show a paywall; unpublished ones simply don't exist for other users
+    if (!unlocked && episode.content_status !== 'PUBLISHED') notFound();
     const pages = unlocked ? await getPages(episodeId) : [];
     const { prev, next } = await getNextPrevEpisodes(episode.comic_id, episode.episode_order);
 

@@ -1,27 +1,37 @@
 import pool from '@/lib/db';
 import { RowDataPacket, PoolConnection } from 'mysql2/promise';
 import { v4 as uuidv4 } from 'uuid';
+import { isOwnerOrAdmin, Viewer } from '@/lib/visibility';
 
 export type ItemKind = 'chapter' | 'episode';
 
 export const MIN_WITHDRAWAL = 100; // baht
 
-type Viewer = { id?: string | null; role?: string | null } | null | undefined;
+// A chapter/episode plus what access depends on. content_status is the parent novel/comic status.
+export type AccessItem = { id: string; price: number; author_id: string; content_status: string };
 
-// Price + owning author of a chapter/episode, or null if it doesn't exist
+// Price, owning author and parent status of a chapter/episode, or undefined if it doesn't exist
 export async function getItem(kind: ItemKind, id: string) {
     const sql = kind === 'chapter'
-        ? `SELECT c.id, c.title, c.price, n.author_id FROM chapters c JOIN novels n ON c.novel_id = n.id WHERE c.id = ?`
-        : `SELECT e.id, e.title, e.price, c.author_id FROM comic_episodes e JOIN comics c ON e.comic_id = c.id WHERE e.id = ?`;
+        ? `SELECT c.id, c.title, c.price, n.author_id, n.status AS content_status FROM chapters c JOIN novels n ON c.novel_id = n.id WHERE c.id = ?`
+        : `SELECT e.id, e.title, e.price, c.author_id, c.status AS content_status FROM comic_episodes e JOIN comics c ON e.comic_id = c.id WHERE e.id = ?`;
     const [rows] = await pool.query<RowDataPacket[]>(sql, [id]);
-    return rows[0] as { id: string; title: string; price: number; author_id: string } | undefined;
+    return rows[0] as (AccessItem & { title: string }) | undefined;
 }
 
-// Free items, the author, admins and buyers can read; everyone else sees the paywall
-export async function canAccess(viewer: Viewer, kind: ItemKind, item: { id: string; price: number; author_id: string }) {
-    if (!item.price || item.price <= 0) return true;
+// Who can read a chapter/episode:
+// - the author and admins: always
+// - PUBLISHED: free items for everyone, paid items for buyers
+// - ARCHIVED: only people who bought it before it was archived
+// - DRAFT / BANNED: nobody else
+export async function canAccess(viewer: Viewer, kind: ItemKind, item: AccessItem) {
+    if (isOwnerOrAdmin(viewer, item.author_id)) return true;
+    if (item.content_status === 'PUBLISHED') {
+        if (!item.price || item.price <= 0) return true;
+    } else if (item.content_status !== 'ARCHIVED' || !item.price || item.price <= 0) {
+        return false;
+    }
     if (!viewer?.id) return false;
-    if (viewer.role === 'ADMIN' || viewer.id === item.author_id) return true;
     const column = kind === 'chapter' ? 'chapter_id' : 'episode_id';
     const [rows] = await pool.query<RowDataPacket[]>(
         `SELECT 1 FROM purchases WHERE user_id = ? AND ${column} = ? LIMIT 1`,
@@ -68,7 +78,7 @@ export type PurchaseResult =
 // so concurrent requests can't double-spend or double-buy.
 export async function purchaseItem(userId: string, kind: ItemKind, itemId: string): Promise<PurchaseResult> {
     const item = await getItem(kind, itemId);
-    if (!item) return { ok: false, status: 404, error: 'ไม่พบตอนนี้' };
+    if (!item || item.content_status !== 'PUBLISHED') return { ok: false, status: 404, error: 'ไม่พบตอนนี้' };
     if (!item.price || item.price <= 0) return { ok: false, status: 400, error: 'ตอนนี้อ่านฟรี' };
     if (item.author_id === userId) return { ok: false, status: 400, error: 'คุณเป็นเจ้าของผลงานนี้' };
 

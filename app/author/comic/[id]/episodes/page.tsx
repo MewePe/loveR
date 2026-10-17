@@ -108,6 +108,7 @@ export default function EpisodeManagement() {
             for (const file of pageFiles) {
                 const formData = new FormData();
                 formData.append('file', file);
+                formData.append('purpose', 'comic-page');
                 const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData, credentials: 'include' });
                 if (uploadRes.ok) {
                     const data = await uploadRes.json();
