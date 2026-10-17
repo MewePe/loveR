@@ -115,3 +115,26 @@ npx tsx scripts/add_login_attempts.ts # ตาราง login_attempts สำห
 - **การเปลี่ยนสถานะเงินทุกแบบ** (อนุมัติเติมเหรียญ, อนุมัติ/ปฏิเสธการถอน) ต้องมีเงื่อนไข `WHERE status = 'PENDING'` เพื่อกันการทำซ้ำ
 - **ทุกที่ที่ส่งเนื้อหาบท/ตอนออกไป** ต้องผ่าน `canAccess()` ได้แก่ `app/read/[chapterId]`, `app/comic/[id]/read/[episodeId]`, `/api/chapters`, `/api/novels/[id]/chapters` (ส่ง `content` ให้เฉพาะเจ้าของ), `/api/comics/[id]/episodes/[episodeId]` และ `.../pages` ถ้าเพิ่ม endpoint ใหม่ที่คืนเนื้อหา ต้องเช็กเหมือนกัน
 - รูปหน้าการ์ตูนส่งผ่าน `/api/media/...` ซึ่งเช็กสิทธิ์ก่อนส่งไฟล์ (ดูหัวข้อ "อัปโหลดไฟล์")
+
+## ข้อควรระวังตอนพัฒนา
+
+- **หลัง `git checkout` หรือ `git pull` ให้รีสตาร์ท `npm run dev` หนึ่งครั้ง** ถ้า `next.config.ts` ถูกเปลี่ยนหลายครั้งติดกันเร็วๆ dev server อาจค้างใช้ config เก่า (เคยเกิดแล้ว: เทสต์ open proxy fail ทั้งที่โค้ดถูก แก้ได้ด้วยการ `touch next.config.ts`)
+- lint ยังมี error `no-explicit-any` ที่ค้างมาจากโค้ดเดิมบางไฟล์ (เช่น `app/admin/page.tsx`, `app/api/admin/users/route.ts`, `app/api/novels/[id]/route.ts`) ไม่ต้องแก้พร้อมงานอื่น แต่ห้ามเพิ่ม `any` ใหม่
+
+## งานที่เหลือ (อัปเดตล่าสุด 2026-10-17)
+
+**สถานะ branch**: `main` มีงานทั้งหมดจนถึงการ cleanup แล้ว (PR #1 merged) ส่วน `login-rate-limit` ที่มีระบบจำกัดการล็อกอินผิด push แล้วแต่**ยังไม่ได้เปิด PR**: https://github.com/MewePe/loveR/pull/new/login-rate-limit หลัง merge ต้องรัน `scripts/add_login_attempts.ts` บน DB อื่นที่ไม่ใช่เครื่องนี้ด้วย
+
+**ผู้ดูแลต้องทำเอง**:
+- กรอก "ข้อมูลการชำระเงิน" ที่ `/admin` → Settings ถ้ายังไม่กรอก ผู้อ่านจะเติมเหรียญไม่ได้
+- สำรอง `storage/` และ `public/uploads/` ซึ่งไม่อยู่ใน git
+- ถ้ามั่นใจแล้วว่ารูปการ์ตูนใน storage ใช้ได้: `npx tsx scripts/move_comic_pages_private.ts --delete-originals` (URL เก่าใน `public/uploads/` ยังเปิดได้จนกว่าจะรัน)
+
+**งานพัฒนา** (เรียงตามความสำคัญ):
+1. **dependency ที่มีช่องโหว่**: `npm audit` เตือนอยู่ (มีมาก่อนแล้ว) ควรไล่ดูทีละตัว อย่าใช้ `npm audit fix --force` เพราะอาจอัปเกรดแบบ breaking
+2. **เปลี่ยน `alert()` เป็น toast**: ยังมี `alert()` ทั่วโปรเจกต์ ควรทำให้เป็นรูปแบบเดียวกับ `components/ConfirmDialog.tsx` (Provider + hook)
+3. **ประวัติการอ่าน**: `app/api/profile/route.ts` ยังฝัง `novelsRead`/`comicsRead` เป็น 0
+4. **คอมเมนต์และให้คะแนน**: ยังไม่มี แต่ enum `reports.target_type` มี `COMMENT` เตรียมไว้แล้ว
+5. **แยก `app/author/page.tsx`** (~1,300 บรรทัด) ออกเป็น component ตามแท็บ แบบเดียวกับ `components/author/EarningsPanel.tsx`
+6. **object storage**: จำเป็นเฉพาะถ้าจะ deploy บน Vercel/serverless ตอนนี้ไฟล์ทั้งหมดเขียนลงดิสก์ (`lib/upload.ts` เป็นจุดเดียวที่ต้องแก้)
+7. **rate limit การสมัครสมาชิกและการเติมเหรียญ**: ตอนนี้จำกัดเฉพาะการล็อกอิน (`/api/coins/topup` จำกัดได้แค่ 3 รายการ PENDING ต่อคน)
