@@ -17,7 +17,19 @@ npm run lint           # eslint (next/core-web-vitals + typescript)
 npx tsc --noEmit       # ตรวจ type
 ```
 
-โปรเจกต์นี้ไม่มีชุดเทสต์
+### เทสต์ end-to-end
+
+```bash
+npm run test:e2e                                                       # ทั้งหมด (~2 นาที)
+node --test tests/e2e/coins.test.mjs                                   # ทีละไฟล์
+node --test --test-name-pattern="XSS" tests/e2e/security.test.mjs      # ทีละเทสต์
+```
+
+- **ต้องเปิด `npm run dev` และ MySQL ไว้ก่อน** เทสต์ยิง HTTP ไปที่ dev server จริง (`E2E_BASE_URL`, ค่าเริ่มต้น `http://localhost:3000`) และอ่าน/เขียน DB ตามที่ตั้งใน `.env`
+- เทสต์สร้างผู้ใช้ `e2e-*@test.local` และข้อมูลของตัวเอง แล้วลบทิ้งเองใน `after()` (ใช้ `cleanupUsers()` ใน `tests/e2e/helpers.mjs`) ไม่แตะข้อมูลจริง ยกเว้น `maintenance.test.mjs` ที่เปิด/ปิด maintenance mode ชั่วคราวแล้วคืนค่าเดิม (สคริปต์จึงรันแบบ `--test-concurrency=1`)
+- ไม่ยอมรันกับ server ที่ไม่ใช่ localhost ถ้าไม่ได้ตั้ง `E2E_ALLOW_REMOTE=1`
+- ใช้ `node:test` + `node:assert` ไม่มี dependency เพิ่ม เขียนเป็น `.mjs` ไฟล์ละ 1 หัวข้อ ภายในไฟล์ test จะรันตามลำดับ และใช้ state ร่วมกันผ่านตัวแปรระดับ module
+- **แก้ระบบเงิน การล็อกเนื้อหา สิทธิ์ หรือการอัปโหลดเมื่อไหร่ ให้รัน `npm run test:e2e` ทุกครั้ง**
 
 สคริปต์จัดการฐานข้อมูลใน `scripts/` รันด้วย `npx tsx` เช่น:
 
