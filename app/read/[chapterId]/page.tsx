@@ -67,10 +67,11 @@ export default async function ReadChapter({ params }: { params: Promise<{ chapte
             {/* Content */}
             <div className="max-w-3xl mx-auto px-6 py-12 md:py-20">
                 {unlocked ? (
-                    <div
-                        className="reading-content text-lg md:text-xl leading-relaxed text-gray-800 dark:text-gray-100"
-                        dangerouslySetInnerHTML={{ __html: content || '' }}
-                    />
+                    // Rendered as plain text (never as HTML): chapter content is author input, and HTML here
+                    // would let an author run scripts in readers' browsers
+                    <div className="reading-content whitespace-pre-line text-lg md:text-xl leading-relaxed text-gray-800 dark:text-gray-100">
+                        {content || ''}
+                    </div>
                 ) : (
                     <Paywall kind="chapter" itemId={chapter.id} price={chapter.price} loggedIn={!!session?.user} />
                 )}

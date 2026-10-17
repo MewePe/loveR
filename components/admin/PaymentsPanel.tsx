@@ -58,14 +58,14 @@ export default function PaymentsPanel() {
         setBusyId(w.id);
         try {
             const fd = new FormData();
-            fd.append('file', file);
-            const uploadRes = await fetch('/api/upload', { method: 'POST', body: fd, credentials: 'include' });
-            const uploaded = await uploadRes.json();
-            if (!uploadRes.ok) {
-                alert(uploaded.error || 'อัปโหลดสลิปไม่สำเร็จ');
-                return;
+            fd.append('status', 'APPROVED');
+            fd.append('slip', file);
+            const res = await fetch(`/api/admin/withdrawals/${w.id}`, { method: 'PATCH', body: fd, credentials: 'include' });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                alert(data.error || 'เกิดข้อผิดพลาด');
             }
-            await patch(`/api/admin/withdrawals/${w.id}`, { status: 'APPROVED', slip_image: uploaded.url });
+            fetchData();
         } finally {
             setBusyId(null);
         }

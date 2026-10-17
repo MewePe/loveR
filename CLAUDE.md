@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## โปรเจกต์
 
-LoveRead คือเว็บแอปภาษาไทยสำหรับอ่านนิยาย (แบ่งเป็นบท) และการ์ตูน (แบ่งเป็นตอนและหน้า) มี 3 บทบาท: READER, AUTHOR, ADMIN (เก็บใน `users.role`; ใน enum มี `VISITOR` ด้วย) ข้อความใน UI เป็นภาษาไทย
+LoveRead คือเว็บแอปภาษาไทยสำหรับอ่านนิยาย (แบ่งเป็นบท) และการ์ตูน (แบ่งเป็นตอนและหน้า) มี 3 บทบาท: READER, AUTHOR, ADMIN (เก็บใน `users.role`) นอกจากนี้มี `BANNED` สำหรับผู้ใช้ที่ถูกแบน และใน enum มี `VISITOR` ด้วย ข้อความใน UI เป็นภาษาไทย
+
+MariaDB ในเครื่องนี้**ไม่ได้เปิด strict mode** ถ้าเขียนค่า ENUM ที่ไม่มีอยู่จริง DB จะไม่ error แต่เก็บเป็น `''` เงียบๆ ดังนั้นต้อง whitelist ค่า enum ในโค้ดก่อนเขียนเสมอ
 
 ## คำสั่ง
 
@@ -26,6 +28,7 @@ npx tsx scripts/check_user.ts <email>
 npx tsx scripts/update_schema.ts   # รัน schema.sql (CREATE TABLE IF NOT EXISTS) — ไม่เพิ่มคอลัมน์ให้ตารางที่มีอยู่แล้ว
 npx tsx scripts/add_coin_system.ts # migration ระบบเหรียญ/ขายตอน (รันซ้ำได้)
 npx tsx scripts/move_comic_pages_private.ts [--delete-originals] # ย้ายรูปหน้าการ์ตูนเก่าจาก public/uploads ไป storage/ (รันซ้ำได้)
+npx tsx scripts/add_banned_role.ts # เพิ่ม BANNED ใน users.role (รันซ้ำได้)
 ```
 
 `reset_db.ts` และ `drop_old_db.ts` ลบข้อมูล
@@ -42,9 +45,11 @@ npx tsx scripts/move_comic_pages_private.ts [--delete-originals] # ย้าย�
 - enum สถานะเนื้อหา: `DRAFT | PUBLISHED | ARCHIVED | BANNED` ดูกฎการมองเห็นในหัวข้อ "การมองเห็นเนื้อหา"
 - ลำดับชั้นเนื้อหา: `novels → chapters` (`chapter_order`), `comics → comic_episodes` (`episode_order`) `→ comic_pages` (`page_order`, `image_url`)
 
-**Auth** (`lib/auth.ts`): NextAuth v5 beta, Credentials provider กับ bcrypt, session แบบ JWT callback `jwt` จะอ่าน `role` จาก DB ใหม่ทุก request ทำให้เปลี่ยน role แล้วมีผลทันทีโดยไม่ต้องล็อกอินใหม่ type ของ `session.user.id` และ `session.user.role` อยู่ใน `types/next-auth.d.ts` หน้า sign-in คือ `/login`
+**Auth** (`lib/auth.ts`): NextAuth v5 beta, Credentials provider กับ bcrypt, session แบบ JWT callback `jwt` จะอ่าน `role` จาก DB ใหม่ทุก request ทำให้เปลี่ยน role แล้วมีผลทันทีโดยไม่ต้องล็อกอินใหม่ ถ้าผู้ใช้ถูกลบหรือเป็น `BANNED` callback จะคืน `null` ซึ่งทำให้ session สิ้นสุด และ `authorize()` ก็ไม่ให้ผู้ใช้ BANNED ล็อกอิน แอดมินเปลี่ยน role ของตัวเองไม่ได้ type ของ `session.user.id` และ `session.user.role` อยู่ใน `types/next-auth.d.ts` หน้า sign-in คือ `/login`
 
 **API routes** (`app/api/**/route.ts`) เขียนตามรูปแบบเดียวกัน: `const session = await auth()` แล้วเช็ก role หรือความเป็นเจ้าของ รัน SQL แล้วคืน `NextResponse.json(...)` กรณี error คืน `{ error }` พร้อม status route ฝั่งแอดมินใน `app/api/admin/` เช็ก `session?.user?.role !== 'ADMIN'` เองทุกไฟล์ (middleware ไม่ได้ทำหน้าที่ตรวจสิทธิ์) params ของ dynamic route มี type เป็น `{ params: Promise<{ id: string }> }` และต้อง await (Next 15)
+
+**เนื้อหาบทนิยาย** เป็น plain text (ผู้เขียนพิมพ์ใน textarea) แสดงด้วย `whitespace-pre-line` **ห้ามแสดงด้วย `dangerouslySetInnerHTML`** เพราะผู้เขียนจะฝังสคริปต์ให้ไปรันในเบราว์เซอร์ผู้อ่านได้ (เช่น สั่งซื้อตอนด้วยเหรียญของผู้อ่าน)
 
 **Pages** เกือบทั้งหมดเป็น client component (`"use client"`) ที่ดึงข้อมูลจาก `/api/*` ส่วน `components/Providers.tsx` ครอบแอปด้วย `SessionProvider` + `next-themes` (dark mode แบบ `attribute="class"` ใช้คลาส `dark:` ของ Tailwind v4)
 
@@ -64,7 +69,9 @@ npx tsx scripts/move_comic_pages_private.ts [--delete-originals] # ย้าย�
 - นักเขียนตั้งสถานะได้แค่ `AUTHOR_SETTABLE_STATUSES` (DRAFT/PUBLISHED/ARCHIVED) และแก้สถานะเรื่องที่ถูก `BANNED` ไม่ได้ มีแต่แอดมินที่แบนหรือปลดแบนได้ผ่าน `/api/admin/content`
 
 **อัปโหลดไฟล์**: ใช้ฟังก์ชันใน `lib/upload.ts` ทุกครั้งที่รับไฟล์รูป ทั้งหมดรับเฉพาะ JPG/PNG/WEBP/GIF ไม่เกิน 10MB ตรวจชนิดจาก magic bytes และตั้งนามสกุลตามชนิดที่ตรวจได้ `POST /api/upload` (multipart field `file`, ต้องล็อกอิน) มี 2 แบบ:
-- **ทั่วไป** (ปก, avatar, สลิป ฯลฯ): `saveImageUpload()` เก็บไว้ที่ `public/uploads/` แล้วคืน `{ url: "/uploads/..." }` เอกสารนักเขียนเก็บใน `public/uploads/writers/`
+- **ทั่วไป** (ปก, avatar): `saveImageUpload()` เก็บไว้ที่ `public/uploads/` แล้วคืน `{ url: "/uploads/..." }` URL ปกและ avatar ที่รับจากผู้ใช้ต้องผ่าน `isPublicUploadUrl()` (ไฟล์ใน `/uploads/` เท่านั้น ห้าม URL ภายนอก)
+- **เอกสารส่วนตัว** (สำเนาบัตรประชาชน, สมุดบัญชี, สลิปเติมเหรียญ, สลิปโอนเงินถอน): `savePrivateDocument(file, category, ownerId)` เก็บไว้ที่ `storage/private/<category>/<ownerId>/` และส่งผ่าน `/api/media/private/...` ให้เฉพาะเจ้าของกับแอดมิน การอนุมัติถอนเงินส่งสลิปเป็น multipart ไปที่ `PATCH /api/admin/withdrawals/[id]` โดยตรง
+- `next.config.ts` ไม่มี `remotePatterns` ห้ามใส่ `'**'` เพราะจะทำให้ `/_next/image` กลายเป็น open proxy
 - **หน้าการ์ตูน** (`purpose=comic-page`, AUTHOR/ADMIN เท่านั้น): `savePrivateComicPage()` เก็บไว้ที่ `storage/comic-pages/<authorId>/` ซึ่งอยู่นอก `public/` แล้วคืน `/api/media/comic-pages/<authorId>/<file>` route นี้จะส่งไฟล์ให้เฉพาะคนที่ `canAccess()` ตอนที่ใช้รูปนั้นได้ หรือเป็นเจ้าของไฟล์
 - ทุกที่ที่รับ URL หน้าการ์ตูน ต้องผ่าน `validatePageUrls(urls, userId)` ซึ่งยอมรับเฉพาะไฟล์ private ของผู้เขียนคนนั้นเอง หรือไฟล์ `/uploads/...` แบบเก่า กันการเอา URL รูปของตอนที่ขายของคนอื่นมาใส่ตอนฟรีของตัวเอง
 - **รูปจาก `/api/media` ห้ามใช้ `next/image` แบบ optimize** (ให้ใส่ `unoptimized` หรือใช้ `<img>`) เพราะ optimizer ไม่ส่ง cookie ของผู้ใช้ไปด้วย

@@ -3,6 +3,7 @@ import pool from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
 import { v4 as uuidv4 } from 'uuid';
+import { isPublicUploadUrl } from '@/lib/upload';
 
 export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
@@ -63,6 +64,9 @@ export async function POST(req: Request) {
 
     const body = await req.json();
     const { title, description, coverImage, categoryId } = body;
+    if (coverImage && !isPublicUploadUrl(coverImage)) {
+        return NextResponse.json({ error: 'Invalid cover image' }, { status: 400 });
+    }
     const id = uuidv4();
 
     const finalCategoryId = categoryId && categoryId !== '' ? categoryId : null;

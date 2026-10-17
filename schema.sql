@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(255) UNIQUE,
     password VARCHAR(255), -- For credentials provider
     image VARCHAR(255),
-    role ENUM('VISITOR', 'READER', 'AUTHOR', 'ADMIN') DEFAULT 'READER',
+    role ENUM('VISITOR', 'READER', 'AUTHOR', 'ADMIN', 'BANNED') DEFAULT 'READER',
     coins INT NOT NULL DEFAULT 0, -- reader coin balance (1 coin = 1 baht)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP

@@ -33,10 +33,10 @@ export async function PATCH(
             return NextResponse.json({ error: 'Writer profile not found' }, { status: 404 });
         }
 
-        // If approved, update user role to AUTHOR
+        // If approved, promote readers to AUTHOR (never touch ADMIN or un-ban BANNED users)
         if (status === 'APPROVED') {
             await connection.query(
-                'UPDATE users SET role = "AUTHOR" WHERE id = ?',
+                'UPDATE users SET role = "AUTHOR" WHERE id = ? AND role = "READER"',
                 [id]
             );
         }

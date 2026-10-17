@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
-import { saveImageUpload } from '@/lib/upload';
+import { savePrivateDocument } from '@/lib/upload';
 
 // Columns a user may set on their own writer profile (status/rejection_reason are admin-only)
 const TEXT_FIELDS = [
@@ -55,7 +55,7 @@ export async function POST(req: Request) {
         for (const key of FILE_FIELDS) {
             const file = formData.get(key);
             if (file instanceof File && file.size > 0) {
-                const result = await saveImageUpload(file, 'writers');
+                const result = await savePrivateDocument(file, 'writer-docs', session.user.id);
                 if ('error' in result) {
                     return NextResponse.json({ error: result.error }, { status: result.status });
                 }

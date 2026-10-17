@@ -198,7 +198,7 @@ export default function WriterProfile() {
                             />
                             {previews.id_card ? (
                                 <div className="relative h-40 w-full mb-2">
-                                    <Image src={previews.id_card} alt="ID Card" fill className="object-contain rounded-lg" />
+                                    <Image src={previews.id_card} alt="ID Card" fill unoptimized className="object-contain rounded-lg" />
                                 </div>
                             ) : (
                                 <Upload className="w-10 h-10 text-gray-400 mx-auto mb-2" />
@@ -217,7 +217,7 @@ export default function WriterProfile() {
                             />
                             {previews.bank_book ? (
                                 <div className="relative h-40 w-full mb-2">
-                                    <Image src={previews.bank_book} alt="Bank Book" fill className="object-contain rounded-lg" />
+                                    <Image src={previews.bank_book} alt="Bank Book" fill unoptimized className="object-contain rounded-lg" />
                                 </div>
                             ) : (
                                 <Upload className="w-10 h-10 text-gray-400 mx-auto mb-2" />

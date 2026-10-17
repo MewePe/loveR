@@ -71,6 +71,35 @@ export async function readPrivateComicPage(userId: string, filename: string) {
     }
 }
 
+// Cover images / avatars must be files uploaded to this app (blocks external tracking/phishing image URLs)
+export function isPublicUploadUrl(url: unknown): url is string {
+    return typeof url === 'string' && /^\/uploads\/[\w.-]+$/.test(url);
+}
+
+// Personal documents (ID card / bank book scans, payment slips) are private to their owner and admins.
+// Served by /api/media/private/<category>/<ownerId>/<file>.
+export const PRIVATE_DOC_CATEGORIES = ['writer-docs', 'topup-slips', 'withdrawal-slips'] as const;
+export type PrivateDocCategory = typeof PRIVATE_DOC_CATEGORIES[number];
+const PRIVATE_DOC_DIR = path.join(process.cwd(), 'storage', 'private');
+
+export async function savePrivateDocument(file: File, category: PrivateDocCategory, ownerId: string): Promise<SaveResult> {
+    if (!USER_ID_RE.test(ownerId)) return { error: 'Invalid user', status: 400 };
+    const result = await validateAndWrite(file, path.join(PRIVATE_DOC_DIR, category, ownerId));
+    if ('error' in result) return result;
+    return { url: `/api/media/private/${category}/${ownerId}/${result.filename}` };
+}
+
+export async function readPrivateDocument(category: string, ownerId: string, filename: string) {
+    if (!(PRIVATE_DOC_CATEGORIES as readonly string[]).includes(category)) return null;
+    if (!USER_ID_RE.test(ownerId) || !PRIVATE_FILE_RE.test(filename)) return null;
+    try {
+        const data = await readFile(path.join(PRIVATE_DOC_DIR, category, ownerId, filename));
+        return { data, contentType: IMAGE_CONTENT_TYPES[filename.split('.').pop()!] };
+    } catch {
+        return null;
+    }
+}
+
 // Page image URLs an author may attach to their episode: their own private uploads, or legacy public /uploads files.
 // Blocks pointing a free episode at another author's private (paid) page.
 export function validatePageUrls(urls: unknown, userId: string): string | null {

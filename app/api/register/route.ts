@@ -11,6 +11,16 @@ export async function POST(req: Request) {
         if (!name || !email || !password) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
+        if (typeof name !== 'string' || name.trim().length === 0 || name.length > 100) {
+            return NextResponse.json({ error: 'ชื่อต้องมี 1-100 ตัวอักษร' }, { status: 400 });
+        }
+        if (typeof email !== 'string' || email.length > 255 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return NextResponse.json({ error: 'อีเมลไม่ถูกต้อง' }, { status: 400 });
+        }
+        // bcrypt only uses the first 72 bytes, so cap the length too
+        if (typeof password !== 'string' || password.length < 8 || password.length > 72) {
+            return NextResponse.json({ error: 'รหัสผ่านต้องมี 8-72 ตัวอักษร' }, { status: 400 });
+        }
 
         // Check if user exists
         const [existingUsers] = await pool.query<RowDataPacket[]>('SELECT id FROM users WHERE email = ?', [email]);

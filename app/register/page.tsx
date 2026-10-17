@@ -48,7 +48,7 @@ export default function Register() {
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
-                        <input name="password" type="password" required className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 dark:text-white dark:bg-gray-700 dark:border-gray-600" />
+                        <input name="password" type="password" required minLength={8} maxLength={72} placeholder="อย่างน้อย 8 ตัวอักษร" className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 dark:text-white dark:bg-gray-700 dark:border-gray-600" />
                     </div>
                     <button type="submit" className="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold hover:bg-indigo-700 transition">
                         Sign Up

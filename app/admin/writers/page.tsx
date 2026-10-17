@@ -153,7 +153,7 @@ export default function AdminWriters() {
                                     <label className="text-sm text-gray-500">ID Card Image</label>
                                     <div className="relative h-48 w-full mt-2 bg-gray-100 dark:bg-gray-900 rounded-lg">
                                         {selectedRequest.id_card_image ? (
-                                            <Image src={selectedRequest.id_card_image} alt="ID Card" fill className="object-contain" />
+                                            <Image src={selectedRequest.id_card_image} alt="ID Card" fill unoptimized className="object-contain" />
                                         ) : (
                                             <div className="flex items-center justify-center h-full text-gray-400">No Image</div>
                                         )}
@@ -163,7 +163,7 @@ export default function AdminWriters() {
                                     <label className="text-sm text-gray-500">Bank Book Image</label>
                                     <div className="relative h-48 w-full mt-2 bg-gray-100 dark:bg-gray-900 rounded-lg">
                                         {selectedRequest.bank_book_image ? (
-                                            <Image src={selectedRequest.bank_book_image} alt="Bank Book" fill className="object-contain" />
+                                            <Image src={selectedRequest.bank_book_image} alt="Bank Book" fill unoptimized className="object-contain" />
                                         ) : (
                                             <div className="flex items-center justify-center h-full text-gray-400">No Image</div>
                                         )}

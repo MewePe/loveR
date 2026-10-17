@@ -295,6 +295,7 @@ enum users_role {
   READER
   AUTHOR
   ADMIN
+  BANNED
 }
 
 enum withdrawals_status {

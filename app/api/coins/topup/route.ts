@@ -3,7 +3,7 @@ import pool from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
 import { v4 as uuidv4 } from 'uuid';
-import { saveImageUpload } from '@/lib/upload';
+import { savePrivateDocument } from '@/lib/upload';
 
 const MIN_TOPUP = 20;
 const MAX_TOPUP = 50000;
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'คุณมีรายการรอตรวจสอบหลายรายการแล้ว กรุณารอแอดมินตรวจสอบก่อน' }, { status: 400 });
         }
 
-        const saved = await saveImageUpload(slip, 'slips');
+        const saved = await savePrivateDocument(slip, 'topup-slips', session.user.id);
         if ('error' in saved) {
             return NextResponse.json({ error: saved.error }, { status: saved.status });
         }
