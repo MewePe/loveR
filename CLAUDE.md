@@ -50,7 +50,7 @@ npx tsx scripts/update_schema.ts   # รัน schema.sql (CREATE TABLE IF NOT E
 
 **การสมัครเป็นนักเขียนมีสองระบบซ้อนกัน**: `author_requests` (`/become-author` → `/api/author-request` อนุมัติผ่าน `/api/admin/author-requests` ซึ่งหน้า `/admin` หลักใช้อยู่) และ `writer_profiles` (`/author/profile` → `/api/author/profile` อนุมัติผ่าน `/api/admin/writers`) ก่อนแก้ให้ดูก่อนว่าฟีเจอร์นั้นเกี่ยวกับระบบไหน
 
-**อัปโหลดไฟล์**: `POST /api/upload` (multipart field `file`) เขียนไฟล์ลง `public/uploads/<uuid>.<ext>` แล้วคืน `{ url: "/uploads/..." }` ไม่มีการเช็กสิทธิ์หรือชนิดไฟล์ และต้องมีโฟลเดอร์นี้อยู่ก่อน
+**อัปโหลดไฟล์**: `POST /api/upload` (multipart field `file`) เขียนไฟล์ลง `public/uploads/<uuid>.<ext>` แล้วคืน `{ url: "/uploads/..." }` ต้องล็อกอิน รับเฉพาะรูป JPG/PNG/WEBP/GIF ไม่เกิน 10MB (ตรวจชนิดจาก magic bytes และตั้งนามสกุลไฟล์ตามชนิดที่ตรวจได้) `public/uploads/` ไม่ถูก track ใน git
 
 ## ส่วนที่ยังไม่เสร็จ
 
