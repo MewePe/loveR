@@ -67,7 +67,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     try {
         const updates: string[] = [];
-        const values: any[] = [];
+        const values: (string | null)[] = [];
 
         if (title !== undefined) { updates.push('title = ?'); values.push(title); }
         if (description !== undefined) { updates.push('description = ?'); values.push(description); }

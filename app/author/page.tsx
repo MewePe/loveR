@@ -3,12 +3,27 @@ import { useEffect, useState } from 'react';
 import { LayoutDashboard, BookOpen, DollarSign, Wallet, User, LogOut, Plus, Save, Upload, AlertCircle, Eye, Edit, Trash2, Send, FileText, MoreVertical, ImageIcon } from 'lucide-react';
 import { signOut, useSession } from 'next-auth/react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import EarningsPanel from '@/components/author/EarningsPanel';
 import WalletPanel from '@/components/author/WalletPanel';
 import { useConfirm } from '@/components/ConfirmDialog';
 
 type TabType = 'dashboard' | 'novels' | 'comics' | 'earnings' | 'wallet' | 'profile';
+
+// A novel or comic as returned by /api/author/novels and /api/author/comics
+interface Work {
+    id: string;
+    title: string;
+    description: string | null;
+    cover_image: string | null;
+    status: string;
+    category_id: string | null;
+    views: number;
+}
+
+// writer_profiles row from /api/author/profile (empty object if the user has none yet)
+type WriterProfile = Record<string, string | null | undefined>;
 
 const menuItems = [
     { name: 'ภาพรวมนักเขียน', key: 'dashboard' as TabType, icon: LayoutDashboard },
@@ -25,8 +40,8 @@ export default function AuthorDashboard() {
     const router = useRouter();
     const [activeTab, setActiveTab] = useState<TabType>('dashboard');
     const [stats, setStats] = useState({ novels: 0, comics: 0, views: 0 });
-    const [novels, setNovels] = useState<any[]>([]);
-    const [profile, setProfile] = useState<any>({});
+    const [novels, setNovels] = useState<Work[]>([]);
+    const [profile, setProfile] = useState<WriterProfile>({});
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [files, setFiles] = useState<{ id_card?: File, bank_book?: File }>({});
@@ -40,14 +55,14 @@ export default function AuthorDashboard() {
 
     // Edit novel state
     const [showEditModal, setShowEditModal] = useState(false);
-    const [editingNovel, setEditingNovel] = useState<any>(null);
+    const [editingNovel, setEditingNovel] = useState<Work | null>(null);
 
     // Comics state
-    const [comics, setComics] = useState<any[]>([]);
+    const [comics, setComics] = useState<Work[]>([]);
     const [showComicModal, setShowComicModal] = useState(false);
     const [newComic, setNewComic] = useState({ title: '', description: '', categoryId: '' });
     const [showEditComicModal, setShowEditComicModal] = useState(false);
-    const [editingComic, setEditingComic] = useState<any>(null);
+    const [editingComic, setEditingComic] = useState<Work | null>(null);
 
     // Categories state
     const [categories, setCategories] = useState<{ id: string; name: string; slug: string }[]>([]);
@@ -134,12 +149,12 @@ export default function AuthorDashboard() {
                         สมัครเป็นนักเขียนเพื่อเริ่มต้นสร้างผลงานของคุณ!
                     </p>
                     <div className="space-y-3">
-                        <a href="/become-author" className="block w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 transition">
+                        <Link href="/become-author" className="block w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 transition">
                             สมัครเป็นนักเขียน
-                        </a>
-                        <a href="/" className="block w-full border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 py-3 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                        </Link>
+                        <Link href="/" className="block w-full border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 py-3 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                             กลับหน้าแรก
-                        </a>
+                        </Link>
                     </div>
                 </div>
             </div>
@@ -148,7 +163,7 @@ export default function AuthorDashboard() {
 
     function handleProfileChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
         const { name, value } = e.target;
-        setProfile((prev: any) => ({ ...prev, [name]: value }));
+        setProfile((prev) => ({ ...prev, [name]: value }));
     }
 
     function handleFileChange(e: React.ChangeEvent<HTMLInputElement>, type: 'id_card' | 'bank_book') {
@@ -164,9 +179,9 @@ export default function AuthorDashboard() {
         setSaving(true);
 
         const formData = new FormData();
-        Object.keys(profile).forEach(key => {
-            if (profile[key] !== null && key !== 'id_card_image' && key !== 'bank_book_image') {
-                formData.append(key, profile[key]);
+        Object.entries(profile).forEach(([key, value]) => {
+            if (value != null && key !== 'id_card_image' && key !== 'bank_book_image') {
+                formData.append(key, value);
             }
         });
 
@@ -255,7 +270,7 @@ export default function AuthorDashboard() {
         }
     }
 
-    function openEditModal(novel: any) {
+    function openEditModal(novel: Work) {
         setEditingNovel(novel);
         setNewNovel({ title: novel.title, description: novel.description || '', categoryId: novel.category_id || '' });
         setCoverPreview(novel.cover_image || null);
@@ -394,7 +409,7 @@ export default function AuthorDashboard() {
         }
     }
 
-    function openEditComicModal(comic: any) {
+    function openEditComicModal(comic: Work) {
         setEditingComic(comic);
         setNewComic({ title: comic.title, description: comic.description || '', categoryId: comic.category_id || '' });
         setCoverPreview(comic.cover_image || null);
@@ -557,7 +572,7 @@ export default function AuthorDashboard() {
                     <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">ผลงานล่าสุด</h3>
                     {novels.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {novels.slice(0, 6).map((novel: any) => (
+                            {novels.slice(0, 6).map((novel) => (
                                 <div key={novel.id} className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border dark:border-gray-700">
                                     <h4 className="font-semibold text-gray-900 dark:text-white truncate">{novel.title}</h4>
                                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{novel.description}</p>
@@ -594,7 +609,7 @@ export default function AuthorDashboard() {
 
                 {novels.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {novels.map((novel: any) => (
+                        {novels.map((novel) => (
                             <div key={novel.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 overflow-hidden hover:shadow-md transition">
                                 <div className="h-32 bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center relative">
                                     {novel.cover_image ? (
@@ -684,7 +699,7 @@ export default function AuthorDashboard() {
 
                 {comics.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {comics.map((comic: any) => (
+                        {comics.map((comic) => (
                             <div key={comic.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 overflow-hidden hover:shadow-md transition">
                                 <div className="h-32 bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center relative">
                                     {comic.cover_image ? (

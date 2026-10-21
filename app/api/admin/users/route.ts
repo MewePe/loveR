@@ -14,7 +14,7 @@ export async function GET(req: Request) {
         const search = searchParams.get('search') || '';
 
         let query = 'SELECT id, name, email, role, created_at FROM users';
-        const params: any[] = [];
+        const params: string[] = [];
 
         if (search) {
             query += ' WHERE name LIKE ? OR email LIKE ?';

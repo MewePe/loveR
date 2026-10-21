@@ -10,7 +10,7 @@ export default function BecomeAuthorPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
-    const [existingRequest, setExistingRequest] = useState<any>(null);
+    const [existingRequest, setExistingRequest] = useState<{ status: string; rejection_reason: string | null; created_at: string; updated_at: string | null } | null>(null);
     const [reapplying, setReapplying] = useState(false);
     const [formData, setFormData] = useState({
         prefix: 'นาย',
@@ -130,12 +130,12 @@ export default function BecomeAuthorPage() {
 
     // Has existing request
     if (existingRequest && !reapplying) {
-        const statusColors: any = {
+        const statusColors: Record<string, string> = {
             PENDING: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300',
             APPROVED: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
             REJECTED: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
         };
-        const statusText: any = {
+        const statusText: Record<string, string> = {
             PENDING: 'รอการอนุมัติ',
             APPROVED: 'อนุมัติแล้ว',
             REJECTED: 'ไม่อนุมัติ'

@@ -19,7 +19,7 @@ export async function GET(req: Request) {
     LEFT JOIN categories cat ON c.category_id = cat.id
     WHERE c.status = ?
   `;
-    const params: any[] = [status];
+    const params: string[] = [status];
 
     if (categoryId) {
         query += ` AND c.category_id = ?`;

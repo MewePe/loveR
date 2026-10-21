@@ -31,9 +31,9 @@ export async function POST(req: Request) {
         await pool.query('INSERT INTO categories (id, name, slug) VALUES (?, ?, ?)', [id, name, slug]);
 
         return NextResponse.json({ message: 'Category created successfully', id });
-    } catch (error: any) {
+    } catch (error) {
         console.error('Failed to create category:', error);
-        if (error.code === 'ER_DUP_ENTRY') {
+        if ((error as { code?: string }).code === 'ER_DUP_ENTRY') {
             return NextResponse.json({ error: 'Category name or slug already exists' }, { status: 409 });
         }
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

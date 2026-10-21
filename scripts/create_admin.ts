@@ -1,4 +1,4 @@
-import mysql from 'mysql2/promise';
+import mysql, { RowDataPacket } from 'mysql2/promise';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import dotenv from 'dotenv';
@@ -25,7 +25,7 @@ async function createAdmin() {
 
     try {
         // Check if user exists
-        const [users] = await connection.query<any[]>('SELECT id FROM users WHERE email = ?', [email]);
+        const [users] = await connection.query<RowDataPacket[]>('SELECT id FROM users WHERE email = ?', [email]);
 
         if (users.length > 0) {
             console.log(`User ${email} already exists. Promoting to ADMIN...`);

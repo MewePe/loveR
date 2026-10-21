@@ -1,4 +1,4 @@
-import mysql from 'mysql2/promise';
+import mysql, { RowDataPacket } from 'mysql2/promise';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -17,7 +17,7 @@ async function checkUser() {
         database: process.env.DB_NAME || 'loveread_db',
     });
 
-    const [rows] = await connection.query<any[]>('SELECT id, name, email, role FROM users WHERE email = ?', [email]);
+    const [rows] = await connection.query<RowDataPacket[]>('SELECT id, name, email, role FROM users WHERE email = ?', [email]);
     console.log(rows);
     await connection.end();
 }

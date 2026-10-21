@@ -1,4 +1,4 @@
-import mysql from 'mysql2/promise';
+import mysql, { RowDataPacket } from 'mysql2/promise';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -19,7 +19,7 @@ async function reset() {
 
     console.log('Fetching all tables...');
     const [rows] = await connection.query('SHOW TABLES');
-    const tables = (rows as any[]).map((row: any) => Object.values(row)[0]);
+    const tables = (rows as RowDataPacket[]).map((row) => Object.values(row)[0]);
 
     console.log(`Found ${tables.length} tables. Dropping...`);
     // Drop tables in reverse order of creation or disable FK checks (already done)

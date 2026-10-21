@@ -1,4 +1,4 @@
-import mysql from 'mysql2/promise';
+import mysql, { RowDataPacket } from 'mysql2/promise';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -20,7 +20,7 @@ async function setAdmin() {
     });
 
     try {
-        const [users] = await connection.query<any[]>('SELECT id FROM users WHERE email = ?', [email]);
+        const [users] = await connection.query<RowDataPacket[]>('SELECT id FROM users WHERE email = ?', [email]);
 
         if (users.length === 0) {
             console.error(`User with email ${email} not found.`);

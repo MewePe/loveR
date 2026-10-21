@@ -60,7 +60,7 @@ export async function PATCH(req: Request) {
         }
 
         const updates: string[] = [];
-        const values: any[] = [];
+        const values: (string | null)[] = [];
 
         if (name !== undefined) {
             updates.push('name = ?');

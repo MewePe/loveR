@@ -322,12 +322,12 @@ export default function AdminPanel() {
     }
 
     function renderWriters() {
-        const statusColors: any = {
+        const statusColors: Record<string, string> = {
             PENDING: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
             APPROVED: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
             REJECTED: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
         };
-        const statusText: any = { PENDING: 'รอการอนุมัติ', APPROVED: 'อนุมัติแล้ว', REJECTED: 'ไม่อนุมัติ' };
+        const statusText: Record<string, string> = { PENDING: 'รอการอนุมัติ', APPROVED: 'อนุมัติแล้ว', REJECTED: 'ไม่อนุมัติ' };
 
         return (
             <div className="space-y-6">
