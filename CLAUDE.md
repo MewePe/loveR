@@ -132,6 +132,7 @@ npx tsx scripts/add_comments_ratings.ts # ตาราง comments และ rat
 ## ข้อควรระวังตอนพัฒนา
 
 - **หลัง `git checkout` หรือ `git pull` ให้รีสตาร์ท `npm run dev` หนึ่งครั้ง** ถ้า `next.config.ts` ถูกเปลี่ยนหลายครั้งติดกันเร็วๆ dev server อาจค้างใช้ config เก่า (เคยเกิดแล้ว: เทสต์ open proxy fail ทั้งที่โค้ดถูก แก้ได้ด้วยการ `touch next.config.ts`)
+- **ไฟล์ใน `public/uploads/` เคยถูก track ใน git** จนถึง commit `627e644` ซึ่ง `git rm` ออกไป ทำให้ไฟล์ในเครื่องหายด้วย (ปก/รูปเก่าขึ้น 404) การ checkout commit ก่อนหน้านั้นแล้วกลับมาก็ทำให้หายได้อีก กู้คืนได้ด้วย `git archive 627e644^ public/uploads | tar -x --skip-old-files` (ไฟล์ที่อัปโหลดหลังจากนั้นไม่อยู่ใน git ต้องสำรองเอง)
 - lint ยังมี error `no-explicit-any` ที่ค้างมาจากโค้ดเดิมบางไฟล์ (เช่น `app/admin/page.tsx`, `app/api/admin/users/route.ts`, `app/api/novels/[id]/route.ts`) ไม่ต้องแก้พร้อมงานอื่น แต่ห้ามเพิ่ม `any` ใหม่
 
 ## งานที่เหลือ (อัปเดตล่าสุด 2026-10-21)
