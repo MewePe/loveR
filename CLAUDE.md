@@ -89,7 +89,7 @@ npx tsx scripts/add_reading_history.ts # ตาราง reading_history (รั
 
 **แอดมิน**: ทุกอย่างอยู่ที่ `app/admin/page.tsx` ซึ่งเป็นแดชบอร์ดแบบแท็บ (แท็บการเงินแยกไว้ใน `components/admin/PaymentsPanel.tsx`) หน้าเก่าอย่าง `/admin/users`, `/admin/content` ฯลฯ แค่ redirect ไป `/admin`
 
-**ส่วนนักเขียน**: `app/author/page.tsx` เป็นแดชบอร์ดไฟล์เดียวขนาดใหญ่แบบแท็บ (dashboard/novels/comics/earnings/wallet/profile) แท็บรายได้และกระเป๋าเงินอยู่ใน `components/author/` ส่วน `/author/dashboard` และ `/author/profile` แค่ redirect ไป `/author` หน้าแก้ไขบท/ตอน/หน้าการ์ตูนอยู่ใน route ย่อยใต้ `app/author/novel/[id]/...` และ `app/author/comic/[id]/...`
+**ส่วนนักเขียน**: `app/author/page.tsx` มีแค่ sidebar, การสลับแท็บ และโหลดข้อมูลที่แท็บภาพรวม/นิยาย/การ์ตูนใช้ร่วมกัน แต่ละแท็บอยู่ใน `components/author/` (`DashboardPanel`, `WorksPanel` ใช้ร่วมกันทั้งนิยายและการ์ตูน, `EarningsPanel`, `WalletPanel`, `WriterProfilePanel` ซึ่งโหลดข้อมูลเอง) ฟอร์มสร้าง/แก้ไขนิยายและการ์ตูนคือ `WorkFormModal` ข้อความ/สี/route ที่ต่างกันระหว่างนิยายกับการ์ตูนอยู่ใน `WORK_KINDS` (`components/author/types.ts`) ส่วน `/author/dashboard` และ `/author/profile` แค่ redirect ไป `/author` หน้าแก้ไขบท/ตอน/หน้าการ์ตูนอยู่ใน route ย่อยใต้ `app/author/novel/[id]/...` และ `app/author/comic/[id]/...`
 
 **การสมัครเป็นนักเขียน** ใช้ตาราง `writer_profiles` ตารางเดียว (1 แถวต่อ user, key คือ `user_id`) ผ่าน `/api/author/profile` (GET/POST แบบ multipart) ทั้งหน้า `/become-author` และแท็บ "ข้อมูลนักเขียน" ใน `/author`
 - ถ้า READER เป็นคนส่ง ถือเป็นการสมัคร: ต้องกรอกข้อมูลส่วนตัวครบ และระบบตั้ง `status = 'PENDING'` ให้ (ถ้าเคยถูกปฏิเสธก็ส่งใหม่ได้)
@@ -159,5 +159,4 @@ npx tsx scripts/add_reading_history.ts # ตาราง reading_history (รั
 
 **งานพัฒนา** (เรียงตามความสำคัญ):
 1. **dependency ที่มีช่องโหว่** (อัปเกรด next เป็น 15.5.28 และรัน `npm audit fix` แล้วเมื่อ 2026-10-21): ที่เหลือแก้ได้ทางเดียวคือขึ้น Next 16 (breaking) ได้แก่ `postcss` ที่ next ฝังมาเอง (ใช้ตอน build CSS ของเราเอง ไม่ได้รับ input จากผู้ใช้) และ `braces`/`micromatch`/`fast-glob` ใต้ `eslint-config-next` (dev เท่านั้น) อย่าใช้ `npm audit fix --force` เพราะจะอัปเกรดแบบ breaking
-2. **แยก `app/author/page.tsx`** (~1,300 บรรทัด) ออกเป็น component ตามแท็บ แบบเดียวกับ `components/author/EarningsPanel.tsx`
-3. **object storage**: จำเป็นเฉพาะถ้าจะ deploy บน Vercel/serverless ตอนนี้ไฟล์ทั้งหมดเขียนลงดิสก์ (`lib/upload.ts` เป็นจุดเดียวที่ต้องแก้)
+2. **object storage**: จำเป็นเฉพาะถ้าจะ deploy บน Vercel/serverless ตอนนี้ไฟล์ทั้งหมดเขียนลงดิสก์ (`lib/upload.ts` เป็นจุดเดียวที่ต้องแก้)
