@@ -161,13 +161,31 @@ npx tsx scripts/add_notifications.ts # ตาราง notifications และ�
 
 ## งานที่เหลือ (อัปเดตล่าสุด 2026-10-21)
 
-**สถานะ branch**: ทุกอย่างอยู่บน `main` แล้ว (`login-rate-limit` merge แล้ว) DB อื่นที่ไม่ใช่เครื่องนี้ต้องรัน `scripts/add_login_attempts.ts`, `scripts/add_comments_ratings.ts`, `scripts/add_register_attempts.ts`, `scripts/add_reading_history.ts` และ `scripts/add_notifications.ts`
+**สถานะ branch**: ทุกอย่างอยู่บน `main` และ push ขึ้น `origin/main` แล้ว ไม่มีงานค้าง
+
+**อัปเดตเครื่องอื่น/DB อื่นให้ตรงกับ `main`** (ทุกสคริปต์รันซ้ำได้ ถ้าเคยรันแล้วจะข้ามเอง):
+1. `git pull` แล้ว `npm install` (2026-10-21 อัปเกรด `next` เป็น 15.5.28 และ dependency อื่นจาก `npm audit fix`)
+2. รัน migration ตามลำดับ:
+   ```bash
+   npx tsx scripts/add_login_attempts.ts      # จำกัดการล็อกอินผิด
+   npx tsx scripts/add_comments_ratings.ts    # คอมเมนต์และให้คะแนน
+   npx tsx scripts/add_register_attempts.ts   # จำกัดการสมัครสมาชิก
+   npx tsx scripts/add_reading_history.ts     # ประวัติการอ่าน
+   npx tsx scripts/add_notifications.ts       # แจ้งเตือน + comments.parent_id (ตอบกลับ)
+   ```
+   DB ที่เก่ากว่านั้นให้รันสคริปต์ก่อนหน้าตามลำดับใน README ก่อน ส่วน DB ใหม่ใช้ `schema.sql` ได้เลยไม่ต้องรันพวกนี้
+3. ลบ `.next` แล้วเปิด `npm run dev` ใหม่ จากนั้นรัน `npm run test:e2e` เพื่อเช็ก (ต้องผ่านทั้งหมด 83 เทสต์)
 
 **ผู้ดูแลต้องทำเอง**:
-- กรอก "ข้อมูลการชำระเงิน" ที่ `/admin` → Settings ถ้ายังไม่กรอก ผู้อ่านจะเติมเหรียญไม่ได้
-- สำรอง `storage/` และ `public/uploads/` ซึ่งไม่อยู่ใน git
+- กรอก "ข้อมูลการชำระเงิน" ที่ `/admin` → ตั้งค่า (เครื่องนี้ยังเป็นข้อความตัวอย่างอยู่) ถ้ายังไม่กรอก ผู้อ่านจะเติมเหรียญไม่ได้
+- สำรอง `storage/` และ `public/uploads/` ซึ่งไม่อยู่ใน git (ไฟล์สำรองเก่า `storage-2026-10-17.zip` ย้ายไปไว้ที่ `D:\loveR-backups\` แล้ว)
 - ถ้ามั่นใจแล้วว่ารูปการ์ตูนใน storage ใช้ได้: `npx tsx scripts/move_comic_pages_private.ts --delete-originals` (URL เก่าใน `public/uploads/` ยังเปิดได้จนกว่าจะรัน)
+- ตอน deploy: ให้ reverse proxy (เช่น nginx) ตั้ง `x-forwarded-for` ไม่งั้น limit ต่อ IP ของการล็อกอินและการสมัครจะไม่ทำงาน (IP เป็น `'unknown'`)
 
 **งานพัฒนา** (เรียงตามความสำคัญ):
-1. **dependency ที่มีช่องโหว่** (อัปเกรด next เป็น 15.5.28 และรัน `npm audit fix` แล้วเมื่อ 2026-10-21): ที่เหลือแก้ได้ทางเดียวคือขึ้น Next 16 (breaking) ได้แก่ `postcss` ที่ next ฝังมาเอง (ใช้ตอน build CSS ของเราเอง ไม่ได้รับ input จากผู้ใช้) และ `braces`/`micromatch`/`fast-glob` ใต้ `eslint-config-next` (dev เท่านั้น) อย่าใช้ `npm audit fix --force` เพราะจะอัปเกรดแบบ breaking
-2. **object storage**: จำเป็นเฉพาะถ้าจะ deploy บน Vercel/serverless ตอนนี้ไฟล์ทั้งหมดเขียนลงดิสก์ (`lib/upload.ts` เป็นจุดเดียวที่ต้องแก้)
+1. **หน้า `/admin` ใช้บนมือถือไม่ได้**: sidebar กว้างตายตัว (`fixed w-64` + `pl-64`) ให้ทำแบบเดียวกับ `/author` (ซ่อน sidebar ใต้ `md` แล้วใช้แถบแท็บเลื่อนแนวนอน)
+2. **`prompt()` ในแท็บการเงิน** (`components/admin/PaymentsPanel.tsx`): ตอนปฏิเสธการเติมเหรียญและการถอนเงิน ยังใช้กล่องของเบราว์เซอร์ถามเหตุผล (จัดการกดยกเลิกถูกแล้ว) ควรเปลี่ยนเป็น dialog แบบเดียวกับการปฏิเสธคำขอนักเขียนใน `app/admin/page.tsx`
+3. **ลบแจ้งเตือนเก่า**: ตาราง `notifications` ยังไม่มีการลบอัตโนมัติ ถ้าใช้งานนานควรลบที่เก่ากว่า ~90 วัน (เช่นใน `notify()` นานๆ ครั้ง หรือ cron)
+4. **ข้อความ error ภาษาอังกฤษใน API**: เช่น `Unauthorized`, `Content not found`, `Invalid ...` ปกติผู้ใช้ไม่เห็น แต่ถ้าแสดงใน toast ควรเป็นภาษาไทย (UI ทั้งหมดเป็นภาษาไทยแล้ว)
+5. **dependency ที่มีช่องโหว่** (อัปเกรด next เป็น 15.5.28 และรัน `npm audit fix` แล้วเมื่อ 2026-10-21): ที่เหลือแก้ได้ทางเดียวคือขึ้น Next 16 (breaking) ได้แก่ `postcss` ที่ next ฝังมาเอง (ใช้ตอน build CSS ของเราเอง ไม่ได้รับ input จากผู้ใช้) และ `braces`/`micromatch`/`fast-glob` ใต้ `eslint-config-next` (dev เท่านั้น) อย่าใช้ `npm audit fix --force` เพราะจะอัปเกรดแบบ breaking
+6. **object storage**: จำเป็นเฉพาะถ้าจะ deploy บน Vercel/serverless ตอนนี้ไฟล์ทั้งหมดเขียนลงดิสก์ (`lib/upload.ts` เป็นจุดเดียวที่ต้องแก้)
