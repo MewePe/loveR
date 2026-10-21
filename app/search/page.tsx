@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback } from 'react';
+import { Suspense, useEffect, useState, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Search, BookOpen, ImageIcon, X, ChevronDown } from 'lucide-react';
 import Image from 'next/image';
@@ -30,7 +30,7 @@ interface Category {
     name: string;
 }
 
-export default function SearchPage() {
+function SearchContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const [query, setQuery] = useState(searchParams.get('q') || '');
@@ -264,5 +264,14 @@ export default function SearchPage() {
                 )}
             </div>
         </div>
+    );
+}
+
+// useSearchParams() ต้องอยู่ใน Suspense ไม่งั้น next build จะ prerender หน้านี้ไม่ได้
+export default function SearchPage() {
+    return (
+        <Suspense>
+            <SearchContent />
+        </Suspense>
     );
 }

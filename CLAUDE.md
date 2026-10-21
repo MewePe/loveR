@@ -145,7 +145,7 @@ npx tsx scripts/add_comments_ratings.ts # ตาราง comments และ rat
 - ถ้ามั่นใจแล้วว่ารูปการ์ตูนใน storage ใช้ได้: `npx tsx scripts/move_comic_pages_private.ts --delete-originals` (URL เก่าใน `public/uploads/` ยังเปิดได้จนกว่าจะรัน)
 
 **งานพัฒนา** (เรียงตามความสำคัญ):
-1. **dependency ที่มีช่องโหว่**: `npm audit` เตือนอยู่ (มีมาก่อนแล้ว) ควรไล่ดูทีละตัว อย่าใช้ `npm audit fix --force` เพราะอาจอัปเกรดแบบ breaking
+1. **dependency ที่มีช่องโหว่** (อัปเกรด next เป็น 15.5.28 และรัน `npm audit fix` แล้วเมื่อ 2026-10-21): ที่เหลือแก้ได้ทางเดียวคือขึ้น Next 16 (breaking) ได้แก่ `postcss` ที่ next ฝังมาเอง (ใช้ตอน build CSS ของเราเอง ไม่ได้รับ input จากผู้ใช้) และ `braces`/`micromatch`/`fast-glob` ใต้ `eslint-config-next` (dev เท่านั้น) อย่าใช้ `npm audit fix --force` เพราะจะอัปเกรดแบบ breaking
 2. **เปลี่ยน `alert()` เป็น toast**: ยังมี `alert()` ทั่วโปรเจกต์ ควรทำให้เป็นรูปแบบเดียวกับ `components/ConfirmDialog.tsx` (Provider + hook)
 3. **ประวัติการอ่าน**: `app/api/profile/route.ts` ยังฝัง `novelsRead`/`comicsRead` เป็น 0
 4. **แยก `app/author/page.tsx`** (~1,300 บรรทัด) ออกเป็น component ตามแท็บ แบบเดียวกับ `components/author/EarningsPanel.tsx`

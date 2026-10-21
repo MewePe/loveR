@@ -49,3 +49,6 @@ port_check.txt
 
 # private comic page images (served via /api/media after an access check)
 /storage/
+
+# local backups of storage/ (contain private documents)
+/storage-*.zip
