@@ -3,7 +3,7 @@ import pool from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
 
-export async function GET(req: Request) {
+export async function GET() {
     const session = await auth();
     if (session?.user?.role !== 'ADMIN') {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

@@ -3,7 +3,7 @@ import pool from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
 
-export async function GET(req: Request) {
+export async function GET() {
     try {
         const [settings] = await pool.query<RowDataPacket[]>('SELECT * FROM system_settings WHERE id = "1"');
         return NextResponse.json(settings[0] || {});

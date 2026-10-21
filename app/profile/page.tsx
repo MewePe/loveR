@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { User, Mail, Calendar, BookOpen, ImageIcon, Save, Camera, Eye, Heart, Bookmark } from 'lucide-react';
+import { User, Mail, Calendar, BookOpen, ImageIcon, Save, Camera, Eye, Bookmark } from 'lucide-react';
 import Image from 'next/image';
 import { useToast } from '@/components/Toast';
 
@@ -23,7 +23,7 @@ interface Stats {
 
 export default function ProfilePage() {
     const toast = useToast();
-    const { data: session, status } = useSession();
+    const { status } = useSession();
     const router = useRouter();
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [stats, setStats] = useState<Stats>({ novelsRead: 0, comicsRead: 0, bookmarks: 0 });
@@ -40,7 +40,7 @@ export default function ProfilePage() {
         } else if (status === 'authenticated') {
             fetchProfile();
         }
-    }, [status]);
+    }, [status, router]);
 
     async function fetchProfile() {
         setLoading(true);

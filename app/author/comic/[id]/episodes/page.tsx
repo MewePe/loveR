@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Plus, Edit, Trash2, Save, X, GripVertical, Eye, Upload, ImageIcon } from 'lucide-react';
@@ -26,7 +26,7 @@ interface Comic {
 export default function EpisodeManagement() {
     const toast = useToast();
     const confirm = useConfirm();
-    const { data: session, status } = useSession();
+    const { status } = useSession();
     const router = useRouter();
     const params = useParams();
     const comicId = params.id as string;
@@ -43,15 +43,7 @@ export default function EpisodeManagement() {
     const [pageFiles, setPageFiles] = useState<File[]>([]);
     const [pagePreviews, setPagePreviews] = useState<string[]>([]);
 
-    useEffect(() => {
-        if (status === 'unauthenticated') {
-            router.push('/login');
-        } else if (status === 'authenticated') {
-            fetchData();
-        }
-    }, [status, comicId]);
-
-    async function fetchData() {
+    const fetchData = useCallback(async () => {
         setLoading(true);
         try {
             const comicRes = await fetch(`/api/comics/${comicId}`, { credentials: 'include' });
@@ -68,7 +60,15 @@ export default function EpisodeManagement() {
         } finally {
             setLoading(false);
         }
-    }
+    }, [comicId]);
+
+    useEffect(() => {
+        if (status === 'unauthenticated') {
+            router.push('/login');
+        } else if (status === 'authenticated') {
+            fetchData();
+        }
+    }, [status, router, fetchData]);
 
     function openCreateModal() {
         setEditingEpisode(null);

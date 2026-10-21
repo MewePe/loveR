@@ -1,27 +1,32 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { BarChart3, Users, BookOpen, AlertTriangle, Tag, Settings, LogOut, Search, Shield, Ban, CheckCircle, XCircle, Eye, Trash2, Plus, Save, FileText, Wallet } from 'lucide-react';
 import PaymentsPanel from '@/components/admin/PaymentsPanel';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import Image from 'next/image';
 import { useConfirm } from '@/components/ConfirmDialog';
 import { useToast } from '@/components/Toast';
 
 type TabType = 'dashboard' | 'users' | 'content' | 'reports' | 'writers' | 'payments' | 'categories' | 'settings';
 
 const menuItems = [
-    { name: 'Dashboard', key: 'dashboard' as TabType, icon: BarChart3 },
-    { name: 'Users', key: 'users' as TabType, icon: Users },
-    { name: 'Content', key: 'content' as TabType, icon: BookOpen },
-    { name: 'Reports', key: 'reports' as TabType, icon: AlertTriangle },
-    { name: 'Writer Requests', key: 'writers' as TabType, icon: Users },
+    { name: 'ภาพรวม', key: 'dashboard' as TabType, icon: BarChart3 },
+    { name: 'ผู้ใช้', key: 'users' as TabType, icon: Users },
+    { name: 'เนื้อหา', key: 'content' as TabType, icon: BookOpen },
+    { name: 'รายงาน', key: 'reports' as TabType, icon: AlertTriangle },
+    { name: 'คำขอเป็นนักเขียน', key: 'writers' as TabType, icon: Users },
     { name: 'การเงิน', key: 'payments' as TabType, icon: Wallet },
-    { name: 'Categories', key: 'categories' as TabType, icon: Tag },
-    { name: 'Settings', key: 'settings' as TabType, icon: Settings },
+    { name: 'หมวดหมู่', key: 'categories' as TabType, icon: Tag },
+    { name: 'ตั้งค่า', key: 'settings' as TabType, icon: Settings },
 ];
+
+// Thai labels for enum values shown in the tables (unknown values fall back to the raw value)
+const ROLE_LABEL: Record<string, string> = { ADMIN: 'แอดมิน', AUTHOR: 'นักเขียน', READER: 'ผู้อ่าน', BANNED: 'ถูกแบน', VISITOR: 'ผู้เยี่ยมชม' };
+const CONTENT_STATUS_LABEL: Record<string, string> = { PUBLISHED: 'เผยแพร่แล้ว', DRAFT: 'ฉบับร่าง', ARCHIVED: 'เก็บถาวร', BANNED: 'ถูกระงับ' };
+const REPORT_STATUS_LABEL: Record<string, string> = { PENDING: 'รอตรวจสอบ', RESOLVED: 'จัดการแล้ว', IGNORED: 'ไม่ดำเนินการ' };
+const REPORT_TARGET_LABEL: Record<string, string> = { NOVEL: 'นิยาย', COMIC: 'การ์ตูน', COMMENT: 'คอมเมนต์' };
 
 interface AdminStats { users: number; novels: number; chapters: number; comics: number; reports: number; }
 interface User { id: string; name: string; email: string; role: string; created_at: string; }
@@ -74,12 +79,6 @@ export default function AdminPanel() {
         }
     }, [status, session, router]);
 
-    useEffect(() => {
-        if (session?.user?.role === 'ADMIN') {
-            fetchTabData();
-        }
-    }, [activeTab, contentTab, userSearch]);
-
     async function fetchData() {
         setLoading(true);
         try {
@@ -90,7 +89,7 @@ export default function AdminPanel() {
         }
     }
 
-    async function fetchTabData() {
+    const fetchTabData = useCallback(async () => {
         switch (activeTab) {
             case 'users':
                 const usersRes = await fetch(`/api/admin/users?search=${userSearch}`, { credentials: 'include' });
@@ -120,21 +119,27 @@ export default function AdminPanel() {
                 }
                 break;
         }
-    }
+    }, [activeTab, contentTab, userSearch]);
+
+    useEffect(() => {
+        if (session?.user?.role === 'ADMIN') {
+            fetchTabData();
+        }
+    }, [session?.user?.role, fetchTabData]);
 
     // Action handlers
     async function updateUserRole(id: string, newRole: string) {
-        if (!(await confirm(`Change role to ${newRole}?`))) return;
+        if (!(await confirm(`เปลี่ยนสิทธิ์ผู้ใช้เป็น "${ROLE_LABEL[newRole] ?? newRole}"?`))) return;
         const res = await fetch(`/api/admin/users/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role: newRole }), credentials: 'include' });
         if (res.ok) fetchTabData();
-        else toast.error('Failed to update user');
+        else toast.error('เปลี่ยนสิทธิ์ผู้ใช้ไม่สำเร็จ');
     }
 
     async function updateContentStatus(id: string, newStatus: string) {
-        if (!(await confirm(`Change status to ${newStatus}?`))) return;
+        if (!(await confirm(`เปลี่ยนสถานะเป็น "${CONTENT_STATUS_LABEL[newStatus] ?? newStatus}"?`))) return;
         const res = await fetch(`/api/admin/content/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus, type: contentTab }), credentials: 'include' });
         if (res.ok) fetchTabData();
-        else toast.error('Failed to update');
+        else toast.error('เปลี่ยนสถานะไม่สำเร็จ');
     }
 
     async function updateReportStatus(id: string, newStatus: string) {
@@ -144,21 +149,21 @@ export default function AdminPanel() {
 
     // Delete a reported comment and resolve the report
     async function deleteReportedComment(report: Report) {
-        if (!(await confirm('Delete this comment?', { danger: true }))) return;
+        if (!(await confirm('ลบคอมเมนต์นี้?', { danger: true }))) return;
         const res = await fetch(`/api/comments/${report.target_id}`, { method: 'DELETE', credentials: 'include' });
         if (res.ok || res.status === 404) await updateReportStatus(report.id, 'RESOLVED');
-        else toast.error('Failed to delete comment');
+        else toast.error('ลบคอมเมนต์ไม่สำเร็จ');
     }
 
     async function addCategory(e: React.FormEvent) {
         e.preventDefault();
         const res = await fetch('/api/admin/categories', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newCategory), credentials: 'include' });
         if (res.ok) { setNewCategory({ name: '', slug: '' }); fetchTabData(); }
-        else toast.error('Failed to add category');
+        else toast.error('เพิ่มหมวดหมู่ไม่สำเร็จ (ชื่อหรือ slug อาจซ้ำ)');
     }
 
     async function deleteCategory(id: string) {
-        if (!(await confirm('Delete this category?', { danger: true }))) return;
+        if (!(await confirm('ลบหมวดหมู่นี้?', { danger: true }))) return;
         const res = await fetch(`/api/admin/categories/${id}`, { method: 'DELETE', credentials: 'include' });
         if (res.ok) fetchTabData();
     }
@@ -167,8 +172,8 @@ export default function AdminPanel() {
         e.preventDefault();
         setSaving(true);
         const res = await fetch('/api/admin/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(settings), credentials: 'include' });
-        if (res.ok) toast.success('Settings saved');
-        else toast.error('Failed to save');
+        if (res.ok) toast.success('บันทึกการตั้งค่าแล้ว');
+        else toast.error('บันทึกการตั้งค่าไม่สำเร็จ');
         setSaving(false);
     }
 
@@ -200,10 +205,10 @@ export default function AdminPanel() {
     if (status === 'unauthenticated' || (status === 'authenticated' && session?.user?.role?.toUpperCase() !== 'ADMIN')) return null;
 
     const chartData = [
-        { name: 'Users', count: stats?.users || 0 },
-        { name: 'Novels', count: stats?.novels || 0 },
-        { name: 'Comics', count: stats?.comics || 0 },
-        { name: 'Reports', count: stats?.reports || 0 },
+        { name: 'ผู้ใช้', count: stats?.users || 0 },
+        { name: 'นิยาย', count: stats?.novels || 0 },
+        { name: 'การ์ตูน', count: stats?.comics || 0 },
+        { name: 'รายงาน', count: stats?.reports || 0 },
     ];
 
     function renderContent() {
@@ -223,17 +228,17 @@ export default function AdminPanel() {
     function renderDashboard() {
         return (
             <div className="space-y-6">
-                <div><h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard Overview</h1><p className="text-gray-500 dark:text-gray-400">Welcome back, Admin.</p></div>
+                <div><h1 className="text-2xl font-bold text-gray-900 dark:text-white">ภาพรวมระบบ</h1><p className="text-gray-500 dark:text-gray-400">ยินดีต้อนรับกลับมา</p></div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border dark:border-gray-700"><div className="flex items-center justify-between mb-4"><h3 className="text-gray-500 dark:text-gray-400 font-medium">Total Users</h3><Users className="w-6 h-6 text-blue-500" /></div><p className="text-3xl font-bold text-gray-900 dark:text-white">{stats?.users}</p></div>
-                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border dark:border-gray-700"><div className="flex items-center justify-between mb-4"><h3 className="text-gray-500 dark:text-gray-400 font-medium">Total Novels</h3><BookOpen className="w-6 h-6 text-indigo-500" /></div><p className="text-3xl font-bold text-gray-900 dark:text-white">{stats?.novels}</p></div>
-                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border dark:border-gray-700"><div className="flex items-center justify-between mb-4"><h3 className="text-gray-500 dark:text-gray-400 font-medium">Total Comics</h3><FileText className="w-6 h-6 text-pink-500" /></div><p className="text-3xl font-bold text-gray-900 dark:text-white">{stats?.comics}</p></div>
-                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border dark:border-gray-700"><div className="flex items-center justify-between mb-4"><h3 className="text-gray-500 dark:text-gray-400 font-medium">Pending Reports</h3><AlertTriangle className="w-6 h-6 text-red-500" /></div><p className="text-3xl font-bold text-gray-900 dark:text-white">{stats?.reports}</p></div>
+                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border dark:border-gray-700"><div className="flex items-center justify-between mb-4"><h3 className="text-gray-500 dark:text-gray-400 font-medium">ผู้ใช้ทั้งหมด</h3><Users className="w-6 h-6 text-blue-500" /></div><p className="text-3xl font-bold text-gray-900 dark:text-white">{stats?.users}</p></div>
+                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border dark:border-gray-700"><div className="flex items-center justify-between mb-4"><h3 className="text-gray-500 dark:text-gray-400 font-medium">นิยายทั้งหมด</h3><BookOpen className="w-6 h-6 text-indigo-500" /></div><p className="text-3xl font-bold text-gray-900 dark:text-white">{stats?.novels}</p></div>
+                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border dark:border-gray-700"><div className="flex items-center justify-between mb-4"><h3 className="text-gray-500 dark:text-gray-400 font-medium">การ์ตูนทั้งหมด</h3><FileText className="w-6 h-6 text-pink-500" /></div><p className="text-3xl font-bold text-gray-900 dark:text-white">{stats?.comics}</p></div>
+                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border dark:border-gray-700"><div className="flex items-center justify-between mb-4"><h3 className="text-gray-500 dark:text-gray-400 font-medium">รายงานที่รอตรวจสอบ</h3><AlertTriangle className="w-6 h-6 text-red-500" /></div><p className="text-3xl font-bold text-gray-900 dark:text-white">{stats?.reports}</p></div>
                 </div>
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border dark:border-gray-700 h-80">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Platform Statistics</h3>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">สถิติของระบบ</h3>
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={chartData}><CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} /><XAxis dataKey="name" stroke="#6B7280" /><YAxis stroke="#6B7280" /><Tooltip contentStyle={{ backgroundColor: '#1F2937', borderColor: '#374151', color: '#F3F4F6' }} /><Legend /><Bar dataKey="count" fill="#6366F1" radius={[4, 4, 0, 0]} /></BarChart>
+                        <BarChart data={chartData}><CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} /><XAxis dataKey="name" stroke="#6B7280" /><YAxis stroke="#6B7280" /><Tooltip contentStyle={{ backgroundColor: '#1F2937', borderColor: '#374151', color: '#F3F4F6' }} /><Legend /><Bar dataKey="count" name="จำนวน" fill="#6366F1" radius={[4, 4, 0, 0]} /></BarChart>
                     </ResponsiveContainer>
                 </div>
             </div>
@@ -243,20 +248,20 @@ export default function AdminPanel() {
     function renderUsers() {
         return (
             <div className="space-y-6">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">User Management</h1>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">จัดการผู้ใช้</h1>
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 overflow-hidden">
-                    <div className="p-4 border-b dark:border-gray-700"><div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" /><input type="text" placeholder="Search users..." className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" value={userSearch} onChange={(e) => setUserSearch(e.target.value)} /></div></div>
+                    <div className="p-4 border-b dark:border-gray-700"><div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" /><input type="text" placeholder="ค้นหาชื่อหรืออีเมล..." className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" value={userSearch} onChange={(e) => setUserSearch(e.target.value)} /></div></div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left">
-                            <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 text-xs uppercase"><tr><th className="px-6 py-3">User</th><th className="px-6 py-3">Role</th><th className="px-6 py-3">Joined</th><th className="px-6 py-3 text-right">Actions</th></tr></thead>
+                            <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 text-xs uppercase"><tr><th className="px-6 py-3">ผู้ใช้</th><th className="px-6 py-3">สิทธิ์</th><th className="px-6 py-3">สมัครเมื่อ</th><th className="px-6 py-3 text-right">จัดการ</th></tr></thead>
                             <tbody className="divide-y dark:divide-gray-700">
                                 {users.map((user) => (
                                     <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                         <td className="px-6 py-4"><div className="font-medium text-gray-900 dark:text-white">{user.name}</div><div className="text-sm text-gray-500 dark:text-gray-400">{user.email}</div></td>
-                                        <td className="px-6 py-4"><span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.role === 'ADMIN' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' : user.role === 'BANNED' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'}`}>{user.role}</span></td>
-                                        <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{new Date(user.created_at).toLocaleDateString()}</td>
+                                        <td className="px-6 py-4"><span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.role === 'ADMIN' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' : user.role === 'BANNED' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'}`}>{ROLE_LABEL[user.role] ?? user.role}</span></td>
+                                        <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{new Date(user.created_at).toLocaleDateString('th-TH')}</td>
                                         <td className="px-6 py-4 text-right space-x-2">
-                                            {user.role !== 'ADMIN' && (<><button onClick={() => updateUserRole(user.id, 'ADMIN')} className="text-gray-400 hover:text-purple-600" title="Promote to Admin"><Shield className="w-4 h-4" /></button>{user.role === 'BANNED' ? <button onClick={() => updateUserRole(user.id, 'READER')} className="text-gray-400 hover:text-green-600" title="Unban"><CheckCircle className="w-4 h-4" /></button> : <button onClick={() => updateUserRole(user.id, 'BANNED')} className="text-gray-400 hover:text-red-600" title="Ban"><Ban className="w-4 h-4" /></button>}</>)}
+                                            {user.role !== 'ADMIN' && (<><button onClick={() => updateUserRole(user.id, 'ADMIN')} className="text-gray-400 hover:text-purple-600" title="ตั้งเป็นแอดมิน"><Shield className="w-4 h-4" /></button>{user.role === 'BANNED' ? <button onClick={() => updateUserRole(user.id, 'READER')} className="text-gray-400 hover:text-green-600" title="ปลดแบน"><CheckCircle className="w-4 h-4" /></button> : <button onClick={() => updateUserRole(user.id, 'BANNED')} className="text-gray-400 hover:text-red-600" title="แบน"><Ban className="w-4 h-4" /></button>}</>)}
                                         </td>
                                     </tr>
                                 ))}
@@ -271,25 +276,25 @@ export default function AdminPanel() {
     function renderContentSection() {
         return (
             <div className="space-y-6">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Content Management</h1>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">จัดการเนื้อหา</h1>
                 <div className="flex space-x-4">
-                    <button onClick={() => setContentTab('novels')} className={`px-4 py-2 rounded-lg font-medium transition ${contentTab === 'novels' ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300'}`}><BookOpen className="w-4 h-4 inline mr-2" />Novels</button>
-                    <button onClick={() => setContentTab('comics')} className={`px-4 py-2 rounded-lg font-medium transition ${contentTab === 'comics' ? 'bg-pink-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300'}`}><FileText className="w-4 h-4 inline mr-2" />Comics</button>
+                    <button onClick={() => setContentTab('novels')} className={`px-4 py-2 rounded-lg font-medium transition ${contentTab === 'novels' ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300'}`}><BookOpen className="w-4 h-4 inline mr-2" />นิยาย</button>
+                    <button onClick={() => setContentTab('comics')} className={`px-4 py-2 rounded-lg font-medium transition ${contentTab === 'comics' ? 'bg-pink-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300'}`}><FileText className="w-4 h-4 inline mr-2" />การ์ตูน</button>
                 </div>
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 overflow-hidden">
                     <table className="w-full text-left">
-                        <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 text-xs uppercase"><tr><th className="px-6 py-3">Title</th><th className="px-6 py-3">Author</th><th className="px-6 py-3">Status</th><th className="px-6 py-3">Created</th><th className="px-6 py-3 text-right">Actions</th></tr></thead>
+                        <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 text-xs uppercase"><tr><th className="px-6 py-3">ชื่อเรื่อง</th><th className="px-6 py-3">ผู้เขียน</th><th className="px-6 py-3">สถานะ</th><th className="px-6 py-3">สร้างเมื่อ</th><th className="px-6 py-3 text-right">จัดการ</th></tr></thead>
                         <tbody className="divide-y dark:divide-gray-700">
                             {contentItems.map((item) => (
                                 <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                     <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{item.title}</td>
                                     <td className="px-6 py-4 text-gray-500 dark:text-gray-400">{item.author_name}</td>
-                                    <td className="px-6 py-4"><span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${item.status === 'PUBLISHED' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : item.status === 'BANNED' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'}`}>{item.status}</span></td>
-                                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{new Date(item.created_at).toLocaleDateString()}</td>
-                                    <td className="px-6 py-4 text-right space-x-2">{item.status !== 'PUBLISHED' && <button onClick={() => updateContentStatus(item.id, 'PUBLISHED')} className="text-gray-400 hover:text-green-600"><CheckCircle className="w-4 h-4" /></button>}{item.status !== 'BANNED' && <button onClick={() => updateContentStatus(item.id, 'BANNED')} className="text-gray-400 hover:text-red-600"><Ban className="w-4 h-4" /></button>}</td>
+                                    <td className="px-6 py-4"><span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${item.status === 'PUBLISHED' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : item.status === 'BANNED' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'}`}>{CONTENT_STATUS_LABEL[item.status] ?? item.status}</span></td>
+                                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{new Date(item.created_at).toLocaleDateString('th-TH')}</td>
+                                    <td className="px-6 py-4 text-right space-x-2">{item.status !== 'PUBLISHED' && <button onClick={() => updateContentStatus(item.id, 'PUBLISHED')} className="text-gray-400 hover:text-green-600" title="เผยแพร่"><CheckCircle className="w-4 h-4" /></button>}{item.status !== 'BANNED' && <button onClick={() => updateContentStatus(item.id, 'BANNED')} className="text-gray-400 hover:text-red-600" title="ระงับ"><Ban className="w-4 h-4" /></button>}</td>
                                 </tr>
                             ))}
-                            {contentItems.length === 0 && <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">No content found.</td></tr>}
+                            {contentItems.length === 0 && <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">ไม่พบเนื้อหา</td></tr>}
                         </tbody>
                     </table>
                 </div>
@@ -300,22 +305,22 @@ export default function AdminPanel() {
     function renderReports() {
         return (
             <div className="space-y-6">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Report Management</h1>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">จัดการรายงาน</h1>
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 overflow-hidden">
                     <table className="w-full text-left">
-                        <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 text-xs uppercase"><tr><th className="px-6 py-3">Reporter</th><th className="px-6 py-3">Target</th><th className="px-6 py-3">Reason</th><th className="px-6 py-3">Status</th><th className="px-6 py-3">Date</th><th className="px-6 py-3 text-right">Actions</th></tr></thead>
+                        <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 text-xs uppercase"><tr><th className="px-6 py-3">ผู้รายงาน</th><th className="px-6 py-3">สิ่งที่ถูกรายงาน</th><th className="px-6 py-3">เหตุผล</th><th className="px-6 py-3">สถานะ</th><th className="px-6 py-3">วันที่</th><th className="px-6 py-3 text-right">จัดการ</th></tr></thead>
                         <tbody className="divide-y dark:divide-gray-700">
                             {reports.map((report) => (
                                 <tr key={report.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                     <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{report.reporter_name}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400"><span className="font-semibold text-indigo-600 dark:text-indigo-400">{report.target_type}</span>: {report.target_type === 'COMMENT' ? (report.target_title ? <a href={`/${report.parent_type === 'COMIC' ? 'comic' : 'novel'}/${report.parent_id}`} target="_blank" rel="noreferrer" className="hover:underline whitespace-pre-line line-clamp-3">{report.comment_author_name}: {report.target_title}</a> : <span className="italic">(deleted)</span>) : report.target_title ? <a href={`/${report.target_type === 'COMIC' ? 'comic' : 'novel'}/${report.target_id}`} target="_blank" rel="noreferrer" className="hover:underline">{report.target_title}</a> : report.target_id}</td>
+                                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400"><span className="font-semibold text-indigo-600 dark:text-indigo-400">{REPORT_TARGET_LABEL[report.target_type] ?? report.target_type}</span>: {report.target_type === 'COMMENT' ? (report.target_title ? <a href={`/${report.parent_type === 'COMIC' ? 'comic' : 'novel'}/${report.parent_id}`} target="_blank" rel="noreferrer" className="hover:underline whitespace-pre-line line-clamp-3">{report.comment_author_name}: {report.target_title}</a> : <span className="italic">(ถูกลบแล้ว)</span>) : report.target_title ? <a href={`/${report.target_type === 'COMIC' ? 'comic' : 'novel'}/${report.target_id}`} target="_blank" rel="noreferrer" className="hover:underline">{report.target_title}</a> : report.target_id}</td>
                                     <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{report.reason}</td>
-                                    <td className="px-6 py-4"><span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${report.status === 'RESOLVED' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : report.status === 'IGNORED' ? 'bg-gray-100 text-gray-800 dark:bg-gray-700' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'}`}>{report.status}</span></td>
-                                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{new Date(report.created_at).toLocaleDateString()}</td>
-                                    <td className="px-6 py-4 text-right space-x-2">{report.status === 'PENDING' && (<>{report.target_type === 'COMMENT' && report.target_title && <button onClick={() => deleteReportedComment(report)} title="Delete comment" className="text-gray-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>}<button onClick={() => updateReportStatus(report.id, 'RESOLVED')} className="text-gray-400 hover:text-green-600"><CheckCircle className="w-4 h-4" /></button><button onClick={() => updateReportStatus(report.id, 'IGNORED')} className="text-gray-400 hover:text-gray-600"><XCircle className="w-4 h-4" /></button></>)}</td>
+                                    <td className="px-6 py-4"><span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${report.status === 'RESOLVED' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : report.status === 'IGNORED' ? 'bg-gray-100 text-gray-800 dark:bg-gray-700' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'}`}>{REPORT_STATUS_LABEL[report.status] ?? report.status}</span></td>
+                                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{new Date(report.created_at).toLocaleDateString('th-TH')}</td>
+                                    <td className="px-6 py-4 text-right space-x-2">{report.status === 'PENDING' && (<>{report.target_type === 'COMMENT' && report.target_title && <button onClick={() => deleteReportedComment(report)} title="ลบคอมเมนต์" className="text-gray-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>}<button onClick={() => updateReportStatus(report.id, 'RESOLVED')} className="text-gray-400 hover:text-green-600" title="จัดการแล้ว"><CheckCircle className="w-4 h-4" /></button><button onClick={() => updateReportStatus(report.id, 'IGNORED')} className="text-gray-400 hover:text-gray-600" title="ไม่ดำเนินการ"><XCircle className="w-4 h-4" /></button></>)}</td>
                                 </tr>
                             ))}
-                            {reports.length === 0 && <tr><td colSpan={6} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">No reports found.</td></tr>}
+                            {reports.length === 0 && <tr><td colSpan={6} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">ไม่มีรายงาน</td></tr>}
                         </tbody>
                     </table>
                 </div>
@@ -369,7 +374,7 @@ export default function AdminPanel() {
                                 <div><label className="text-sm text-gray-500">เลขบัตรประชาชน</label><div className="font-medium dark:text-white">{selectedWriter.id_card_number}</div></div>
                                 <div><label className="text-sm text-gray-500">เบอร์โทร</label><div className="font-medium dark:text-white">{selectedWriter.phone_number}</div></div>
                                 <div><label className="text-sm text-gray-500">จังหวัด</label><div className="font-medium dark:text-white">{selectedWriter.province}</div></div>
-                                <div><label className="text-sm text-gray-500">สถานะ</label><div className="font-medium dark:text-white">{selectedWriter.status}</div></div>
+                                <div><label className="text-sm text-gray-500">สถานะ</label><div className="font-medium dark:text-white">{statusText[selectedWriter.status] ?? selectedWriter.status}</div></div>
                                 <div><label className="text-sm text-gray-500">ธนาคาร</label><div className="font-medium dark:text-white">{selectedWriter.bank_name || '-'}</div></div>
                                 <div><label className="text-sm text-gray-500">เลขที่บัญชี / ชื่อบัญชี</label><div className="font-medium dark:text-white">{selectedWriter.bank_account_number || '-'} {selectedWriter.bank_account_name}</div></div>
                                 <div><label className="text-sm text-gray-500">สำเนาบัตรประชาชน</label><div className="font-medium">{selectedWriter.id_card_image ? <a href={selectedWriter.id_card_image} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline">ดูไฟล์</a> : <span className="dark:text-white">-</span>}</div></div>
@@ -391,21 +396,21 @@ export default function AdminPanel() {
     function renderCategories() {
         return (
             <div className="space-y-6">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Category Management</h1>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">จัดการหมวดหมู่</h1>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     <div className="md:col-span-1">
                         <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border dark:border-gray-700 sticky top-24">
-                            <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white flex items-center gap-2"><Plus className="w-5 h-5" /> Add Category</h2>
+                            <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white flex items-center gap-2"><Plus className="w-5 h-5" /> เพิ่มหมวดหมู่</h2>
                             <form onSubmit={addCategory} className="space-y-4">
-                                <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label><input type="text" required value={newCategory.name} onChange={(e) => { const name = e.target.value; const slug = name.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, ''); setNewCategory({ name, slug }); }} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="e.g. Romance" /></div>
-                                <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Slug</label><input type="text" required value={newCategory.slug} onChange={(e) => setNewCategory({ ...newCategory, slug: e.target.value })} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="e.g. romance" /></div>
-                                <button type="submit" className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700">Add Category</button>
+                                <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ชื่อหมวดหมู่</label><input type="text" required value={newCategory.name} onChange={(e) => { const name = e.target.value; const slug = name.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, ''); setNewCategory({ name, slug }); }} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="เช่น โรแมนติก" /></div>
+                                <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Slug (ใช้ใน URL)</label><input type="text" required value={newCategory.slug} onChange={(e) => setNewCategory({ ...newCategory, slug: e.target.value })} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="เช่น romance" /></div>
+                                <button type="submit" className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700">เพิ่มหมวดหมู่</button>
                             </form>
                         </div>
                     </div>
                     <div className="md:col-span-2">
                         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 overflow-hidden">
-                            <div className="p-4 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50"><h3 className="font-medium text-gray-700 dark:text-gray-300">All Categories</h3></div>
+                            <div className="p-4 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50"><h3 className="font-medium text-gray-700 dark:text-gray-300">หมวดหมู่ทั้งหมด</h3></div>
                             <div className="divide-y dark:divide-gray-700">
                                 {categories.map((category) => (
                                     <div key={category.id} className="p-4 flex justify-between items-center hover:bg-gray-50 dark:hover:bg-gray-700/50">
@@ -413,7 +418,7 @@ export default function AdminPanel() {
                                         <button onClick={() => deleteCategory(category.id)} className="text-gray-400 hover:text-red-600 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"><Trash2 className="w-5 h-5" /></button>
                                     </div>
                                 ))}
-                                {categories.length === 0 && <div className="p-8 text-center text-gray-500 dark:text-gray-400">No categories found.</div>}
+                                {categories.length === 0 && <div className="p-8 text-center text-gray-500 dark:text-gray-400">ยังไม่มีหมวดหมู่</div>}
                             </div>
                         </div>
                     </div>
@@ -425,16 +430,16 @@ export default function AdminPanel() {
     function renderSettings() {
         return (
             <div className="space-y-6 max-w-2xl">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2"><Settings className="w-6 h-6" /> System Settings</h1>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2"><Settings className="w-6 h-6" /> ตั้งค่าระบบ</h1>
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-6">
                     <form onSubmit={saveSettings} className="space-y-6">
-                        <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Site Name</label><input type="text" value={settings.site_name} onChange={(e) => setSettings({ ...settings, site_name: e.target.value })} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" /></div>
-                        <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Site Description</label><textarea value={settings.site_description} onChange={(e) => setSettings({ ...settings, site_description: e.target.value })} rows={3} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" /></div>
-                        <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contact Email</label><input type="email" value={settings.contact_email} onChange={(e) => setSettings({ ...settings, contact_email: e.target.value })} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" /></div>
+                        <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ชื่อเว็บไซต์</label><input type="text" value={settings.site_name} onChange={(e) => setSettings({ ...settings, site_name: e.target.value })} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" /></div>
+                        <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">คำอธิบายเว็บไซต์</label><textarea value={settings.site_description} onChange={(e) => setSettings({ ...settings, site_description: e.target.value })} rows={3} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" /></div>
+                        <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">อีเมลติดต่อ</label><input type="email" value={settings.contact_email} onChange={(e) => setSettings({ ...settings, contact_email: e.target.value })} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" /></div>
                         <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ส่วนแบ่งรายได้นักเขียน (%)</label><input type="number" min={0} max={100} step={1} value={settings.author_share_percent} onChange={(e) => setSettings({ ...settings, author_share_percent: Number(e.target.value) })} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" /><p className="text-xs text-gray-500 dark:text-gray-400 mt-1">ใช้กับการซื้อตอนครั้งถัดไป ไม่ย้อนหลัง</p></div>
                         <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ข้อมูลการชำระเงิน (แสดงในหน้าเติมเหรียญ)</label><textarea value={settings.payment_info} onChange={(e) => setSettings({ ...settings, payment_info: e.target.value })} rows={3} placeholder={'เช่น ธนาคารกสิกรไทย 123-4-56789-0 ชื่อบัญชี ...\nPromptPay 08x-xxx-xxxx'} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" /></div>
-                        <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg"><div><div className="font-medium text-gray-900 dark:text-white">Maintenance Mode</div><div className="text-sm text-gray-500 dark:text-gray-400">Disable site access for non-admins</div></div><label className="relative inline-flex items-center cursor-pointer"><input type="checkbox" checked={settings.maintenance_mode} onChange={(e) => setSettings({ ...settings, maintenance_mode: e.target.checked })} className="sr-only peer" /><div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div></label></div>
-                        <div className="pt-4 border-t dark:border-gray-700"><button type="submit" disabled={saving} className="w-full flex justify-center items-center gap-2 bg-indigo-600 text-white py-2.5 rounded-lg hover:bg-indigo-700 disabled:opacity-50"><Save className="w-4 h-4" />{saving ? 'Saving...' : 'Save Settings'}</button></div>
+                        <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg"><div><div className="font-medium text-gray-900 dark:text-white">โหมดปิดปรับปรุง</div><div className="text-sm text-gray-500 dark:text-gray-400">ผู้ที่ไม่ใช่แอดมินจะเข้าเว็บไม่ได้</div></div><label className="relative inline-flex items-center cursor-pointer"><input type="checkbox" checked={settings.maintenance_mode} onChange={(e) => setSettings({ ...settings, maintenance_mode: e.target.checked })} className="sr-only peer" /><div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div></label></div>
+                        <div className="pt-4 border-t dark:border-gray-700"><button type="submit" disabled={saving} className="w-full flex justify-center items-center gap-2 bg-indigo-600 text-white py-2.5 rounded-lg hover:bg-indigo-700 disabled:opacity-50"><Save className="w-4 h-4" />{saving ? 'กำลังบันทึก...' : 'บันทึกการตั้งค่า'}</button></div>
                     </form>
                 </div>
             </div>
@@ -447,7 +452,7 @@ export default function AdminPanel() {
             <div className="w-64 bg-white dark:bg-gray-800 h-screen shadow-md flex flex-col fixed left-0 top-0 z-40">
                 <div className="p-6 flex items-center gap-3 border-b dark:border-gray-700">
                     <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">A</div>
-                    <span className="text-xl font-bold text-gray-800 dark:text-white">Admin Panel</span>
+                    <span className="text-xl font-bold text-gray-800 dark:text-white">ผู้ดูแลระบบ</span>
                 </div>
                 <nav className="flex-1 p-4 space-y-2">
                     {menuItems.map((item) => {

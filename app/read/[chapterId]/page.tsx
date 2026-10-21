@@ -87,11 +87,11 @@ export default async function ReadChapter({ params }: { params: Promise<{ chapte
                             href={`/read/${prev.id}`}
                             className="flex-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 py-4 rounded-xl text-center font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition shadow-sm"
                         >
-                            &larr; Previous
+                            &larr; บทก่อนหน้า
                         </Link>
                     ) : (
                         <button disabled className="flex-1 bg-gray-100 dark:bg-gray-800/50 text-gray-400 dark:text-gray-500 py-4 rounded-xl text-center font-medium cursor-not-allowed border border-transparent dark:border-gray-800">
-                            Previous
+                            บทก่อนหน้า
                         </button>
                     )}
 
@@ -100,11 +100,11 @@ export default async function ReadChapter({ params }: { params: Promise<{ chapte
                             href={`/read/${next.id}`}
                             className="flex-1 bg-indigo-600 dark:bg-indigo-700 text-white py-4 rounded-xl text-center font-medium hover:bg-indigo-700 dark:hover:bg-indigo-600 transition shadow-lg hover:shadow-indigo-500/30"
                         >
-                            Next &rarr;
+                            บทถัดไป &rarr;
                         </Link>
                     ) : (
                         <button disabled className="flex-1 bg-gray-100 dark:bg-gray-800/50 text-gray-400 dark:text-gray-500 py-4 rounded-xl text-center font-medium cursor-not-allowed border border-transparent dark:border-gray-800">
-                            Next
+                            บทถัดไป
                         </button>
                     )}
                 </div>

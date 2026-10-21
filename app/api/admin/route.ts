@@ -3,7 +3,7 @@ import pool from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
 
-export async function GET(_req: Request) {
+export async function GET() {
     const session = await auth();
     if (!session?.user?.email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -27,7 +27,8 @@ export async function GET(_req: Request) {
             comics: comicCount[0].count,
             reports: reportCount[0].count,
         });
-    } catch (_error) {
+    } catch (error) {
+        console.error('Failed to fetch admin stats:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

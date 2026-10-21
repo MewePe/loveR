@@ -33,7 +33,7 @@ export default function BecomeAuthorPage() {
         } else if (status === 'authenticated') {
             checkExistingRequest();
         }
-    }, [status]);
+    }, [status, router]);
 
     async function checkExistingRequest() {
         setLoading(true);

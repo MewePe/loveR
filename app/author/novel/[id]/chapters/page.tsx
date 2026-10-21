@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Plus, Edit, Trash2, Save, X, GripVertical, Eye } from 'lucide-react';
@@ -25,7 +25,7 @@ interface Novel {
 export default function ChapterManagement() {
     const toast = useToast();
     const confirm = useConfirm();
-    const { data: session, status } = useSession();
+    const { status } = useSession();
     const router = useRouter();
     const params = useParams();
     const novelId = params.id as string;
@@ -38,15 +38,7 @@ export default function ChapterManagement() {
     const [formData, setFormData] = useState({ title: '', content: '', price: 0 });
     const [saving, setSaving] = useState(false);
 
-    useEffect(() => {
-        if (status === 'unauthenticated') {
-            router.push('/login');
-        } else if (status === 'authenticated') {
-            fetchData();
-        }
-    }, [status, novelId]);
-
-    async function fetchData() {
+    const fetchData = useCallback(async () => {
         setLoading(true);
         try {
             // Fetch novel info
@@ -65,7 +57,15 @@ export default function ChapterManagement() {
         } finally {
             setLoading(false);
         }
-    }
+    }, [novelId]);
+
+    useEffect(() => {
+        if (status === 'unauthenticated') {
+            router.push('/login');
+        } else if (status === 'authenticated') {
+            fetchData();
+        }
+    }, [status, router, fetchData]);
 
     function openCreateModal() {
         setEditingChapter(null);

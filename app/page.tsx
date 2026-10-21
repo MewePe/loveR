@@ -38,14 +38,14 @@ export default async function Home() {
       <section className="relative bg-cover bg-center text-white py-24" style={{ backgroundImage: 'url(/hero-bg.jpg)' }}>
         <div className="absolute inset-0 bg-gradient-to-r from-indigo-900/80 via-purple-900/70 to-pink-900/80"></div>
         <div className="container mx-auto px-4 text-center relative z-10">
-          <h1 className="text-4xl md:text-6xl font-bold mb-4 drop-shadow-lg">Welcome to LoveRead</h1>
-          <p className="text-xl mb-8 opacity-90 drop-shadow">Discover a world of endless stories and comics.</p>
+          <h1 className="text-4xl md:text-6xl font-bold mb-4 drop-shadow-lg">ยินดีต้อนรับสู่ LoveRead</h1>
+          <p className="text-xl mb-8 opacity-90 drop-shadow">ค้นพบโลกของนิยายและการ์ตูนที่ไม่มีวันจบ</p>
           <div className="space-x-4">
             <Link href="/search" className="bg-white text-indigo-600 px-8 py-3 rounded-full font-bold hover:bg-gray-100 transition shadow-lg">
-              Start Reading
+              เริ่มอ่าน
             </Link>
             <Link href="/author" className="border-2 border-white text-white px-8 py-3 rounded-full font-bold hover:bg-white/10 transition backdrop-blur-sm">
-              Start Writing
+              เริ่มเขียน
             </Link>
           </div>
         </div>

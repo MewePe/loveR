@@ -145,7 +145,8 @@ npx tsx scripts/add_reading_history.ts # ตาราง reading_history (รั
 
 - **หลัง `git checkout` หรือ `git pull` ให้รีสตาร์ท `npm run dev` หนึ่งครั้ง** ถ้า `next.config.ts` ถูกเปลี่ยนหลายครั้งติดกันเร็วๆ dev server อาจค้างใช้ config เก่า (เคยเกิดแล้ว: เทสต์ open proxy fail ทั้งที่โค้ดถูก แก้ได้ด้วยการ `touch next.config.ts`)
 - **ไฟล์ใน `public/uploads/` เคยถูก track ใน git** จนถึง commit `627e644` ซึ่ง `git rm` ออกไป ทำให้ไฟล์ในเครื่องหายด้วย (ปก/รูปเก่าขึ้น 404) การ checkout commit ก่อนหน้านั้นแล้วกลับมาก็ทำให้หายได้อีก กู้คืนได้ด้วย `git archive 627e644^ public/uploads | tar -x --skip-old-files` (ไฟล์ที่อัปโหลดหลังจากนั้นไม่อยู่ใน git ต้องสำรองเอง)
-- lint ไม่มี error แล้ว (เหลือแค่ warning) และ `npm run build` รัน lint ด้วย ถ้ามี error จะ build ไม่ผ่าน ห้ามใช้ `any` ให้ใช้ type จริงหรือ `RowDataPacket` แทน
+- `npm run lint` ต้องไม่มีทั้ง error และ warning (`npm run build` รัน lint ด้วย ถ้ามี error จะ build ไม่ผ่าน) ห้ามใช้ `any` ให้ใช้ type จริงหรือ `RowDataPacket` แทน ฟังก์ชันที่เรียกใน `useEffect` ให้ห่อด้วย `useCallback` แล้วใส่ใน dependency
+- ข้อความทั้งหมดใน UI (รวม toast, confirm, title, placeholder และข้อความ error จาก API ที่แสดงให้ผู้ใช้เห็น) เป็นภาษาไทย ค่า enum ที่แสดงในตารางให้แปลงผ่าน label map (เช่น `ROLE_LABEL` ใน `app/admin/page.tsx`) ไม่แสดงค่าดิบ
 - **อย่ารัน `npm run build` ขณะที่ `npm run dev` เปิดอยู่** เพราะทั้งคู่เขียนลง `.next/` ให้ปิด dev ก่อน แล้วลบ `.next` ก่อนเปิด dev ใหม่
 
 ## งานที่เหลือ (อัปเดตล่าสุด 2026-10-21)
@@ -160,5 +161,3 @@ npx tsx scripts/add_reading_history.ts # ตาราง reading_history (รั
 **งานพัฒนา** (เรียงตามความสำคัญ):
 1. **dependency ที่มีช่องโหว่** (อัปเกรด next เป็น 15.5.28 และรัน `npm audit fix` แล้วเมื่อ 2026-10-21): ที่เหลือแก้ได้ทางเดียวคือขึ้น Next 16 (breaking) ได้แก่ `postcss` ที่ next ฝังมาเอง (ใช้ตอน build CSS ของเราเอง ไม่ได้รับ input จากผู้ใช้) และ `braces`/`micromatch`/`fast-glob` ใต้ `eslint-config-next` (dev เท่านั้น) อย่าใช้ `npm audit fix --force` เพราะจะอัปเกรดแบบ breaking
 2. **object storage**: จำเป็นเฉพาะถ้าจะ deploy บน Vercel/serverless ตอนนี้ไฟล์ทั้งหมดเขียนลงดิสก์ (`lib/upload.ts` เป็นจุดเดียวที่ต้องแก้)
-3. **lint warning ที่ค้างอยู่** (~30 จุด): import ที่ไม่ได้ใช้ และ `useEffect` ที่ dependency ไม่ครบ ไม่ทำให้ build ล้ม แต่บางจุดอาจทำให้ข้อมูลไม่อัปเดตตามที่ควร
-4. **ข้อความภาษาอังกฤษในหน้าแอดมิน**: เช่น `Failed to update user`, `Change role to ...?` ใน `app/admin/page.tsx` และหน้า `/register`, `/login` ส่วนอื่นของ UI เป็นภาษาไทย

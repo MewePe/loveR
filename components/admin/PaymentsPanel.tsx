@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { CheckCircle, XCircle, Upload } from 'lucide-react';
 import { useConfirm } from '@/components/ConfirmDialog';
 import { useToast } from '@/components/Toast';
@@ -26,16 +26,16 @@ export default function PaymentsPanel() {
     const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
     const [busyId, setBusyId] = useState<string | null>(null);
 
-    useEffect(() => {
-        fetchData();
-    }, [tab]);
-
-    async function fetchData() {
+    const fetchData = useCallback(async () => {
         const res = await fetch(tab === 'topups' ? '/api/admin/topups' : '/api/admin/withdrawals', { credentials: 'include' });
         if (!res.ok) return;
         if (tab === 'topups') setTopups(await res.json());
         else setWithdrawals(await res.json());
-    }
+    }, [tab]);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
 
     async function patch(url: string, body: object) {
         const res = await fetch(url, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), credentials: 'include' });

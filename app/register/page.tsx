@@ -27,37 +27,37 @@ export default function Register() {
                 router.push('/login');
             } else {
                 const json = await res.json();
-                toast.error(json.error || 'Registration failed');
+                toast.error(json.error || 'สมัครสมาชิกไม่สำเร็จ');
             }
         } catch (err) {
             console.error(err);
-            toast.error('An error occurred');
+            toast.error('เกิดข้อผิดพลาด');
         }
     }
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 transition-colors">
             <div className="max-w-md w-full bg-white dark:bg-gray-800 p-8 rounded-xl shadow-sm border dark:border-gray-700">
-                <h2 className="text-2xl font-bold text-center mb-6 text-indigo-600 dark:text-indigo-400">Join LoveRead</h2>
+                <h2 className="text-2xl font-bold text-center mb-6 text-indigo-600 dark:text-indigo-400">สมัครสมาชิก LoveRead</h2>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">ชื่อที่แสดง</label>
                         <input name="name" type="text" required className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 dark:text-white dark:bg-gray-700 dark:border-gray-600" />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">อีเมล</label>
                         <input name="email" type="email" required className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 dark:text-white dark:bg-gray-700 dark:border-gray-600" />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">รหัสผ่าน</label>
                         <input name="password" type="password" required minLength={8} maxLength={72} placeholder="อย่างน้อย 8 ตัวอักษร" className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 dark:text-white dark:bg-gray-700 dark:border-gray-600" />
                     </div>
                     <button type="submit" className="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold hover:bg-indigo-700 transition">
-                        Sign Up
+                        สมัครสมาชิก
                     </button>
                 </form>
                 <p className="mt-4 text-center text-sm text-gray-600 dark:text-gray-400">
-                    Already have an account? <Link href="/api/auth/signin" className="text-indigo-600 dark:text-indigo-400 hover:underline">Login</Link>
+                    มีบัญชีอยู่แล้ว? <Link href="/login" className="text-indigo-600 dark:text-indigo-400 hover:underline">เข้าสู่ระบบ</Link>
                 </p>
             </div>
         </div>

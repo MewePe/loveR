@@ -31,10 +31,10 @@ export default function Login() {
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 transition-colors">
             <div className="max-w-md w-full bg-white dark:bg-gray-800 p-8 rounded-xl shadow-sm border dark:border-gray-700">
-                <h2 className="text-2xl font-bold text-center mb-6 text-indigo-600 dark:text-indigo-400">Welcome Back</h2>
+                <h2 className="text-2xl font-bold text-center mb-6 text-indigo-600 dark:text-indigo-400">เข้าสู่ระบบ</h2>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">อีเมล</label>
                         <input
                             type="email"
                             value={email}
@@ -44,7 +44,7 @@ export default function Login() {
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">รหัสผ่าน</label>
                         <input
                             type="password"
                             value={password}
@@ -59,11 +59,11 @@ export default function Login() {
                         </p>
                     )}
                     <button type="submit" disabled={submitting} className="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold hover:bg-indigo-700 transition disabled:opacity-50">
-                        {submitting ? 'กำลังเข้าสู่ระบบ...' : 'Login'}
+                        {submitting ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
                     </button>
                 </form>
                 <p className="mt-4 text-center text-sm text-gray-600 dark:text-gray-400">
-                    Don&apos;t have an account? <Link href="/register" className="text-indigo-600 dark:text-indigo-400 hover:underline">Sign Up</Link>
+                    ยังไม่มีบัญชี? <Link href="/register" className="text-indigo-600 dark:text-indigo-400 hover:underline">สมัครสมาชิก</Link>
                 </p>
             </div>
         </div>

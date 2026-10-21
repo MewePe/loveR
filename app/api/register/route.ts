@@ -11,7 +11,7 @@ export async function POST(req: Request) {
         const { name, email, password } = await req.json();
 
         if (!name || !email || !password) {
-            return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+            return NextResponse.json({ error: 'กรุณากรอกข้อมูลให้ครบ' }, { status: 400 });
         }
         if (typeof name !== 'string' || name.trim().length === 0 || name.length > 100) {
             return NextResponse.json({ error: 'ชื่อต้องมี 1-100 ตัวอักษร' }, { status: 400 });
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
         // Check if user exists
         const [existingUsers] = await pool.query<RowDataPacket[]>('SELECT id FROM users WHERE email = ?', [email]);
         if (existingUsers.length > 0) {
-            return NextResponse.json({ error: 'User already exists' }, { status: 409 });
+            return NextResponse.json({ error: 'อีเมลนี้มีบัญชีอยู่แล้ว' }, { status: 409 });
         }
 
         // Hash password

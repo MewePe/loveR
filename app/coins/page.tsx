@@ -34,7 +34,7 @@ export default function CoinsPage() {
     useEffect(() => {
         if (status === 'unauthenticated') router.push('/login');
         else if (status === 'authenticated') fetchData();
-    }, [status]);
+    }, [status, router]);
 
     async function fetchData() {
         try {

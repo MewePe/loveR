@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bookmark } from "lucide-react";
 
@@ -19,15 +19,7 @@ export default function BookmarkButton({ contentType, contentId, className = "",
     const [loading, setLoading] = useState(true);
     const [animating, setAnimating] = useState(false);
 
-    useEffect(() => {
-        if (session?.user) {
-            checkBookmark();
-        } else {
-            setLoading(false);
-        }
-    }, [session, contentType, contentId]);
-
-    async function checkBookmark() {
+    const checkBookmark = useCallback(async () => {
         try {
             const res = await fetch(`/api/bookmarks?content_type=${contentType}&content_id=${contentId}`);
             if (res.ok) {
@@ -42,7 +34,15 @@ export default function BookmarkButton({ contentType, contentId, className = "",
         } finally {
             setLoading(false);
         }
-    }
+    }, [contentType, contentId]);
+
+    useEffect(() => {
+        if (session?.user) {
+            checkBookmark();
+        } else {
+            setLoading(false);
+        }
+    }, [session, checkBookmark]);
 
     async function toggleBookmark() {
         if (!session?.user) {

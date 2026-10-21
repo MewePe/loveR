@@ -18,7 +18,7 @@ interface BookmarkItem {
 }
 
 export default function BookmarksPage() {
-    const { data: session, status } = useSession();
+    const { status } = useSession();
     const router = useRouter();
     const [bookmarks, setBookmarks] = useState<BookmarkItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -31,7 +31,7 @@ export default function BookmarksPage() {
         } else if (status === "authenticated") {
             fetchBookmarks();
         }
-    }, [status]);
+    }, [status, router]);
 
     async function fetchBookmarks() {
         try {

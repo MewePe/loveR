@@ -152,7 +152,7 @@ export default function AuthorDashboard() {
                     <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">
                         W
                     </div>
-                    <span className="text-xl font-bold text-gray-800 dark:text-white">Writer Center</span>
+                    <span className="text-xl font-bold text-gray-800 dark:text-white">ศูนย์นักเขียน</span>
                 </div>
 
                 <nav className="flex-1 p-4 space-y-2">

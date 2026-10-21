@@ -4,7 +4,7 @@ import { auth } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
 import { RowDataPacket } from 'mysql2';
 
-export async function GET(req: Request) {
+export async function GET() {
     try {
         const [categories] = await pool.query<RowDataPacket[]>('SELECT * FROM categories ORDER BY name ASC');
         return NextResponse.json(categories);

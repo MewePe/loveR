@@ -5,6 +5,8 @@ import { useState, useEffect } from 'react';
 import { Home, Search, Bookmark, Coins, History } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 
+const ROLE_LABEL: Record<string, string> = { ADMIN: 'แอดมิน', AUTHOR: 'นักเขียน', READER: 'ผู้อ่าน' };
+
 interface UserProfile {
     name: string;
     image: string | null;
@@ -45,6 +47,7 @@ export default function Navbar() {
     const displayName = userProfile?.name || session?.user?.name || 'User';
     const displayImage = userProfile?.image || session?.user?.image || `https://ui-avatars.com/api/?name=${displayName}`;
     const displayRole = userProfile?.role || session?.user?.role || 'READER';
+    const roleLabel = ROLE_LABEL[displayRole] ?? displayRole;
 
     return (
         <nav className="bg-white dark:bg-gray-900 shadow-sm border-b dark:border-gray-800 sticky top-0 z-50">
@@ -70,10 +73,10 @@ export default function Navbar() {
                                     >
                                         <img
                                             src={displayImage}
-                                            alt="Profile"
+                                            alt="รูปโปรไฟล์"
                                             className="w-8 h-8 rounded-full object-cover"
                                         />
-                                        <span className="font-medium">{displayName} ({displayRole})</span>
+                                        <span className="font-medium">{displayName} ({roleLabel})</span>
                                     </button>
 
                                     {/* Dropdown */}
@@ -178,10 +181,10 @@ export default function Navbar() {
                         {session ? (
                             <>
                                 <div className="flex items-center gap-3 px-3 py-2 border-t dark:border-gray-700 mt-2 pt-4">
-                                    <img src={displayImage} alt="Profile" className="w-10 h-10 rounded-full object-cover" />
+                                    <img src={displayImage} alt="รูปโปรไฟล์" className="w-10 h-10 rounded-full object-cover" />
                                     <div>
                                         <p className="font-medium text-gray-900 dark:text-white">{displayName}</p>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400">{displayRole}</p>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">{roleLabel}</p>
                                     </div>
                                 </div>
                                 <Link href="/profile" className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 hover:bg-gray-50 dark:hover:bg-gray-800">โปรไฟล์</Link>
