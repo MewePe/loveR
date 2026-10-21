@@ -29,9 +29,15 @@ export async function GET() {
             [user.id]
         );
 
+        // Number of different novels/comics the user has opened a chapter/episode of (lib/readingHistory.ts)
+        const [read] = await pool.query<RowDataPacket[]>(
+            'SELECT COUNT(novel_id) AS novels, COUNT(comic_id) AS comics FROM reading_history WHERE user_id = ?',
+            [user.id]
+        );
+
         const stats = {
-            novelsRead: 0, // Can track reading history later
-            comicsRead: 0,
+            novelsRead: Number(read[0]?.novels) || 0,
+            comicsRead: Number(read[0]?.comics) || 0,
             bookmarks: bookmarks[0]?.count || 0
         };
 

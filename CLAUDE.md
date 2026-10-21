@@ -49,6 +49,7 @@ npx tsx scripts/drop_author_requests.ts # สำรองข้อมูลไ�
 npx tsx scripts/add_login_attempts.ts # ตาราง login_attempts สำหรับจำกัดการล็อกอินผิด (รันซ้ำได้)
 npx tsx scripts/add_comments_ratings.ts # ตาราง comments และ ratings (รันซ้ำได้)
 npx tsx scripts/add_register_attempts.ts # ตาราง register_attempts สำหรับจำกัดการสมัครสมาชิก (รันซ้ำได้)
+npx tsx scripts/add_reading_history.ts # ตาราง reading_history (รันซ้ำได้)
 ```
 
 `reset_db.ts` และ `drop_old_db.ts` ลบข้อมูล
@@ -61,7 +62,7 @@ npx tsx scripts/add_register_attempts.ts # ตาราง register_attempts ส
 
 **เข้าถึงข้อมูลด้วย raw SQL ผ่าน `mysql2` ไม่ใช่ Prisma** ทุก API route และ `lib/auth.ts` ใช้ pool จาก `lib/db.ts` ในรูปแบบ `pool.query<RowDataPacket[]>(sql, params)` และใช้ placeholder `?` ไม่มี Prisma client ใน runtime ส่วน `prisma/schema.prisma` ใช้เป็นเอกสารอ้างอิงโครงสร้างตาราง (ตรวจด้วย `npx prisma validate`) `schema.sql` ใช้สร้างฐานข้อมูลใหม่ได้ครบ ส่วน DB เก่าให้อัปเกรดด้วยสคริปต์ใน `scripts/` ตามลำดับที่ระบุใน README เมื่อแก้ schema ให้แก้ทั้ง `schema.sql` และ `schema.prisma` ให้ตรงกัน และถ้า DB เก่าต้องเปลี่ยนตาม ให้เพิ่มสคริปต์ migration ที่รันซ้ำได้ ตาราง `author_requests` ถูกลบแล้ว (ใช้ `writer_profiles` แทน)
 
-- `bookmarks`, `comments`, `ratings` มีคอลัมน์ `novel_id` หรือ `comic_id` อย่างใดอย่างหนึ่ง แต่ API ใช้รูปแบบ `{ content_type: 'novel' | 'comic', content_id }` ใช้ `lib/contentRef.ts` (`CONTENT_COLUMN`, `isContentType()`, `getContentRow()`) แปลงเป็นชื่อคอลัมน์ ห้ามเอา input ไปต่อเป็น SQL ตรงๆ
+- `bookmarks`, `comments`, `ratings`, `reading_history` มีคอลัมน์ `novel_id` หรือ `comic_id` อย่างใดอย่างหนึ่ง แต่ API ใช้รูปแบบ `{ content_type: 'novel' | 'comic', content_id }` ใช้ `lib/contentRef.ts` (`CONTENT_COLUMN`, `isContentType()`, `getContentRow()`) แปลงเป็นชื่อคอลัมน์ ห้ามเอา input ไปต่อเป็น SQL ตรงๆ
 
 - Primary key เป็น UUID แบบ `VARCHAR(36)` สร้างในโค้ดด้วย `v4()` จากแพ็กเกจ `uuid` ชื่อคอลัมน์เป็น snake_case
 - enum สถานะเนื้อหา: `DRAFT | PUBLISHED | ARCHIVED | BANNED` ดูกฎการมองเห็นในหัวข้อ "การมองเห็นเนื้อหา"
@@ -122,6 +123,12 @@ npx tsx scripts/add_register_attempts.ts # ตาราง register_attempts ส
 - ทั้งสองอย่างเช็ก `canViewContent()` (เรื่องที่ไม่ได้เผยแพร่ได้ 404 ยกเว้นเจ้าของ/แอดมิน) และซ่อนคอมเมนต์/ไม่นับคะแนนของผู้ใช้ที่เป็น `BANNED`
 - ยังไม่แสดงคะแนนเฉลี่ยในหน้ารายการ/ค้นหา (ถ้าจะเพิ่ม ให้ JOIN แบบ aggregate ใน `/api/novels`, `/api/comics`)
 
+**ประวัติการอ่าน** (`lib/readingHistory.ts`, ตาราง `reading_history`):
+- 1 แถวต่อคนต่อเรื่อง เก็บบท/ตอนล่าสุดที่เปิด (`chapter_id`/`episode_id`) และ `read_at` (`TIMESTAMP(3)`)
+- `recordRead()` ถูกเรียกในหน้า `app/read/[chapterId]` และ `app/comic/[id]/read/[episodeId]` เฉพาะเมื่อผ่าน `canAccess()` แล้ว (หน้า paywall ไม่บันทึก) ถ้า error จะ log แล้วยังให้อ่านได้ตามปกติ
+- `GET /api/history?page=` (ล่าสุดก่อน หน้าละ 20) ซ่อนเรื่องที่ไม่ได้ `PUBLISHED` ยกเว้นเรื่องของตัวเอง (กฎเดียวกับ bookmarks) และ `DELETE /api/history` (`{ content_type, content_id }` หรือ `{ all: true }`) หน้า UI คือ `/history` ซึ่งมีปุ่ม "อ่านต่อ"
+- ถ้าบทถูกลบ แถวยังอยู่แต่ `chapter_id` เป็น NULL (ปุ่มอ่านต่อจะพาไปหน้าเรื่องแทน) `novelsRead`/`comicsRead` ใน `/api/profile` นับจากตารางนี้
+
 **ระบบเหรียญและขายตอน** (logic หลักอยู่ใน `lib/coins.ts`):
 - 1 เหรียญ = 1 บาท ยอดเหรียญของผู้อ่านอยู่ที่ `users.coins` แต่ละบท/ตอนมี `price` (0 = ฟรี)
 - **เติมเหรียญ**: ผู้อ่านอัปโหลดสลิปที่ `/coins` → แถวใน `coin_topups` (PENDING) → แอดมินอนุมัติที่ `/admin` แท็บการเงิน แล้วเหรียญจึงเพิ่ม
@@ -141,7 +148,7 @@ npx tsx scripts/add_register_attempts.ts # ตาราง register_attempts ส
 
 ## งานที่เหลือ (อัปเดตล่าสุด 2026-10-21)
 
-**สถานะ branch**: ทุกอย่างอยู่บน `main` แล้ว (`login-rate-limit` merge แล้ว) DB อื่นที่ไม่ใช่เครื่องนี้ต้องรัน `scripts/add_login_attempts.ts`, `scripts/add_comments_ratings.ts` และ `scripts/add_register_attempts.ts`
+**สถานะ branch**: ทุกอย่างอยู่บน `main` แล้ว (`login-rate-limit` merge แล้ว) DB อื่นที่ไม่ใช่เครื่องนี้ต้องรัน `scripts/add_login_attempts.ts`, `scripts/add_comments_ratings.ts`, `scripts/add_register_attempts.ts` และ `scripts/add_reading_history.ts`
 
 **ผู้ดูแลต้องทำเอง**:
 - กรอก "ข้อมูลการชำระเงิน" ที่ `/admin` → Settings ถ้ายังไม่กรอก ผู้อ่านจะเติมเหรียญไม่ได้
@@ -151,6 +158,5 @@ npx tsx scripts/add_register_attempts.ts # ตาราง register_attempts ส
 **งานพัฒนา** (เรียงตามความสำคัญ):
 1. **dependency ที่มีช่องโหว่** (อัปเกรด next เป็น 15.5.28 และรัน `npm audit fix` แล้วเมื่อ 2026-10-21): ที่เหลือแก้ได้ทางเดียวคือขึ้น Next 16 (breaking) ได้แก่ `postcss` ที่ next ฝังมาเอง (ใช้ตอน build CSS ของเราเอง ไม่ได้รับ input จากผู้ใช้) และ `braces`/`micromatch`/`fast-glob` ใต้ `eslint-config-next` (dev เท่านั้น) อย่าใช้ `npm audit fix --force` เพราะจะอัปเกรดแบบ breaking
 2. **เปลี่ยน `alert()` เป็น toast**: ยังมี `alert()` ทั่วโปรเจกต์ ควรทำให้เป็นรูปแบบเดียวกับ `components/ConfirmDialog.tsx` (Provider + hook)
-3. **ประวัติการอ่าน**: `app/api/profile/route.ts` ยังฝัง `novelsRead`/`comicsRead` เป็น 0
-4. **แยก `app/author/page.tsx`** (~1,300 บรรทัด) ออกเป็น component ตามแท็บ แบบเดียวกับ `components/author/EarningsPanel.tsx`
-5. **object storage**: จำเป็นเฉพาะถ้าจะ deploy บน Vercel/serverless ตอนนี้ไฟล์ทั้งหมดเขียนลงดิสก์ (`lib/upload.ts` เป็นจุดเดียวที่ต้องแก้)
+3. **แยก `app/author/page.tsx`** (~1,300 บรรทัด) ออกเป็น component ตามแท็บ แบบเดียวกับ `components/author/EarningsPanel.tsx`
+4. **object storage**: จำเป็นเฉพาะถ้าจะ deploy บน Vercel/serverless ตอนนี้ไฟล์ทั้งหมดเขียนลงดิสก์ (`lib/upload.ts` เป็นจุดเดียวที่ต้องแก้)

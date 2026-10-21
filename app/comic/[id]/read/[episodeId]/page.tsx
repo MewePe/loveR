@@ -6,6 +6,7 @@ import ThemeToggle from '@/components/ThemeToggle';
 import Paywall from '@/components/Paywall';
 import { auth } from '@/lib/auth';
 import { canAccess, AccessItem } from '@/lib/coins';
+import { recordRead } from '@/lib/readingHistory';
 
 async function getEpisode(comicId: string, episodeId: string) {
     const [rows] = await pool.query<RowDataPacket[]>(`
@@ -61,6 +62,7 @@ export default async function ReadEpisode({ params }: { params: Promise<{ id: st
     // Update views
     if (unlocked) {
         await pool.query('UPDATE comic_episodes SET views = views + 1 WHERE id = ?', [episodeId]);
+        if (session?.user?.id) await recordRead(session.user.id, 'comic', episode.comic_id, episodeId);
     }
 
     return (

@@ -256,3 +256,22 @@ CREATE TABLE IF NOT EXISTS ratings (
     FOREIGN KEY (novel_id) REFERENCES novels(id) ON DELETE CASCADE,
     FOREIGN KEY (comic_id) REFERENCES comics(id) ON DELETE CASCADE
 );
+
+-- Last chapter/episode each user read, one row per user per novel/comic (lib/readingHistory.ts)
+CREATE TABLE IF NOT EXISTS reading_history (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    novel_id VARCHAR(36),
+    comic_id VARCHAR(36),
+    chapter_id VARCHAR(36),
+    episode_id VARCHAR(36),
+    read_at TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP(3),
+    UNIQUE KEY uniq_user_novel (user_id, novel_id),
+    UNIQUE KEY uniq_user_comic (user_id, comic_id),
+    INDEX idx_user_time (user_id, read_at),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (novel_id) REFERENCES novels(id) ON DELETE CASCADE,
+    FOREIGN KEY (comic_id) REFERENCES comics(id) ON DELETE CASCADE,
+    FOREIGN KEY (chapter_id) REFERENCES chapters(id) ON DELETE SET NULL,
+    FOREIGN KEY (episode_id) REFERENCES comic_episodes(id) ON DELETE SET NULL
+);

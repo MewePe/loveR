@@ -41,6 +41,7 @@ model chapters {
   created_at    DateTime @default(now()) @db.Timestamp(0)
   updated_at    DateTime @default(now()) @db.Timestamp(0)
   purchases     purchases[]
+  reading_history reading_history[]
   novels        novels?  @relation(fields: [novel_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "chapters_ibfk_1")
 
   @@index([novel_id], map: "novel_id")
@@ -58,6 +59,7 @@ model comic_episodes {
   comics        comics?       @relation(fields: [comic_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "comic_episodes_ibfk_1")
   comic_pages   comic_pages[]
   purchases     purchases[]
+  reading_history reading_history[]
 
   @@index([comic_id], map: "comic_id")
 }
@@ -87,6 +89,7 @@ model comics {
   comic_episodes comic_episodes[]
   comments       comments[]
   ratings        ratings[]
+  reading_history reading_history[]
   users          users?           @relation(fields: [author_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "comics_ibfk_1")
   categories     categories?      @relation(fields: [category_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "comics_ibfk_2")
 
@@ -129,6 +132,7 @@ model novels {
   chapters    chapters[]
   comments    comments[]
   ratings     ratings[]
+  reading_history reading_history[]
   users       users?         @relation(fields: [author_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "novels_ibfk_1")
   categories  categories?    @relation(fields: [category_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "novels_ibfk_2")
 
@@ -174,6 +178,7 @@ model users {
   coin_topups     coin_topups[]
   comments        comments[]
   ratings         ratings[]
+  reading_history reading_history[]
   comics          comics[]
   novels          novels[]
   purchases       purchases[]       @relation("purchases_buyer")
@@ -274,6 +279,29 @@ model comments {
   @@index([novel_id, created_at], map: "idx_novel_time")
   @@index([comic_id, created_at], map: "idx_comic_time")
   @@index([user_id, created_at], map: "idx_user_time")
+}
+
+model reading_history {
+  id             String          @id @db.VarChar(36)
+  user_id        String          @db.VarChar(36)
+  novel_id       String?         @db.VarChar(36)
+  comic_id       String?         @db.VarChar(36)
+  chapter_id     String?         @db.VarChar(36)
+  episode_id     String?         @db.VarChar(36)
+  read_at        DateTime        @default(now()) @db.Timestamp(3)
+  users          users           @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "reading_history_ibfk_1")
+  novels         novels?         @relation(fields: [novel_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "reading_history_ibfk_2")
+  comics         comics?         @relation(fields: [comic_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "reading_history_ibfk_3")
+  chapters       chapters?       @relation(fields: [chapter_id], references: [id], onDelete: SetNull, onUpdate: Restrict, map: "reading_history_ibfk_4")
+  comic_episodes comic_episodes? @relation(fields: [episode_id], references: [id], onDelete: SetNull, onUpdate: Restrict, map: "reading_history_ibfk_5")
+
+  @@unique([user_id, novel_id], map: "uniq_user_novel")
+  @@unique([user_id, comic_id], map: "uniq_user_comic")
+  @@index([user_id, read_at], map: "idx_user_time")
+  @@index([novel_id], map: "novel_id")
+  @@index([comic_id], map: "comic_id")
+  @@index([chapter_id], map: "chapter_id")
+  @@index([episode_id], map: "episode_id")
 }
 
 model ratings {

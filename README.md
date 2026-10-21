@@ -57,6 +57,7 @@ npx tsx scripts/move_comic_pages_private.ts  # ย้ายรูปหน้า
 npx tsx scripts/add_login_attempts.ts        # จำกัดการล็อกอินผิด
 npx tsx scripts/add_comments_ratings.ts      # คอมเมนต์และให้คะแนน
 npx tsx scripts/add_register_attempts.ts     # จำกัดการสมัครสมาชิก
+npx tsx scripts/add_reading_history.ts       # ประวัติการอ่าน
 ```
 
 ### รัน
