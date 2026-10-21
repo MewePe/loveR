@@ -60,6 +60,8 @@ export default function AdminPanel() {
     // Writers state
     const [writerRequests, setWriterRequests] = useState<WriterRequest[]>([]);
     const [selectedWriter, setSelectedWriter] = useState<WriterRequest | null>(null);
+    // Writer application being rejected: the reason form is open while this is set
+    const [rejecting, setRejecting] = useState<{ userId: string; reason: string; submitting: boolean } | null>(null);
 
     // Categories state
     const [categories, setCategories] = useState<Category[]>([]);
@@ -177,8 +179,7 @@ export default function AdminPanel() {
         setSaving(false);
     }
 
-    async function handleWriterAction(userId: string, action: 'APPROVED' | 'REJECTED') {
-        const reason = action === 'REJECTED' ? prompt('หมายเหตุสำหรับการปฏิเสธ (ถ้ามี):') : null;
+    async function handleWriterAction(userId: string, action: 'APPROVED' | 'REJECTED', reason: string | null = null) {
         const res = await fetch(`/api/admin/writers/${userId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
@@ -188,6 +189,7 @@ export default function AdminPanel() {
         if (res.ok) {
             toast.success(action === 'APPROVED' ? 'อนุมัติเรียบร้อย' : 'ปฏิเสธเรียบร้อย');
             setSelectedWriter(null);
+            setRejecting(null);
             fetchTabData();
         } else {
             toast.error('เกิดข้อผิดพลาด');
@@ -355,7 +357,7 @@ export default function AdminPanel() {
                                         <button onClick={() => setSelectedWriter(req)} className="text-gray-400 hover:text-blue-600"><Eye className="w-4 h-4" /></button>
                                         {req.status === 'PENDING' && (<>
                                             <button onClick={() => handleWriterAction(req.user_id, 'APPROVED')} className="text-gray-400 hover:text-green-600" title="อนุมัติ"><CheckCircle className="w-4 h-4" /></button>
-                                            <button onClick={() => handleWriterAction(req.user_id, 'REJECTED')} className="text-gray-400 hover:text-red-600" title="ปฏิเสธ"><XCircle className="w-4 h-4" /></button>
+                                            <button onClick={() => setRejecting({ userId: req.user_id, reason: '', submitting: false })} className="text-gray-400 hover:text-red-600" title="ปฏิเสธ"><XCircle className="w-4 h-4" /></button>
                                         </>)}
                                     </td>
                                 </tr>
@@ -383,10 +385,44 @@ export default function AdminPanel() {
                             </div>
                             <div className="flex justify-end gap-3">
                                 <button onClick={() => setSelectedWriter(null)} className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">ปิด</button>
-                                {selectedWriter.status === 'PENDING' && <><button onClick={() => handleWriterAction(selectedWriter.user_id, 'REJECTED')} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">ปฏิเสธ</button>
+                                {selectedWriter.status === 'PENDING' && <><button onClick={() => setRejecting({ userId: selectedWriter.user_id, reason: '', submitting: false })} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">ปฏิเสธ</button>
                                     <button onClick={() => handleWriterAction(selectedWriter.user_id, 'APPROVED')} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">อนุมัติ</button></>}
                             </div>
                         </div>
+                    </div>
+                )}
+                {rejecting && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4" onClick={() => !rejecting.submitting && setRejecting(null)}>
+                        <form
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="reject-title"
+                            className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6"
+                            onClick={(e) => e.stopPropagation()}
+                            onSubmit={async (e) => {
+                                e.preventDefault();
+                                setRejecting({ ...rejecting, submitting: true });
+                                await handleWriterAction(rejecting.userId, 'REJECTED', rejecting.reason.trim() || null);
+                                setRejecting((current) => current && { ...current, submitting: false });
+                            }}
+                        >
+                            <h2 id="reject-title" className="text-lg font-bold mb-1 text-gray-900 dark:text-white">ปฏิเสธคำขอเป็นนักเขียน</h2>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">เหตุผลจะแสดงให้ผู้สมัครเห็น เพื่อแก้ไขแล้วส่งใหม่ได้</p>
+                            <textarea
+                                autoFocus
+                                rows={4}
+                                maxLength={500}
+                                value={rejecting.reason}
+                                onChange={(e) => setRejecting({ ...rejecting, reason: e.target.value })}
+                                onKeyDown={(e) => { if (e.key === 'Escape' && !rejecting.submitting) setRejecting(null); }}
+                                placeholder="เช่น สำเนาบัตรประชาชนไม่ชัด (ไม่บังคับ)"
+                                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            />
+                            <div className="flex justify-end gap-3 mt-4">
+                                <button type="button" disabled={rejecting.submitting} onClick={() => setRejecting(null)} className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg disabled:opacity-50">ยกเลิก</button>
+                                <button type="submit" disabled={rejecting.submitting} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50">{rejecting.submitting ? 'กำลังบันทึก...' : 'ปฏิเสธคำขอ'}</button>
+                            </div>
+                        </form>
                     </div>
                 )}
             </div>
