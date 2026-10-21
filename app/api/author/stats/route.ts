@@ -30,7 +30,8 @@ export async function GET() {
         return NextResponse.json({
             novels: novelCount[0].count,
             comics: comicCount[0].count,
-            views: (novelViews[0].views || 0) + (comicViews[0].views || 0)
+            // SUM() comes back from mysql2 as a DECIMAL string, so convert before adding ("0" + "0" would be "00")
+            views: Number(novelViews[0].views || 0) + Number(comicViews[0].views || 0)
         });
     } catch (error) {
         console.error('Error fetching stats:', error);

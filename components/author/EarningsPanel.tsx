@@ -43,7 +43,8 @@ export default function EarningsPanel() {
                         ยังไม่มีข้อมูลรายได้
                     </div>
                 ) : (
-                    <table className="w-full text-left text-sm">
+                    <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm whitespace-nowrap">
                         <thead className="text-gray-500 dark:text-gray-400 text-xs uppercase"><tr><th className="py-2">ตอน</th><th className="py-2">ราคา</th><th className="py-2">รายได้</th><th className="py-2">วันที่</th></tr></thead>
                         <tbody className="divide-y dark:divide-gray-700">
                             {data.sales.map((s) => (
@@ -56,6 +57,7 @@ export default function EarningsPanel() {
                             ))}
                         </tbody>
                     </table>
+                    </div>
                 )}
             </div>
         </div>

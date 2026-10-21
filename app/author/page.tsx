@@ -146,8 +146,8 @@ export default function AuthorDashboard() {
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
-            {/* Sidebar */}
-            <div className="w-64 bg-white dark:bg-gray-800 h-screen shadow-md flex flex-col fixed left-0 top-0 z-40">
+            {/* Sidebar (md and up; phones get the tab strip below instead) */}
+            <div className="hidden md:flex w-64 bg-white dark:bg-gray-800 h-screen shadow-md flex-col fixed left-0 top-0 z-40">
                 <div className="p-6 flex items-center gap-3 border-b dark:border-gray-700">
                     <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">
                         W
@@ -186,8 +186,24 @@ export default function AuthorDashboard() {
             </div>
 
             {/* Main Content */}
-            <div className="pl-64 flex-1">
-                <main className="p-8">
+            <div className="md:pl-64 flex-1 min-w-0">
+                {/* Tab strip for phones; sign-out is in the Navbar's mobile menu */}
+                <nav className="md:hidden flex gap-2 overflow-x-auto [scrollbar-width:none] px-4 pt-4 pb-1">
+                    {menuItems.map((item) => (
+                        <button
+                            key={item.key}
+                            onClick={() => setActiveTab(item.key)}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-full text-sm whitespace-nowrap flex-shrink-0 transition-colors ${activeTab === item.key
+                                ? 'bg-indigo-600 text-white'
+                                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700'
+                                }`}
+                        >
+                            <item.icon className="w-4 h-4" />
+                            {item.name}
+                        </button>
+                    ))}
+                </nav>
+                <main className="p-4 md:p-8">
                     {renderContent()}
                 </main>
             </div>

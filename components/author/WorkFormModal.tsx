@@ -72,8 +72,8 @@ export default function WorkFormModal({ kind, work, categories, onClose, onSaved
     const inputClass = `w-full px-4 py-2 border rounded-lg focus:ring-2 ${k.ring} outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-white`;
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 w-full max-w-lg mx-4 shadow-2xl">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 sm:p-8 w-full max-w-lg shadow-2xl max-h-full overflow-y-auto">
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">{work ? 'แก้ไข' : 'สร้าง'}{k.label}{work ? '' : 'ใหม่'}</h2>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
