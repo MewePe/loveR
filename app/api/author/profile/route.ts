@@ -3,6 +3,7 @@ import pool from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
 import { savePrivateDocument } from '@/lib/upload';
+import { notifyAdmins, short } from '@/lib/notifications';
 
 // Columns a user may set on their own writer profile (status/rejection_reason are admin-only)
 const TEXT_FIELDS = [
@@ -96,6 +97,14 @@ export async function POST(req: Request) {
         } else {
             const placeholders = ['?', ...columns.map(() => '?')].join(', ');
             await pool.query(`INSERT INTO writer_profiles (${['user_id', ...columns].join(', ')}) VALUES (${placeholders})`, [session.user.id, ...values]);
+        }
+
+        if (isApplying) {
+            await notifyAdmins({
+                type: 'ADMIN_WRITER_REQUEST',
+                message: `${short(session.user.name, 40) || 'ผู้ใช้'} ส่งคำขอเป็นนักเขียน`,
+                link: '/admin?tab=writers',
+            }, session.user.id);
         }
 
         return NextResponse.json({ message: 'Profile saved successfully' });

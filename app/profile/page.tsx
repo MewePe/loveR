@@ -126,7 +126,7 @@ export default function ProfilePage() {
                             <div className="relative">
                                 <div className="w-32 h-32 rounded-full bg-white dark:bg-gray-700 border-4 border-white dark:border-gray-800 shadow-lg overflow-hidden">
                                     {avatarPreview ? (
-                                        <Image src={avatarPreview} alt="Avatar" fill className="object-cover" />
+                                        <Image src={avatarPreview} alt="รูปโปรไฟล์" fill className="object-cover" />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center text-gray-400 text-4xl">
                                             <User className="w-16 h-16" />

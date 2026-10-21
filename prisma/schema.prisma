@@ -179,6 +179,8 @@ model users {
   comments        comments[]
   ratings         ratings[]
   reading_history reading_history[]
+  notifications   notifications[] @relation("notification_recipient")
+  notifications_caused notifications[] @relation("notification_actor")
   comics          comics[]
   novels          novels[]
   purchases       purchases[]       @relation("purchases_buyer")
@@ -266,19 +268,39 @@ model purchases {
 }
 
 model comments {
-  id         String   @id @db.VarChar(36)
-  user_id    String   @db.VarChar(36)
-  novel_id   String?  @db.VarChar(36)
-  comic_id   String?  @db.VarChar(36)
-  body       String   @db.Text
-  created_at DateTime @default(now()) @db.Timestamp(3)
-  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "comments_ibfk_1")
-  novels     novels?  @relation(fields: [novel_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "comments_ibfk_2")
-  comics     comics?  @relation(fields: [comic_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "comments_ibfk_3")
+  id         String     @id @db.VarChar(36)
+  user_id    String     @db.VarChar(36)
+  novel_id   String?    @db.VarChar(36)
+  comic_id   String?    @db.VarChar(36)
+  parent_id  String?    @db.VarChar(36)
+  body       String     @db.Text
+  created_at DateTime   @default(now()) @db.Timestamp(3)
+  users      users      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "comments_ibfk_1")
+  novels     novels?    @relation(fields: [novel_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "comments_ibfk_2")
+  comics     comics?    @relation(fields: [comic_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "comments_ibfk_3")
+  parent     comments?  @relation("comment_replies", fields: [parent_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "comments_ibfk_4")
+  replies    comments[] @relation("comment_replies")
 
   @@index([novel_id, created_at], map: "idx_novel_time")
   @@index([comic_id, created_at], map: "idx_comic_time")
   @@index([user_id, created_at], map: "idx_user_time")
+  @@index([parent_id, created_at], map: "idx_parent_time")
+}
+
+model notifications {
+  id         String   @id @db.VarChar(36)
+  user_id    String   @db.VarChar(36)
+  actor_id   String?  @db.VarChar(36)
+  type       String   @db.VarChar(32)
+  message    String   @db.VarChar(500)
+  link       String   @db.VarChar(500)
+  is_read    Boolean  @default(false)
+  created_at DateTime @default(now()) @db.Timestamp(3)
+  users      users    @relation("notification_recipient", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "notifications_ibfk_1")
+  actor      users?   @relation("notification_actor", fields: [actor_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "notifications_ibfk_2")
+
+  @@index([user_id, created_at], map: "idx_user_time")
+  @@index([user_id, is_read], map: "idx_user_unread")
 }
 
 model reading_history {

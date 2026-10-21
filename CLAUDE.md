@@ -50,6 +50,7 @@ npx tsx scripts/add_login_attempts.ts # ตาราง login_attempts สำห
 npx tsx scripts/add_comments_ratings.ts # ตาราง comments และ ratings (รันซ้ำได้)
 npx tsx scripts/add_register_attempts.ts # ตาราง register_attempts สำหรับจำกัดการสมัครสมาชิก (รันซ้ำได้)
 npx tsx scripts/add_reading_history.ts # ตาราง reading_history (รันซ้ำได้)
+npx tsx scripts/add_notifications.ts # ตาราง notifications และคอลัมน์ comments.parent_id (รันซ้ำได้)
 ```
 
 `reset_db.ts` และ `drop_old_db.ts` ลบข้อมูล
@@ -118,7 +119,8 @@ npx tsx scripts/add_reading_history.ts # ตาราง reading_history (รั
 **รายงานเนื้อหา**: `components/ReportButton.tsx` (อยู่ในหน้านิยาย/การ์ตูน และแบบ `compact` ข้างแต่ละคอมเมนต์) → `POST /api/reports` (NOVEL/COMIC/COMMENT ห้ามรายงานซ้ำขณะที่ยัง PENDING) แอดมินจัดการที่ `/admin` แท็บ Reports ซึ่งลบคอมเมนต์ที่ถูกรายงานได้เลย
 
 **คอมเมนต์และให้คะแนน** (ระดับเรื่อง ไม่ใช่รายบท อยู่ล่างรายการตอนในหน้า `/novel/[id]` และ `/comic/[id]`):
-- `GET/POST /api/comments` (ใหม่สุดก่อน หน้าละ 20, `?page=`) และ `DELETE /api/comments/[id]` ลบได้โดยเจ้าของคอมเมนต์ เจ้าของเรื่อง หรือแอดมิน UI อยู่ใน `components/CommentSection.tsx`
+- `GET/POST /api/comments` (คอมเมนต์หลักใหม่สุดก่อน หน้าละ 20, `?page=` แต่ละอันมี `replies` เรียงเก่าสุดก่อน) และ `DELETE /api/comments/[id]` ลบได้โดยเจ้าของคอมเมนต์ เจ้าของเรื่อง หรือแอดมิน UI อยู่ใน `components/CommentSection.tsx` (`id="comments"` ใช้เป็น anchor จากแจ้งเตือน)
+- **ตอบกลับ**: `POST` พร้อม `parent_id` ได้ลึก 1 ชั้นเท่านั้น (parent ต้องเป็นคอมเมนต์หลักของเรื่องเดียวกัน ไม่งั้น 400/404) ลบคอมเมนต์หลักแล้วคำตอบหายตาม (FK cascade) `total` นับเฉพาะคอมเมนต์หลัก (ใช้แบ่งหน้า) ส่วน `total_with_replies` นับรวม
 - เนื้อหาคอมเมนต์เป็น plain text ไม่เกิน 1000 ตัวอักษร แสดงด้วย `whitespace-pre-line` **ห้ามใช้ `dangerouslySetInnerHTML`** (เหตุผลเดียวกับเนื้อหาบท) จำกัด 5 คอมเมนต์ต่อนาทีต่อคน (429)
 - `comments.created_at` เป็น `TIMESTAMP(3)` เพื่อให้เรียงใหม่สุดก่อนได้ถูกต้องเมื่อโพสต์ในวินาทีเดียวกัน
 - `GET/PUT/DELETE /api/ratings` คืน `{ average, count, mine, can_rate }` คะแนน 1-5 หนึ่งแถวต่อคนต่อเรื่อง (`PUT` = upsert) ให้คะแนนได้เฉพาะเรื่อง `PUBLISHED` และห้ามให้คะแนนเรื่องของตัวเอง UI อยู่ใน `components/RatingStars.tsx` (กดดาวเดิมซ้ำ = ยกเลิก)
@@ -130,6 +132,14 @@ npx tsx scripts/add_reading_history.ts # ตาราง reading_history (รั
 - `recordRead()` ถูกเรียกในหน้า `app/read/[chapterId]` และ `app/comic/[id]/read/[episodeId]` เฉพาะเมื่อผ่าน `canAccess()` แล้ว (หน้า paywall ไม่บันทึก) ถ้า error จะ log แล้วยังให้อ่านได้ตามปกติ
 - `GET /api/history?page=` (ล่าสุดก่อน หน้าละ 20) ซ่อนเรื่องที่ไม่ได้ `PUBLISHED` ยกเว้นเรื่องของตัวเอง (กฎเดียวกับ bookmarks) และ `DELETE /api/history` (`{ content_type, content_id }` หรือ `{ all: true }`) หน้า UI คือ `/history` ซึ่งมีปุ่ม "อ่านต่อ"
 - ถ้าบทถูกลบ แถวยังอยู่แต่ `chapter_id` เป็น NULL (ปุ่มอ่านต่อจะพาไปหน้าเรื่องแทน) `novelsRead`/`comicsRead` ใน `/api/profile` นับจากตารางนี้
+
+**แจ้งเตือน** (`lib/notifications.ts`, ตาราง `notifications`):
+- สร้างผ่าน `notify(recipients, { type, message, link }, actorId)` / `notifyAdmins()` / `notifyNewItem()` เท่านั้น `type` ต้องอยู่ใน `NOTIFICATION_TYPES` (เก็บเป็น VARCHAR) `message` เป็น plain text ที่ server เขียน (ตัดข้อความจากผู้ใช้ด้วย `short()`) `link` เป็น path ภายในเว็บ
+- เรียกหลังงานหลักสำเร็จ (หลัง commit) และ error จะถูก log แล้วกลืน แจ้งเตือนต้องไม่ทำให้งานหลักล้ม
+- `actorId` = คนที่ทำให้เกิด: ไม่แจ้งเตือนตัวเอง และ `actor_id ON DELETE CASCADE` ทำให้ลบผู้ใช้แล้วแจ้งเตือนที่เขาก่อหายด้วย (เทสต์อาศัยข้อนี้ ไม่ให้แอดมินจริงได้แจ้งเตือนขยะ) ฝั่งแอดมินส่งให้ ADMIN ทุกคน
+- จุดที่สร้าง: บท/ตอนใหม่ของเรื่อง PUBLISHED → คนที่บุ๊กมาร์ก, คอมเมนต์ → เจ้าของเรื่อง, ตอบกลับ → เจ้าของคอมเมนต์หลัก, ให้คะแนนครั้งแรก → เจ้าของเรื่อง (ไม่ระบุชื่อผู้ให้), ขายตอน → นักเขียน (ไม่ระบุชื่อผู้ซื้อ), ผลเติมเหรียญ / คำขอนักเขียน / การถอน → เจ้าของ, สลิปเติมเหรียญ / คำขอนักเขียน / คำขอถอน / รายงาน → แอดมิน
+- API: `GET /api/notifications` (`?page=` หรือ `?limit=`), `GET /api/notifications/count`, `PATCH /api/notifications/[id]` (อ่านแล้ว เฉพาะของตัวเอง), `POST /api/notifications/read-all` UI คือ `components/NotificationBell.tsx` ใน Navbar (poll ทุก 30 วินาทีเฉพาะตอนแท็บเปิดอยู่) และหน้า `/notifications`
+- `/admin` และ `/author` รับ `?tab=` เพื่อเปิดแท็บตรงจากลิงก์แจ้งเตือน
 
 **ระบบเหรียญและขายตอน** (logic หลักอยู่ใน `lib/coins.ts`):
 - 1 เหรียญ = 1 บาท ยอดเหรียญของผู้อ่านอยู่ที่ `users.coins` แต่ละบท/ตอนมี `price` (0 = ฟรี)
@@ -151,7 +161,7 @@ npx tsx scripts/add_reading_history.ts # ตาราง reading_history (รั
 
 ## งานที่เหลือ (อัปเดตล่าสุด 2026-10-21)
 
-**สถานะ branch**: ทุกอย่างอยู่บน `main` แล้ว (`login-rate-limit` merge แล้ว) DB อื่นที่ไม่ใช่เครื่องนี้ต้องรัน `scripts/add_login_attempts.ts`, `scripts/add_comments_ratings.ts`, `scripts/add_register_attempts.ts` และ `scripts/add_reading_history.ts`
+**สถานะ branch**: ทุกอย่างอยู่บน `main` แล้ว (`login-rate-limit` merge แล้ว) DB อื่นที่ไม่ใช่เครื่องนี้ต้องรัน `scripts/add_login_attempts.ts`, `scripts/add_comments_ratings.ts`, `scripts/add_register_attempts.ts`, `scripts/add_reading_history.ts` และ `scripts/add_notifications.ts`
 
 **ผู้ดูแลต้องทำเอง**:
 - กรอก "ข้อมูลการชำระเงิน" ที่ `/admin` → Settings ถ้ายังไม่กรอก ผู้อ่านจะเติมเหรียญไม่ได้

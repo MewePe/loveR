@@ -11,10 +11,10 @@ export function isContentType(value: unknown): value is ContentType {
     return value === 'novel' || value === 'comic';
 }
 
-// The parent novel/comic row (id, status, author_id) or undefined
+// The parent novel/comic row (id, title, status, author_id) or undefined
 export async function getContentRow(type: ContentType, id: string) {
     const [rows] = await pool.query<RowDataPacket[]>(
-        `SELECT id, status, author_id FROM ${CONTENT_TABLE[type]} WHERE id = ?`,
+        `SELECT id, title, status, author_id FROM ${CONTENT_TABLE[type]} WHERE id = ?`,
         [id]
     );
     return rows[0];

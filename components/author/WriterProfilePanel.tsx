@@ -207,13 +207,13 @@ export default function WriterProfilePanel() {
                             />
                             {previews.id_card ? (
                                 <div className="relative h-40 w-full mb-2">
-                                    <Image src={previews.id_card} alt="ID Card" fill unoptimized className="object-contain rounded-lg" />
+                                    <Image src={previews.id_card} alt="สำเนาบัตรประชาชน" fill unoptimized className="object-contain rounded-lg" />
                                 </div>
                             ) : (
                                 <Upload className="w-10 h-10 text-gray-400 mx-auto mb-2" />
                             )}
                             <p className="font-medium text-gray-700 dark:text-gray-300">สำเนาบัตรประชาชน*</p>
-                            <p className="text-xs text-gray-500 mt-1">.jpg .png ขนาดไม่เกิน 5MB</p>
+                            <p className="text-xs text-gray-500 mt-1">.jpg .png .webp .gif ขนาดไม่เกิน 10MB</p>
                         </div>
 
                         {/* Bank Book */}
@@ -226,13 +226,13 @@ export default function WriterProfilePanel() {
                             />
                             {previews.bank_book ? (
                                 <div className="relative h-40 w-full mb-2">
-                                    <Image src={previews.bank_book} alt="Bank Book" fill unoptimized className="object-contain rounded-lg" />
+                                    <Image src={previews.bank_book} alt="สำเนาบัญชีธนาคาร" fill unoptimized className="object-contain rounded-lg" />
                                 </div>
                             ) : (
                                 <Upload className="w-10 h-10 text-gray-400 mx-auto mb-2" />
                             )}
                             <p className="font-medium text-gray-700 dark:text-gray-300">สำเนาบัญชีธนาคาร*</p>
-                            <p className="text-xs text-gray-500 mt-1">.jpg .png ขนาดไม่เกิน 5MB</p>
+                            <p className="text-xs text-gray-500 mt-1">.jpg .png .webp .gif ขนาดไม่เกิน 10MB</p>
                         </div>
                     </div>
                 </section>

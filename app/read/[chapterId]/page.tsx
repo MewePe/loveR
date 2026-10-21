@@ -61,7 +61,7 @@ export default async function ReadChapter({ params }: { params: Promise<{ chapte
                 </Link>
                 <h1 className="text-sm md:text-base font-bold text-center truncate px-2 dark:text-white">{chapter.title}</h1>
                 <div className="w-[100px] flex justify-end items-center gap-2 text-sm">
-                    <button className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200 transition-colors p-1" aria-label="Font Settings">Aa</button>
+                    <button className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200 transition-colors p-1" aria-label="ตั้งค่าตัวอักษร">Aa</button>
                     <ThemeToggle />
                 </div>
             </div>

@@ -58,6 +58,7 @@ npx tsx scripts/add_login_attempts.ts        # จำกัดการล็อ
 npx tsx scripts/add_comments_ratings.ts      # คอมเมนต์และให้คะแนน
 npx tsx scripts/add_register_attempts.ts     # จำกัดการสมัครสมาชิก
 npx tsx scripts/add_reading_history.ts       # ประวัติการอ่าน
+npx tsx scripts/add_notifications.ts         # แจ้งเตือน และการตอบกลับคอมเมนต์
 ```
 
 ### รัน

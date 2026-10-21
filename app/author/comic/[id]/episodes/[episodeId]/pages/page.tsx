@@ -345,7 +345,7 @@ export default function PageManagement() {
                                     </span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span>รอ upload</span>
+                                    <span>รออัปโหลด</span>
                                     <span className="font-semibold text-pink-600">
                                         {queuedFiles.length} รูป
                                     </span>

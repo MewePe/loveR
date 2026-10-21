@@ -229,14 +229,17 @@ CREATE TABLE IF NOT EXISTS comments (
     user_id VARCHAR(36) NOT NULL,
     novel_id VARCHAR(36),
     comic_id VARCHAR(36),
+    parent_id VARCHAR(36), -- set on replies; replies are one level deep (the parent is always a top-level comment)
     body TEXT NOT NULL, -- plain text, rendered with whitespace-pre-line
     created_at TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP(3), -- ms precision so newest-first ordering is stable
     INDEX idx_novel_time (novel_id, created_at),
     INDEX idx_comic_time (comic_id, created_at),
     INDEX idx_user_time (user_id, created_at),
+    INDEX idx_parent_time (parent_id, created_at),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (novel_id) REFERENCES novels(id) ON DELETE CASCADE,
-    FOREIGN KEY (comic_id) REFERENCES comics(id) ON DELETE CASCADE
+    FOREIGN KEY (comic_id) REFERENCES comics(id) ON DELETE CASCADE,
+    FOREIGN KEY (parent_id) REFERENCES comments(id) ON DELETE CASCADE
 );
 
 -- Star ratings (1-5), one per user per novel/comic
@@ -274,4 +277,20 @@ CREATE TABLE IF NOT EXISTS reading_history (
     FOREIGN KEY (comic_id) REFERENCES comics(id) ON DELETE CASCADE,
     FOREIGN KEY (chapter_id) REFERENCES chapters(id) ON DELETE SET NULL,
     FOREIGN KEY (episode_id) REFERENCES comic_episodes(id) ON DELETE SET NULL
+);
+
+-- In-app notifications (lib/notifications.ts). message/link are written by the server; type is whitelisted in code
+CREATE TABLE IF NOT EXISTS notifications (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    actor_id VARCHAR(36), -- who caused it; deleting that user removes the notifications they caused
+    type VARCHAR(32) NOT NULL,
+    message VARCHAR(500) NOT NULL,
+    link VARCHAR(500) NOT NULL,
+    is_read TINYINT(1) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP(3),
+    INDEX idx_user_time (user_id, created_at),
+    INDEX idx_user_unread (user_id, is_read),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE CASCADE
 );

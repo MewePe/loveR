@@ -71,7 +71,8 @@ export async function getAuthorBalance(authorId: string, conn: PoolConnection | 
 }
 
 export type PurchaseResult =
-    | { ok: true; coins: number }
+    // charged/title/authorId are only set when this call made the sale (not when the item was already owned)
+    | { ok: true; coins: number; charged?: number; title?: string; authorId?: string }
     | { ok: false; status: number; error: string };
 
 // Spend the buyer's coins to unlock a chapter/episode. Runs in a transaction with the buyer row locked
@@ -117,7 +118,7 @@ export async function purchaseItem(userId: string, kind: ItemKind, itemId: strin
         );
 
         await conn.commit();
-        return { ok: true, coins: users[0].coins - item.price };
+        return { ok: true, coins: users[0].coins - item.price, charged: item.price, title: item.title, authorId: item.author_id };
     } catch (error) {
         await conn.rollback();
         throw error;

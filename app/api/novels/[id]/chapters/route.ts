@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
 import { v4 as uuidv4 } from 'uuid';
 import { parsePrice } from '@/lib/coins';
+import { notifyNewItem } from '@/lib/notifications';
 import { canViewContent, isOwnerOrAdmin } from '@/lib/visibility';
 
 // GET - Fetch all chapters for a novel. Content is only included for the author/admin (editor view).
@@ -72,6 +73,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             'INSERT INTO chapters (id, title, content, chapter_order, novel_id, price) VALUES (?, ?, ?, ?, ?, ?)',
             [id, title, content, nextOrder, novelId, price]
         );
+        await notifyNewItem('novel', novels[0] as { id: string; title: string; author_id: string; status: string }, id, title);
 
         return NextResponse.json({ id, title, chapter_order: nextOrder });
     } catch (error) {

@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { parsePrice } from '@/lib/coins';
 import { canViewContent } from '@/lib/visibility';
 import { validatePageUrls } from '@/lib/upload';
+import { notifyNewItem } from '@/lib/notifications';
 
 // GET - Fetch all episodes for a comic
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -90,6 +91,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
                 );
             }
         }
+
+        await notifyNewItem('comic', comics[0] as { id: string; title: string; author_id: string; status: string }, episodeId, title);
 
         return NextResponse.json({ id: episodeId, title, episode_order: nextOrder });
     } catch (error) {

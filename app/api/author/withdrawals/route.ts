@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
 import { v4 as uuidv4 } from 'uuid';
 import { getAuthorBalance, MIN_WITHDRAWAL } from '@/lib/coins';
+import { baht, notifyAdmins, short } from '@/lib/notifications';
 
 // GET - Author's withdrawal history
 export async function GET() {
@@ -70,6 +71,11 @@ export async function POST(req: Request) {
         );
 
         await connection.commit();
+        await notifyAdmins({
+            type: 'ADMIN_WITHDRAWAL',
+            message: `${short(session.user.name, 40) || 'นักเขียน'} ขอถอนเงิน ฿${baht(value)}`,
+            link: '/admin?tab=payments',
+        }, userId);
         return NextResponse.json({ success: true });
     } catch (error) {
         await connection.rollback();

@@ -1,9 +1,9 @@
 "use client";
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import { LayoutDashboard, BookOpen, DollarSign, Wallet, User, LogOut, ImageIcon } from 'lucide-react';
 import { signOut, useSession } from 'next-auth/react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import DashboardPanel, { AuthorStats } from '@/components/author/DashboardPanel';
 import WorksPanel from '@/components/author/WorksPanel';
 import WorkFormModal from '@/components/author/WorkFormModal';
@@ -25,10 +25,16 @@ const menuItems = [
 
 // Writer Center: sidebar + one panel per tab (components/author/). This page loads the data the dashboard,
 // novels and comics tabs share; earnings, wallet and profile panels load their own.
-export default function AuthorDashboard() {
+function AuthorDashboard() {
     const { data: session, status } = useSession();
     const router = useRouter();
     const [activeTab, setActiveTab] = useState<TabType>('dashboard');
+    // ?tab=... opens a tab directly (links from notifications)
+    const searchParams = useSearchParams();
+    useEffect(() => {
+        const tab = searchParams.get('tab');
+        if (menuItems.some((item) => item.key === tab)) setActiveTab(tab as TabType);
+    }, [searchParams]);
     const [stats, setStats] = useState<AuthorStats>({ novels: 0, comics: 0, views: 0 });
     const [novels, setNovels] = useState<Work[]>([]);
     const [comics, setComics] = useState<Work[]>([]);
@@ -220,5 +226,14 @@ export default function AuthorDashboard() {
                 />
             )}
         </div>
+    );
+}
+
+// useSearchParams() must sit inside Suspense or next build can't prerender the page
+export default function AuthorDashboardPage() {
+    return (
+        <Suspense>
+            <AuthorDashboard />
+        </Suspense>
     );
 }

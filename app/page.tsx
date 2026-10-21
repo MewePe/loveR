@@ -54,8 +54,8 @@ export default async function Home() {
       {/* Popular Novels */}
       <section className="py-16 container mx-auto px-4">
         <div className="flex justify-between items-end mb-8">
-          <h2 className="text-3xl font-bold text-gray-800 dark:text-white">📚 Popular Novels</h2>
-          <Link href="/search?type=novel" className="text-indigo-600 font-medium hover:underline">View All</Link>
+          <h2 className="text-3xl font-bold text-gray-800 dark:text-white">📚 นิยายยอดนิยม</h2>
+          <Link href="/search?type=novel" className="text-indigo-600 font-medium hover:underline">ดูทั้งหมด</Link>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -90,8 +90,8 @@ export default async function Home() {
       {/* Popular Comics */}
       <section className="py-16 container mx-auto px-4 bg-gray-100 dark:bg-gray-800/50 rounded-3xl">
         <div className="flex justify-between items-end mb-8">
-          <h2 className="text-3xl font-bold text-gray-800 dark:text-white">🎨 Popular Comics</h2>
-          <Link href="/search?type=comic" className="text-pink-600 font-medium hover:underline">View All</Link>
+          <h2 className="text-3xl font-bold text-gray-800 dark:text-white">🎨 การ์ตูนยอดนิยม</h2>
+          <Link href="/search?type=comic" className="text-pink-600 font-medium hover:underline">ดูทั้งหมด</Link>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">

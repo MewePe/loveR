@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { auth } from '@/lib/auth';
-import { RowDataPacket } from 'mysql2';
+import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import { v4 as uuidv4 } from 'uuid';
 import { canViewContent, Viewer } from '@/lib/visibility';
 import { CONTENT_COLUMN, ContentType, getContentRow, isContentType } from '@/lib/contentRef';
+import { notify, short } from '@/lib/notifications';
 
 // { average, count, mine, can_rate } for one novel/comic
 async function summary(type: ContentType, content: RowDataPacket, viewer: Viewer) {
@@ -83,11 +84,19 @@ export async function PUT(req: NextRequest) {
             return NextResponse.json({ error: 'ให้คะแนนได้เฉพาะผลงานที่เผยแพร่อยู่' }, { status: 400 });
         }
 
-        await pool.query(
+        const [result] = await pool.query<ResultSetHeader>(
             `INSERT INTO ratings (id, user_id, ${CONTENT_COLUMN[content_type]}, score) VALUES (?, ?, ?, ?)
              ON DUPLICATE KEY UPDATE score = VALUES(score)`,
             [uuidv4(), userId, content_id, score]
         );
+        // affectedRows is 1 for a new row (2 = changed an existing rating). Raters stay anonymous, like on the page.
+        if (result.affectedRows === 1) {
+            await notify([content.author_id], {
+                type: 'NEW_RATING',
+                message: `มีผู้อ่านให้คะแนน ${'★'.repeat(score)} กับ "${short(content.title)}"`,
+                link: `/${content_type}/${content_id}`,
+            }, userId);
+        }
 
         return NextResponse.json(await summary(content_type, content, session.user));
     } catch (error) {

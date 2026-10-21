@@ -4,6 +4,7 @@ import { useSession, signIn, signOut } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 import { Home, Search, Bookmark, Coins, History } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
+import NotificationBell from './NotificationBell';
 
 const ROLE_LABEL: Record<string, string> = { ADMIN: 'แอดมิน', AUTHOR: 'นักเขียน', READER: 'ผู้อ่าน' };
 
@@ -19,6 +20,16 @@ export default function Navbar() {
     const [isOpen, setIsOpen] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+    // Render the bell in only the visible layout, so there's one bell polling for notifications, not two
+    const [isDesktop, setIsDesktop] = useState(false);
+
+    useEffect(() => {
+        const mq = window.matchMedia('(min-width: 768px)'); // Tailwind md
+        const update = () => setIsDesktop(mq.matches);
+        update();
+        mq.addEventListener('change', update);
+        return () => mq.removeEventListener('change', update);
+    }, []);
 
     useEffect(() => {
         if (status === 'authenticated') {
@@ -60,11 +71,12 @@ export default function Navbar() {
 
                     {/* Desktop Menu */}
                     <div className="hidden md:flex items-center space-x-6">
-                        <Link href="/" className="flex items-center gap-1 text-gray-600 hover:text-indigo-600 dark:text-gray-300 dark:hover:text-indigo-400 font-medium"><Home className="w-4 h-4" /> Home</Link>
-                        <Link href="/search" className="flex items-center gap-1 text-gray-600 hover:text-indigo-600 dark:text-gray-300 dark:hover:text-indigo-400 font-medium"><Search className="w-4 h-4" /> </Link>
+                        <Link href="/" className="flex items-center gap-1 text-gray-600 hover:text-indigo-600 dark:text-gray-300 dark:hover:text-indigo-400 font-medium"><Home className="w-4 h-4" /> หน้าแรก</Link>
+                        <Link href="/search" aria-label="ค้นหา" className="flex items-center gap-1 text-gray-600 hover:text-indigo-600 dark:text-gray-300 dark:hover:text-indigo-400 font-medium"><Search className="w-4 h-4" /> </Link>
 
                         <div className="flex items-center gap-4">
                             <ThemeToggle />
+                            {session && isDesktop && <NotificationBell />}
                             {session ? (
                                 <div className="relative">
                                     <button
@@ -163,6 +175,7 @@ export default function Navbar() {
                     {/* Mobile Menu Button */}
                     <div className="md:hidden flex items-center gap-2">
                         <ThemeToggle />
+                        {session && !isDesktop && <NotificationBell />}
                         <button onClick={() => setIsOpen(!isOpen)} className="text-gray-600 dark:text-gray-300 focus:outline-none">
                             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
@@ -176,8 +189,8 @@ export default function Navbar() {
             {isOpen && (
                 <div className="md:hidden bg-white dark:bg-gray-900 border-t dark:border-gray-800">
                     <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-                        <Link href="/" className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 hover:bg-gray-50 dark:hover:bg-gray-800">Home</Link>
-                        <Link href="/search" className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 hover:bg-gray-50 dark:hover:bg-gray-800">Browse</Link>
+                        <Link href="/" className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 hover:bg-gray-50 dark:hover:bg-gray-800">หน้าแรก</Link>
+                        <Link href="/search" className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 hover:bg-gray-50 dark:hover:bg-gray-800">ค้นหา</Link>
                         {session ? (
                             <>
                                 <div className="flex items-center gap-3 px-3 py-2 border-t dark:border-gray-700 mt-2 pt-4">

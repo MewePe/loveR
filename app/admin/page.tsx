@@ -1,7 +1,7 @@
 "use client";
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { BarChart3, Users, BookOpen, AlertTriangle, Tag, Settings, LogOut, Search, Shield, Ban, CheckCircle, XCircle, Eye, Trash2, Plus, Save, FileText, Wallet } from 'lucide-react';
 import PaymentsPanel from '@/components/admin/PaymentsPanel';
@@ -35,12 +35,18 @@ interface Report { id: string; reporter_name: string; target_type: string; targe
 interface WriterRequest { user_id: string; user_name: string; email: string; title: string; first_name: string; last_name: string; id_card_number: string; phone_number: string; province: string; bank_name: string; bank_account_name: string; bank_account_number: string; id_card_image: string; bank_book_image: string; status: string; rejection_reason: string; created_at: string; }
 interface Category { id: string; name: string; slug: string; }
 
-export default function AdminPanel() {
+function AdminPanel() {
     const toast = useToast();
     const confirm = useConfirm();
     const { data: session, status } = useSession();
     const router = useRouter();
     const [activeTab, setActiveTab] = useState<TabType>('dashboard');
+    // ?tab=... opens a tab directly (links from notifications)
+    const searchParams = useSearchParams();
+    useEffect(() => {
+        const tab = searchParams.get('tab');
+        if (menuItems.some((item) => item.key === tab)) setActiveTab(tab as TabType);
+    }, [searchParams]);
     const [loading, setLoading] = useState(true);
 
     // Dashboard state
@@ -509,5 +515,14 @@ export default function AdminPanel() {
             {/* Main Content */}
             <div className="pl-64 flex-1"><main className="p-8">{renderContent()}</main></div>
         </div>
+    );
+}
+
+// useSearchParams() must sit inside Suspense or next build can't prerender the page
+export default function AdminPanelPage() {
+    return (
+        <Suspense>
+            <AdminPanel />
+        </Suspense>
     );
 }

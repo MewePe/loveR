@@ -103,7 +103,7 @@ export default function WorkFormModal({ kind, work, categories, onClose, onSaved
                         <div className="flex items-center gap-4">
                             {coverPreview ? (
                                 <div className="relative w-24 h-32 rounded-lg overflow-hidden">
-                                    <Image src={coverPreview} alt="Cover preview" fill className="object-cover" />
+                                    <Image src={coverPreview} alt="ตัวอย่างรูปปก" fill className="object-cover" />
                                     <button
                                         type="button"
                                         onClick={() => { setCoverFile(null); setCoverPreview(null); }}

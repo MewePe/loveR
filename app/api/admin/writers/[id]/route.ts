@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { ResultSetHeader } from 'mysql2';
+import { notify, short } from '@/lib/notifications';
 
 export async function PATCH(
     req: Request,
@@ -42,6 +43,9 @@ export async function PATCH(
         }
 
         await connection.commit();
+        await notify([id], status === 'APPROVED'
+            ? { type: 'WRITER_APPROVED', message: 'คำขอเป็นนักเขียนของคุณได้รับการอนุมัติแล้ว เริ่มเขียนได้เลย!', link: '/author' }
+            : { type: 'WRITER_REJECTED', message: `คำขอเป็นนักเขียนของคุณไม่ได้รับการอนุมัติ${reason ? `: ${short(reason, 100)}` : ''}`, link: '/become-author' }, session.user.id);
         return NextResponse.json({ message: 'Writer request updated successfully' });
     } catch (error) {
         await connection.rollback();

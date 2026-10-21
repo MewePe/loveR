@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
 import { v4 as uuidv4 } from 'uuid';
 import { savePrivateDocument } from '@/lib/upload';
+import { notifyAdmins, short } from '@/lib/notifications';
 
 const MIN_TOPUP = 20;
 const MAX_TOPUP = 50000;
@@ -52,6 +53,11 @@ export async function POST(req: Request) {
             'INSERT INTO coin_topups (id, user_id, amount, slip_image) VALUES (?, ?, ?, ?)',
             [uuidv4(), session.user.id, amount, saved.url]
         );
+        await notifyAdmins({
+            type: 'ADMIN_TOPUP',
+            message: `${short(session.user.name, 40) || 'ผู้ใช้'} ส่งสลิปเติมเหรียญ ${amount} บาท รอตรวจสอบ`,
+            link: '/admin?tab=payments',
+        }, session.user.id);
 
         return NextResponse.json({ success: true });
     } catch (error) {

@@ -3,6 +3,9 @@ import pool from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
 import { v4 as uuidv4 } from 'uuid';
+import { notifyAdmins, short } from '@/lib/notifications';
+
+const REPORT_TARGET_LABEL: Record<string, string> = { NOVEL: 'นิยาย', COMIC: 'การ์ตูน', COMMENT: 'คอมเมนต์' };
 
 const TARGET_TABLES: Record<string, string> = { NOVEL: 'novels', COMIC: 'comics', COMMENT: 'comments' };
 
@@ -43,6 +46,11 @@ export async function POST(req: Request) {
             'INSERT INTO reports (id, reporter_id, target_id, target_type, reason) VALUES (?, ?, ?, ?, ?)',
             [uuidv4(), session.user.id, target_id, target_type, trimmedReason]
         );
+        await notifyAdmins({
+            type: 'ADMIN_REPORT',
+            message: `มีการรายงาน${REPORT_TARGET_LABEL[target_type]}ใหม่: ${short(trimmedReason, 80)}`,
+            link: '/admin?tab=reports',
+        }, session.user.id);
 
         return NextResponse.json({ success: true });
     } catch (error) {

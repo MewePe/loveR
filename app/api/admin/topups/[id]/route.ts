@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
+import { notify, short } from '@/lib/notifications';
 
 // PATCH - Approve (credit coins) or reject a pending top-up. Body: { status, reason? }
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -41,6 +42,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         }
 
         await connection.commit();
+        await notify([rows[0].user_id], status === 'APPROVED'
+            ? { type: 'TOPUP_APPROVED', message: `เติมเหรียญสำเร็จ ได้รับ ${rows[0].amount} เหรียญ`, link: '/coins' }
+            : { type: 'TOPUP_REJECTED', message: `คำขอเติมเหรียญ ${rows[0].amount} บาทถูกปฏิเสธ${reason ? `: ${short(reason, 100)}` : ''}`, link: '/coins' }, session.user.id);
         return NextResponse.json({ success: true });
     } catch (error) {
         await connection.rollback();

@@ -30,13 +30,13 @@ type SaveResult = { url: string } | { error: string; status: number };
 
 async function validateAndWrite(file: File, dir: string): Promise<{ filename: string } | { error: string; status: number }> {
     if (file.size > MAX_IMAGE_SIZE) {
-        return { error: 'File too large (max 10MB)', status: 413 };
+        return { error: 'ไฟล์ใหญ่เกินไป (ไม่เกิน 10MB)', status: 413 };
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const ext = detectImageExtension(buffer);
     if (!ext) {
-        return { error: 'Only JPG, PNG, WEBP and GIF images are allowed', status: 415 };
+        return { error: 'รองรับเฉพาะรูป JPG, PNG, WEBP และ GIF', status: 415 };
     }
 
     const filename = `${uuidv4()}${ext}`;
