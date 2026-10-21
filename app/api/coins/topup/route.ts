@@ -8,6 +8,7 @@ import { savePrivateDocument } from '@/lib/upload';
 const MIN_TOPUP = 20;
 const MAX_TOPUP = 50000;
 const MAX_PENDING = 3;
+const MAX_PER_DAY = 10; // all statuses, so rejected spam slips still count
 
 // POST - Request a coin top-up (multipart: amount, slip). Coins are credited when an admin approves the slip.
 export async function POST(req: Request) {
@@ -28,11 +29,17 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'กรุณาแนบสลิปการโอนเงิน' }, { status: 400 });
         }
 
-        const [pending] = await pool.query<RowDataPacket[]>(
-            'SELECT COUNT(*) AS n FROM coin_topups WHERE user_id = ? AND status = "PENDING"',
+        const [counts] = await pool.query<RowDataPacket[]>(
+            `SELECT
+                COALESCE(SUM(status = 'PENDING'), 0) AS pending,
+                COALESCE(SUM(created_at > NOW() - INTERVAL 1 DAY), 0) AS today
+             FROM coin_topups WHERE user_id = ?`,
             [session.user.id]
         );
-        if (pending[0].n >= MAX_PENDING) {
+        if (Number(counts[0].today) >= MAX_PER_DAY) {
+            return NextResponse.json({ error: `ส่งคำขอเติมเหรียญได้ไม่เกิน ${MAX_PER_DAY} ครั้งต่อวัน กรุณาลองใหม่พรุ่งนี้` }, { status: 429 });
+        }
+        if (Number(counts[0].pending) >= MAX_PENDING) {
             return NextResponse.json({ error: 'คุณมีรายการรอตรวจสอบหลายรายการแล้ว กรุณารอแอดมินตรวจสอบก่อน' }, { status: 400 });
         }
 

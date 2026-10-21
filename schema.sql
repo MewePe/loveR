@@ -214,6 +214,15 @@ CREATE TABLE IF NOT EXISTS login_attempts (
     INDEX idx_time (created_at)
 );
 
+-- Sign-up attempts per client IP, for rate-limiting /api/register (lib/registerThrottle.ts)
+CREATE TABLE IF NOT EXISTS register_attempts (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    ip VARCHAR(64) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_ip_time (ip, created_at),
+    INDEX idx_time (created_at)
+);
+
 -- Comments on a novel or comic (exactly one of novel_id / comic_id is set, like bookmarks)
 CREATE TABLE IF NOT EXISTS comments (
     id VARCHAR(36) PRIMARY KEY,

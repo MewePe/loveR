@@ -3,6 +3,8 @@ import pool from '@/lib/db';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import { RowDataPacket } from 'mysql2';
+import { clientIp } from '@/lib/loginThrottle';
+import { hitRegisterLimit } from '@/lib/registerThrottle';
 
 export async function POST(req: Request) {
     try {
@@ -20,6 +22,18 @@ export async function POST(req: Request) {
         // bcrypt only uses the first 72 bytes, so cap the length too
         if (typeof password !== 'string' || password.length < 8 || password.length > 72) {
             return NextResponse.json({ error: 'รหัสผ่านต้องมี 8-72 ตัวอักษร' }, { status: 400 });
+        }
+
+        // Counted before the existing-email check so that check can't be used to enumerate accounts.
+        // If the throttle table is unavailable (migration not run) we log it and still allow the sign-up.
+        let limited = false;
+        try {
+            limited = await hitRegisterLimit(clientIp(req));
+        } catch (error) {
+            console.error('Register throttle unavailable (run scripts/add_register_attempts.ts):', error);
+        }
+        if (limited) {
+            return NextResponse.json({ error: 'สมัครสมาชิกบ่อยเกินไป กรุณาลองใหม่ภายหลัง' }, { status: 429 });
         }
 
         // Check if user exists
