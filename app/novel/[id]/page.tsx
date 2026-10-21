@@ -4,6 +4,8 @@ import { notFound } from 'next/navigation';
 import { RowDataPacket } from 'mysql2';
 import BookmarkButton from '@/components/BookmarkButton';
 import ReportButton from '@/components/ReportButton';
+import RatingStars from '@/components/RatingStars';
+import CommentSection from '@/components/CommentSection';
 import PriceBadge from '@/components/PriceBadge';
 import { auth } from '@/lib/auth';
 import { getPurchasedIds } from '@/lib/coins';
@@ -72,6 +74,7 @@ export default async function NovelDetail({ params }: { params: Promise<{ id: st
                             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">{novel.title}</h1>
                             <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">By <span className="font-semibold text-gray-900 dark:text-white">{novel.author_name || 'Unknown'}</span></p>
 
+                            <RatingStars contentType="novel" contentId={id} />
                             <div className="flex gap-4 mb-10">
                                 {chapters.length > 0 ? (
                                     <Link href={`/read/${chapters[0].id}`} className="bg-indigo-600 text-white px-8 py-3 rounded-lg font-bold hover:bg-indigo-700 transition shadow-lg hover:shadow-indigo-500/30">
@@ -127,9 +130,12 @@ export default async function NovelDetail({ params }: { params: Promise<{ id: st
                             </div>
                         )}
                     </div>
+
+                    <div className="mt-12">
+                        <CommentSection contentType="novel" contentId={id} accentColor="indigo" />
+                    </div>
                 </div>
             </div>
         </div>
     );
 }
-

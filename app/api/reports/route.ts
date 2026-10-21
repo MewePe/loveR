@@ -4,9 +4,9 @@ import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
 import { v4 as uuidv4 } from 'uuid';
 
-const TARGET_TABLES: Record<string, string> = { NOVEL: 'novels', COMIC: 'comics' };
+const TARGET_TABLES: Record<string, string> = { NOVEL: 'novels', COMIC: 'comics', COMMENT: 'comments' };
 
-// POST - Report a novel or comic
+// POST - Report a novel, comic or comment
 export async function POST(req: Request) {
     const session = await auth();
     if (!session?.user?.id) {

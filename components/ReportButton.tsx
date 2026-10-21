@@ -6,8 +6,9 @@ import { useRouter } from "next/navigation";
 import { Flag } from "lucide-react";
 
 interface ReportButtonProps {
-    targetType: "NOVEL" | "COMIC";
+    targetType: "NOVEL" | "COMIC" | "COMMENT";
     targetId: string;
+    compact?: boolean; // small icon-only button, e.g. next to a comment
 }
 
 const PRESET_REASONS = [
@@ -17,7 +18,7 @@ const PRESET_REASONS = [
     "สแปม / โฆษณา",
 ];
 
-export default function ReportButton({ targetType, targetId }: ReportButtonProps) {
+export default function ReportButton({ targetType, targetId, compact = false }: ReportButtonProps) {
     const { data: session } = useSession();
     const router = useRouter();
     const [open, setOpen] = useState(false);
@@ -61,19 +62,25 @@ export default function ReportButton({ targetType, targetId }: ReportButtonProps
 
     return (
         <>
-            <button
-                onClick={handleOpen}
-                title="รายงานเนื้อหา"
-                className="px-4 py-3 rounded-lg font-medium transition flex items-center gap-2 border-2 border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-red-500 hover:text-red-600 dark:hover:border-red-400 dark:hover:text-red-400"
-            >
-                <Flag className="w-5 h-5" />
-                <span className="hidden sm:inline">รายงาน</span>
-            </button>
+            {compact ? (
+                <button onClick={handleOpen} title="รายงานความคิดเห็น" className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400">
+                    <Flag className="w-4 h-4" />
+                </button>
+            ) : (
+                <button
+                    onClick={handleOpen}
+                    title="รายงานเนื้อหา"
+                    className="px-4 py-3 rounded-lg font-medium transition flex items-center gap-2 border-2 border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-red-500 hover:text-red-600 dark:hover:border-red-400 dark:hover:text-red-400"
+                >
+                    <Flag className="w-5 h-5" />
+                    <span className="hidden sm:inline">รายงาน</span>
+                </button>
+            )}
 
             {open && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                     <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-6">
-                        <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">รายงานเนื้อหา</h2>
+                        <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">{targetType === "COMMENT" ? "รายงานความคิดเห็น" : "รายงานเนื้อหา"}</h2>
                         <div className="space-y-2 mb-4">
                             {PRESET_REASONS.map((r) => (
                                 <label key={r} className="flex items-center gap-2 text-gray-700 dark:text-gray-300 cursor-pointer">

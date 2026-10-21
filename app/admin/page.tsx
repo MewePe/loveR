@@ -25,7 +25,7 @@ const menuItems = [
 interface AdminStats { users: number; novels: number; chapters: number; comics: number; reports: number; }
 interface User { id: string; name: string; email: string; role: string; created_at: string; }
 interface ContentItem { id: string; title: string; author_name: string; status: string; created_at: string; }
-interface Report { id: string; reporter_name: string; target_type: string; target_id: string; target_title: string | null; reason: string; status: string; created_at: string; }
+interface Report { id: string; reporter_name: string; target_type: string; target_id: string; target_title: string | null; parent_type: string | null; parent_id: string | null; comment_author_name: string | null; reason: string; status: string; created_at: string; }
 interface WriterRequest { user_id: string; user_name: string; email: string; title: string; first_name: string; last_name: string; id_card_number: string; phone_number: string; province: string; bank_name: string; bank_account_name: string; bank_account_number: string; id_card_image: string; bank_book_image: string; status: string; rejection_reason: string; created_at: string; }
 interface Category { id: string; name: string; slug: string; }
 
@@ -140,7 +140,13 @@ export default function AdminPanel() {
         if (res.ok) fetchTabData();
     }
 
-
+    // Delete a reported comment and resolve the report
+    async function deleteReportedComment(report: Report) {
+        if (!(await confirm('Delete this comment?', { danger: true }))) return;
+        const res = await fetch(`/api/comments/${report.target_id}`, { method: 'DELETE', credentials: 'include' });
+        if (res.ok || res.status === 404) await updateReportStatus(report.id, 'RESOLVED');
+        else alert('Failed to delete comment');
+    }
 
     async function addCategory(e: React.FormEvent) {
         e.preventDefault();
@@ -300,11 +306,11 @@ export default function AdminPanel() {
                             {reports.map((report) => (
                                 <tr key={report.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                     <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{report.reporter_name}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400"><span className="font-semibold text-indigo-600 dark:text-indigo-400">{report.target_type}</span>: {report.target_title ? <a href={`/${report.target_type === 'COMIC' ? 'comic' : 'novel'}/${report.target_id}`} target="_blank" rel="noreferrer" className="hover:underline">{report.target_title}</a> : report.target_id}</td>
+                                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400"><span className="font-semibold text-indigo-600 dark:text-indigo-400">{report.target_type}</span>: {report.target_type === 'COMMENT' ? (report.target_title ? <a href={`/${report.parent_type === 'COMIC' ? 'comic' : 'novel'}/${report.parent_id}`} target="_blank" rel="noreferrer" className="hover:underline whitespace-pre-line line-clamp-3">{report.comment_author_name}: {report.target_title}</a> : <span className="italic">(deleted)</span>) : report.target_title ? <a href={`/${report.target_type === 'COMIC' ? 'comic' : 'novel'}/${report.target_id}`} target="_blank" rel="noreferrer" className="hover:underline">{report.target_title}</a> : report.target_id}</td>
                                     <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{report.reason}</td>
                                     <td className="px-6 py-4"><span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${report.status === 'RESOLVED' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : report.status === 'IGNORED' ? 'bg-gray-100 text-gray-800 dark:bg-gray-700' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'}`}>{report.status}</span></td>
                                     <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{new Date(report.created_at).toLocaleDateString()}</td>
-                                    <td className="px-6 py-4 text-right space-x-2">{report.status === 'PENDING' && (<><button onClick={() => updateReportStatus(report.id, 'RESOLVED')} className="text-gray-400 hover:text-green-600"><CheckCircle className="w-4 h-4" /></button><button onClick={() => updateReportStatus(report.id, 'IGNORED')} className="text-gray-400 hover:text-gray-600"><XCircle className="w-4 h-4" /></button></>)}</td>
+                                    <td className="px-6 py-4 text-right space-x-2">{report.status === 'PENDING' && (<>{report.target_type === 'COMMENT' && report.target_title && <button onClick={() => deleteReportedComment(report)} title="Delete comment" className="text-gray-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>}<button onClick={() => updateReportStatus(report.id, 'RESOLVED')} className="text-gray-400 hover:text-green-600"><CheckCircle className="w-4 h-4" /></button><button onClick={() => updateReportStatus(report.id, 'IGNORED')} className="text-gray-400 hover:text-gray-600"><XCircle className="w-4 h-4" /></button></>)}</td>
                                 </tr>
                             ))}
                             {reports.length === 0 && <tr><td colSpan={6} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">No reports found.</td></tr>}

@@ -8,6 +8,10 @@ LoveRead คือเว็บแอปภาษาไทยสำหรับ�
 
 MariaDB ในเครื่องนี้**ไม่ได้เปิด strict mode** ถ้าเขียนค่า ENUM ที่ไม่มีอยู่จริง DB จะไม่ error แต่เก็บเป็น `''` เงียบๆ ดังนั้นต้อง whitelist ค่า enum ในโค้ดก่อนเขียนเสมอ
 
+## Git workflow
+
+ทำงานบน `main` โดยตรงแล้ว push ขึ้น `origin/main` เลย **ไม่ต้องแยก branch และไม่ต้องเปิด PR** (ผู้ใช้สั่งไว้ 2026-10-21)
+
 ## คำสั่ง
 
 ```bash
@@ -43,6 +47,7 @@ npx tsx scripts/move_comic_pages_private.ts [--delete-originals] # ย้าย�
 npx tsx scripts/add_banned_role.ts # เพิ่ม BANNED ใน users.role (รันซ้ำได้)
 npx tsx scripts/drop_author_requests.ts # สำรองข้อมูลไป storage/backups/ แล้วลบตาราง author_requests (รันซ้ำได้)
 npx tsx scripts/add_login_attempts.ts # ตาราง login_attempts สำหรับจำกัดการล็อกอินผิด (รันซ้ำได้)
+npx tsx scripts/add_comments_ratings.ts # ตาราง comments และ ratings (รันซ้ำได้)
 ```
 
 `reset_db.ts` และ `drop_old_db.ts` ลบข้อมูล
@@ -55,7 +60,7 @@ npx tsx scripts/add_login_attempts.ts # ตาราง login_attempts สำห
 
 **เข้าถึงข้อมูลด้วย raw SQL ผ่าน `mysql2` ไม่ใช่ Prisma** ทุก API route และ `lib/auth.ts` ใช้ pool จาก `lib/db.ts` ในรูปแบบ `pool.query<RowDataPacket[]>(sql, params)` และใช้ placeholder `?` ไม่มี Prisma client ใน runtime ส่วน `prisma/schema.prisma` ใช้เป็นเอกสารอ้างอิงโครงสร้างตาราง (ตรวจด้วย `npx prisma validate`) `schema.sql` ใช้สร้างฐานข้อมูลใหม่ได้ครบ ส่วน DB เก่าให้อัปเกรดด้วยสคริปต์ใน `scripts/` ตามลำดับที่ระบุใน README เมื่อแก้ schema ให้แก้ทั้ง `schema.sql` และ `schema.prisma` ให้ตรงกัน และถ้า DB เก่าต้องเปลี่ยนตาม ให้เพิ่มสคริปต์ migration ที่รันซ้ำได้ ตาราง `author_requests` ถูกลบแล้ว (ใช้ `writer_profiles` แทน)
 
-- `bookmarks` มีคอลัมน์ `novel_id` หรือ `comic_id` อย่างใดอย่างหนึ่ง แต่ API ใช้รูปแบบ `{ content_type: 'novel' | 'comic', content_id }`
+- `bookmarks`, `comments`, `ratings` มีคอลัมน์ `novel_id` หรือ `comic_id` อย่างใดอย่างหนึ่ง แต่ API ใช้รูปแบบ `{ content_type: 'novel' | 'comic', content_id }` ใช้ `lib/contentRef.ts` (`CONTENT_COLUMN`, `isContentType()`, `getContentRow()`) แปลงเป็นชื่อคอลัมน์ ห้ามเอา input ไปต่อเป็น SQL ตรงๆ
 
 - Primary key เป็น UUID แบบ `VARCHAR(36)` สร้างในโค้ดด้วย `v4()` จากแพ็กเกจ `uuid` ชื่อคอลัมน์เป็น snake_case
 - enum สถานะเนื้อหา: `DRAFT | PUBLISHED | ARCHIVED | BANNED` ดูกฎการมองเห็นในหัวข้อ "การมองเห็นเนื้อหา"
@@ -104,7 +109,15 @@ npx tsx scripts/add_login_attempts.ts # ตาราง login_attempts สำห
 
 **Maintenance mode**: `middleware.ts` ใช้ runtime `nodejs` (เพื่อ query MySQL ได้) อ่าน `system_settings.maintenance_mode` แล้ว cache ไว้ 10 วินาที ถ้าเปิดอยู่ ผู้ที่ไม่ใช่ ADMIN จะถูก rewrite ไป `/maintenance` (API ได้ 503) ยกเว้น path ใน `ALWAYS_ALLOWED` ตรวจ role จาก JWT ด้วย `getToken` ไม่ได้เรียก `auth()`
 
-**รายงานเนื้อหา**: `components/ReportButton.tsx` (อยู่ในหน้านิยาย/การ์ตูน) → `POST /api/reports` (NOVEL/COMIC เท่านั้น ห้ามรายงานซ้ำขณะที่ยัง PENDING) แอดมินจัดการที่ `/admin` แท็บ Reports
+**รายงานเนื้อหา**: `components/ReportButton.tsx` (อยู่ในหน้านิยาย/การ์ตูน และแบบ `compact` ข้างแต่ละคอมเมนต์) → `POST /api/reports` (NOVEL/COMIC/COMMENT ห้ามรายงานซ้ำขณะที่ยัง PENDING) แอดมินจัดการที่ `/admin` แท็บ Reports ซึ่งลบคอมเมนต์ที่ถูกรายงานได้เลย
+
+**คอมเมนต์และให้คะแนน** (ระดับเรื่อง ไม่ใช่รายบท อยู่ล่างรายการตอนในหน้า `/novel/[id]` และ `/comic/[id]`):
+- `GET/POST /api/comments` (ใหม่สุดก่อน หน้าละ 20, `?page=`) และ `DELETE /api/comments/[id]` ลบได้โดยเจ้าของคอมเมนต์ เจ้าของเรื่อง หรือแอดมิน UI อยู่ใน `components/CommentSection.tsx`
+- เนื้อหาคอมเมนต์เป็น plain text ไม่เกิน 1000 ตัวอักษร แสดงด้วย `whitespace-pre-line` **ห้ามใช้ `dangerouslySetInnerHTML`** (เหตุผลเดียวกับเนื้อหาบท) จำกัด 5 คอมเมนต์ต่อนาทีต่อคน (429)
+- `comments.created_at` เป็น `TIMESTAMP(3)` เพื่อให้เรียงใหม่สุดก่อนได้ถูกต้องเมื่อโพสต์ในวินาทีเดียวกัน
+- `GET/PUT/DELETE /api/ratings` คืน `{ average, count, mine, can_rate }` คะแนน 1-5 หนึ่งแถวต่อคนต่อเรื่อง (`PUT` = upsert) ให้คะแนนได้เฉพาะเรื่อง `PUBLISHED` และห้ามให้คะแนนเรื่องของตัวเอง UI อยู่ใน `components/RatingStars.tsx` (กดดาวเดิมซ้ำ = ยกเลิก)
+- ทั้งสองอย่างเช็ก `canViewContent()` (เรื่องที่ไม่ได้เผยแพร่ได้ 404 ยกเว้นเจ้าของ/แอดมิน) และซ่อนคอมเมนต์/ไม่นับคะแนนของผู้ใช้ที่เป็น `BANNED`
+- ยังไม่แสดงคะแนนเฉลี่ยในหน้ารายการ/ค้นหา (ถ้าจะเพิ่ม ให้ JOIN แบบ aggregate ใน `/api/novels`, `/api/comics`)
 
 **ระบบเหรียญและขายตอน** (logic หลักอยู่ใน `lib/coins.ts`):
 - 1 เหรียญ = 1 บาท ยอดเหรียญของผู้อ่านอยู่ที่ `users.coins` แต่ละบท/ตอนมี `price` (0 = ฟรี)
@@ -121,9 +134,9 @@ npx tsx scripts/add_login_attempts.ts # ตาราง login_attempts สำห
 - **หลัง `git checkout` หรือ `git pull` ให้รีสตาร์ท `npm run dev` หนึ่งครั้ง** ถ้า `next.config.ts` ถูกเปลี่ยนหลายครั้งติดกันเร็วๆ dev server อาจค้างใช้ config เก่า (เคยเกิดแล้ว: เทสต์ open proxy fail ทั้งที่โค้ดถูก แก้ได้ด้วยการ `touch next.config.ts`)
 - lint ยังมี error `no-explicit-any` ที่ค้างมาจากโค้ดเดิมบางไฟล์ (เช่น `app/admin/page.tsx`, `app/api/admin/users/route.ts`, `app/api/novels/[id]/route.ts`) ไม่ต้องแก้พร้อมงานอื่น แต่ห้ามเพิ่ม `any` ใหม่
 
-## งานที่เหลือ (อัปเดตล่าสุด 2026-10-17)
+## งานที่เหลือ (อัปเดตล่าสุด 2026-10-21)
 
-**สถานะ branch**: `main` มีงานทั้งหมดจนถึงการ cleanup แล้ว (PR #1 merged) ส่วน `login-rate-limit` ที่มีระบบจำกัดการล็อกอินผิด push แล้วแต่**ยังไม่ได้เปิด PR**: https://github.com/MewePe/loveR/pull/new/login-rate-limit หลัง merge ต้องรัน `scripts/add_login_attempts.ts` บน DB อื่นที่ไม่ใช่เครื่องนี้ด้วย
+**สถานะ branch**: ทุกอย่างอยู่บน `main` แล้ว (`login-rate-limit` merge แล้ว) DB อื่นที่ไม่ใช่เครื่องนี้ต้องรัน `scripts/add_login_attempts.ts` และ `scripts/add_comments_ratings.ts`
 
 **ผู้ดูแลต้องทำเอง**:
 - กรอก "ข้อมูลการชำระเงิน" ที่ `/admin` → Settings ถ้ายังไม่กรอก ผู้อ่านจะเติมเหรียญไม่ได้
@@ -134,7 +147,6 @@ npx tsx scripts/add_login_attempts.ts # ตาราง login_attempts สำห
 1. **dependency ที่มีช่องโหว่**: `npm audit` เตือนอยู่ (มีมาก่อนแล้ว) ควรไล่ดูทีละตัว อย่าใช้ `npm audit fix --force` เพราะอาจอัปเกรดแบบ breaking
 2. **เปลี่ยน `alert()` เป็น toast**: ยังมี `alert()` ทั่วโปรเจกต์ ควรทำให้เป็นรูปแบบเดียวกับ `components/ConfirmDialog.tsx` (Provider + hook)
 3. **ประวัติการอ่าน**: `app/api/profile/route.ts` ยังฝัง `novelsRead`/`comicsRead` เป็น 0
-4. **คอมเมนต์และให้คะแนน**: ยังไม่มี แต่ enum `reports.target_type` มี `COMMENT` เตรียมไว้แล้ว
-5. **แยก `app/author/page.tsx`** (~1,300 บรรทัด) ออกเป็น component ตามแท็บ แบบเดียวกับ `components/author/EarningsPanel.tsx`
-6. **object storage**: จำเป็นเฉพาะถ้าจะ deploy บน Vercel/serverless ตอนนี้ไฟล์ทั้งหมดเขียนลงดิสก์ (`lib/upload.ts` เป็นจุดเดียวที่ต้องแก้)
-7. **rate limit การสมัครสมาชิกและการเติมเหรียญ**: ตอนนี้จำกัดเฉพาะการล็อกอิน (`/api/coins/topup` จำกัดได้แค่ 3 รายการ PENDING ต่อคน)
+4. **แยก `app/author/page.tsx`** (~1,300 บรรทัด) ออกเป็น component ตามแท็บ แบบเดียวกับ `components/author/EarningsPanel.tsx`
+5. **object storage**: จำเป็นเฉพาะถ้าจะ deploy บน Vercel/serverless ตอนนี้ไฟล์ทั้งหมดเขียนลงดิสก์ (`lib/upload.ts` เป็นจุดเดียวที่ต้องแก้)
+6. **rate limit การสมัครสมาชิกและการเติมเหรียญ**: ตอนนี้จำกัดเฉพาะการล็อกอิน (`/api/coins/topup` จำกัดได้แค่ 3 รายการ PENDING ต่อคน)

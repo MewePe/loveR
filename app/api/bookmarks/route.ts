@@ -4,16 +4,10 @@ import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
 import { v4 as uuidv4 } from 'uuid';
 import { canViewContent } from '@/lib/visibility';
+import { CONTENT_COLUMN, getContentRow, isContentType } from '@/lib/contentRef';
 
-// The bookmarks table has one row per bookmark with either novel_id or comic_id set.
-// The API speaks in { content_type: 'novel' | 'comic', content_id } so the client doesn't care which column.
-const COLUMN = { novel: 'novel_id', comic: 'comic_id' } as const;
-const TABLE = { novel: 'novels', comic: 'comics' } as const;
-type ContentType = keyof typeof COLUMN;
-
-function isContentType(value: unknown): value is ContentType {
-    return value === 'novel' || value === 'comic';
-}
+// The bookmarks table has one row per bookmark with either novel_id or comic_id set (see lib/contentRef.ts)
+const COLUMN = CONTENT_COLUMN;
 
 // GET /api/bookmarks — list the user's bookmarks, or ?content_type=&content_id= to check one
 export async function GET(req: NextRequest) {
@@ -78,11 +72,8 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Invalid content_type or content_id' }, { status: 400 });
         }
 
-        const [content] = await pool.query<RowDataPacket[]>(
-            `SELECT status, author_id FROM ${TABLE[content_type]} WHERE id = ?`,
-            [content_id]
-        );
-        if (!content[0] || !canViewContent(session.user, content[0])) {
+        const content = await getContentRow(content_type, content_id);
+        if (!content || !canViewContent(session.user, content)) {
             return NextResponse.json({ error: 'Content not found' }, { status: 404 });
         }
 
