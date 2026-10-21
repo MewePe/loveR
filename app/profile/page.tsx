@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { User, Mail, Calendar, BookOpen, ImageIcon, Save, Camera, Eye, Heart, Bookmark } from 'lucide-react';
 import Image from 'next/image';
+import { useToast } from '@/components/Toast';
 
 interface UserProfile {
     id: string;
@@ -21,6 +22,7 @@ interface Stats {
 }
 
 export default function ProfilePage() {
+    const toast = useToast();
     const { data: session, status } = useSession();
     const router = useRouter();
     const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -88,11 +90,11 @@ export default function ProfilePage() {
             });
 
             if (res.ok) {
-                alert('บันทึกข้อมูลสำเร็จ');
+                toast.success('บันทึกข้อมูลสำเร็จ');
                 setEditing(false);
                 fetchProfile();
             } else {
-                alert('เกิดข้อผิดพลาด');
+                toast.error('เกิดข้อผิดพลาด');
             }
         } catch (error) {
             console.error(error);

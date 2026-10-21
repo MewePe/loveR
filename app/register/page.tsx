@@ -2,8 +2,10 @@
 // import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useToast } from '@/components/Toast';
 
 export default function Register() {
+    const toast = useToast();
     const router = useRouter();
     // const [error, setError] = useState('');
 
@@ -25,11 +27,11 @@ export default function Register() {
                 router.push('/login');
             } else {
                 const json = await res.json();
-                alert(json.error || 'Registration failed');
+                toast.error(json.error || 'Registration failed');
             }
         } catch (err) {
             console.error(err);
-            alert('An error occurred');
+            toast.error('An error occurred');
         }
     }
 

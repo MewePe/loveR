@@ -6,6 +6,7 @@ import Link from "next/link";
 import { MessageCircle, Trash2, User } from "lucide-react";
 import ReportButton from "@/components/ReportButton";
 import { useConfirm } from "@/components/ConfirmDialog";
+import { useToast } from "@/components/Toast";
 
 interface CommentSectionProps {
     contentType: "novel" | "comic";
@@ -32,6 +33,7 @@ const ACCENTS = {
 };
 
 export default function CommentSection({ contentType, contentId, accentColor = "indigo" }: CommentSectionProps) {
+    const toast = useToast();
     const { data: session, status } = useSession();
     const confirm = useConfirm();
     const accent = ACCENTS[accentColor];
@@ -80,11 +82,11 @@ export default function CommentSection({ contentType, contentId, accentColor = "
                 setText("");
                 await load(1);
             } else {
-                alert(data.error || "เกิดข้อผิดพลาด");
+                toast.error(data.error || "เกิดข้อผิดพลาด");
             }
         } catch (error) {
             console.error(error);
-            alert("เกิดข้อผิดพลาด");
+            toast.error("เกิดข้อผิดพลาด");
         } finally {
             setPosting(false);
         }
@@ -97,7 +99,7 @@ export default function CommentSection({ contentType, contentId, accentColor = "
             setComments((prev) => prev.filter((c) => c.id !== id));
             setTotal((t) => t - 1);
         } else {
-            alert("ลบไม่สำเร็จ");
+            toast.error("ลบไม่สำเร็จ");
         }
     }
 

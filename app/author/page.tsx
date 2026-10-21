@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import EarningsPanel from '@/components/author/EarningsPanel';
 import WalletPanel from '@/components/author/WalletPanel';
 import { useConfirm } from '@/components/ConfirmDialog';
+import { useToast } from '@/components/Toast';
 
 type TabType = 'dashboard' | 'novels' | 'comics' | 'earnings' | 'wallet' | 'profile';
 
@@ -35,6 +36,7 @@ const menuItems = [
 ];
 
 export default function AuthorDashboard() {
+    const toast = useToast();
     const confirm = useConfirm();
     const { data: session, status } = useSession();
     const router = useRouter();
@@ -196,14 +198,14 @@ export default function AuthorDashboard() {
             });
 
             if (res.ok) {
-                alert('บันทึกข้อมูลสำเร็จ');
+                toast.success('บันทึกข้อมูลสำเร็จ');
                 fetchData();
             } else {
-                alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+                toast.error('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
             }
         } catch (error) {
             console.error(error);
-            alert('เกิดข้อผิดพลาด');
+            toast.error('เกิดข้อผิดพลาด');
         } finally {
             setSaving(false);
         }
@@ -246,14 +248,14 @@ export default function AuthorDashboard() {
             });
 
             if (res.ok) {
-                alert('สร้างนิยายสำเร็จ');
+                toast.success('สร้างนิยายสำเร็จ');
                 setShowCreateModal(false);
                 setNewNovel({ title: '', description: '', categoryId: '' });
                 setCoverFile(null);
                 setCoverPreview(null);
                 fetchData();
             } else {
-                alert('เกิดข้อผิดพลาดในการสร้างนิยาย');
+                toast.error('เกิดข้อผิดพลาดในการสร้างนิยาย');
             }
         } catch (error) {
             console.error(error);
@@ -316,7 +318,7 @@ export default function AuthorDashboard() {
             });
 
             if (res.ok) {
-                alert('แก้ไขนิยายสำเร็จ');
+                toast.success('แก้ไขนิยายสำเร็จ');
                 setShowEditModal(false);
                 setEditingNovel(null);
                 setNewNovel({ title: '', description: '', categoryId: '' });
@@ -324,7 +326,7 @@ export default function AuthorDashboard() {
                 setCoverPreview(null);
                 fetchData();
             } else {
-                alert('เกิดข้อผิดพลาด');
+                toast.error('เกิดข้อผิดพลาด');
             }
         } catch (error) {
             console.error(error);
@@ -343,10 +345,10 @@ export default function AuthorDashboard() {
                 credentials: 'include',
             });
             if (res.ok) {
-                alert('เผยแพร่นิยายสำเร็จ');
+                toast.success('เผยแพร่นิยายสำเร็จ');
                 fetchData();
             } else {
-                alert('เกิดข้อผิดพลาด');
+                toast.error('เกิดข้อผิดพลาด');
             }
         } catch (error) {
             console.error(error);
@@ -361,10 +363,10 @@ export default function AuthorDashboard() {
                 credentials: 'include',
             });
             if (res.ok) {
-                alert('ลบนิยายสำเร็จ');
+                toast.success('ลบนิยายสำเร็จ');
                 fetchData();
             } else {
-                alert('เกิดข้อผิดพลาด');
+                toast.error('เกิดข้อผิดพลาด');
             }
         } catch (error) {
             console.error(error);
@@ -393,14 +395,14 @@ export default function AuthorDashboard() {
                 credentials: 'include',
             });
             if (res.ok) {
-                alert('สร้างการ์ตูนสำเร็จ');
+                toast.success('สร้างการ์ตูนสำเร็จ');
                 setShowComicModal(false);
                 setNewComic({ title: '', description: '', categoryId: '' });
                 setCoverFile(null);
                 setCoverPreview(null);
                 fetchData();
             } else {
-                alert('เกิดข้อผิดพลาด');
+                toast.error('เกิดข้อผิดพลาด');
             }
         } catch (error) {
             console.error(error);
@@ -439,7 +441,7 @@ export default function AuthorDashboard() {
                 credentials: 'include',
             });
             if (res.ok) {
-                alert('แก้ไขการ์ตูนสำเร็จ');
+                toast.success('แก้ไขการ์ตูนสำเร็จ');
                 setShowEditComicModal(false);
                 setEditingComic(null);
                 setNewComic({ title: '', description: '', categoryId: '' });
@@ -447,7 +449,7 @@ export default function AuthorDashboard() {
                 setCoverPreview(null);
                 fetchData();
             } else {
-                alert('เกิดข้อผิดพลาด');
+                toast.error('เกิดข้อผิดพลาด');
             }
         } catch (error) {
             console.error(error);
@@ -466,10 +468,10 @@ export default function AuthorDashboard() {
                 credentials: 'include',
             });
             if (res.ok) {
-                alert('เผยแพร่การ์ตูนสำเร็จ');
+                toast.success('เผยแพร่การ์ตูนสำเร็จ');
                 fetchData();
             } else {
-                alert('เกิดข้อผิดพลาด');
+                toast.error('เกิดข้อผิดพลาด');
             }
         } catch (error) {
             console.error(error);
@@ -481,10 +483,10 @@ export default function AuthorDashboard() {
         try {
             const res = await fetch(`/api/comics/${comicId}`, { method: 'DELETE', credentials: 'include' });
             if (res.ok) {
-                alert('ลบการ์ตูนสำเร็จ');
+                toast.success('ลบการ์ตูนสำเร็จ');
                 fetchData();
             } else {
-                alert('เกิดข้อผิดพลาด');
+                toast.error('เกิดข้อผิดพลาด');
             }
         } catch (error) {
             console.error(error);

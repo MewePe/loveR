@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Plus, Edit, Trash2, Save, X, GripVertical, Eye, Upload, ImageIcon } from 'lucide-react';
 import Image from 'next/image';
 import { useConfirm } from '@/components/ConfirmDialog';
+import { useToast } from '@/components/Toast';
 
 interface Episode {
     id: string;
@@ -23,6 +24,7 @@ interface Comic {
 }
 
 export default function EpisodeManagement() {
+    const toast = useToast();
     const confirm = useConfirm();
     const { data: session, status } = useSession();
     const router = useRouter();
@@ -128,12 +130,12 @@ export default function EpisodeManagement() {
             });
 
             if (res.ok) {
-                alert(editingEpisode ? 'แก้ไขตอนสำเร็จ' : 'เพิ่มตอนสำเร็จ');
+                toast.success(editingEpisode ? 'แก้ไขตอนสำเร็จ' : 'เพิ่มตอนสำเร็จ');
                 setShowModal(false);
                 fetchData();
             } else {
                 const data = await res.json().catch(() => ({}));
-                alert(data.error || 'เกิดข้อผิดพลาด');
+                toast.error(data.error || 'เกิดข้อผิดพลาด');
             }
         } catch (error) {
             console.error(error);
@@ -152,10 +154,10 @@ export default function EpisodeManagement() {
             });
 
             if (res.ok) {
-                alert('ลบตอนสำเร็จ');
+                toast.success('ลบตอนสำเร็จ');
                 fetchData();
             } else {
-                alert('เกิดข้อผิดพลาด');
+                toast.error('เกิดข้อผิดพลาด');
             }
         } catch (error) {
             console.error(error);

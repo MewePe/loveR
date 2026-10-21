@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle, XCircle, Upload } from 'lucide-react';
 import { useConfirm } from '@/components/ConfirmDialog';
+import { useToast } from '@/components/Toast';
 
 interface Topup { id: string; user_name: string; email: string; amount: number; slip_image: string; status: string; rejection_reason: string | null; created_at: string; }
 interface Withdrawal { id: string; user_name: string; email: string; amount: string; bank_name: string; bank_account_number: string; bank_account_name: string; status: string; slip_image: string | null; rejection_reason: string | null; created_at: string; }
@@ -18,6 +19,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function PaymentsPanel() {
+    const toast = useToast();
     const confirm = useConfirm();
     const [tab, setTab] = useState<'topups' | 'withdrawals'>('topups');
     const [topups, setTopups] = useState<Topup[]>([]);
@@ -39,7 +41,7 @@ export default function PaymentsPanel() {
         const res = await fetch(url, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), credentials: 'include' });
         if (!res.ok) {
             const data = await res.json().catch(() => ({}));
-            alert(data.error || 'เกิดข้อผิดพลาด');
+            toast.error(data.error || 'เกิดข้อผิดพลาด');
         }
         fetchData();
     }
@@ -63,7 +65,7 @@ export default function PaymentsPanel() {
             const res = await fetch(`/api/admin/withdrawals/${w.id}`, { method: 'PATCH', body: fd, credentials: 'include' });
             if (!res.ok) {
                 const data = await res.json().catch(() => ({}));
-                alert(data.error || 'เกิดข้อผิดพลาด');
+                toast.error(data.error || 'เกิดข้อผิดพลาด');
             }
             fetchData();
         } finally {

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { baht, EarningsData } from './EarningsPanel';
+import { useToast } from '@/components/Toast';
 
 interface Withdrawal { id: string; amount: string; bank_name: string; bank_account_number: string; status: string; slip_image: string | null; rejection_reason: string | null; created_at: string; }
 
@@ -12,6 +13,7 @@ const statusColors: Record<string, string> = {
 };
 
 export default function WalletPanel() {
+    const toast = useToast();
     const [earnings, setEarnings] = useState<EarningsData | null>(null);
     const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
     const [showForm, setShowForm] = useState(false);
@@ -43,12 +45,12 @@ export default function WalletPanel() {
             });
             const data = await res.json();
             if (res.ok) {
-                alert('ส่งคำขอถอนเงินแล้ว แอดมินจะโอนเงินและแนบสลิปให้');
+                toast.success('ส่งคำขอถอนเงินแล้ว แอดมินจะโอนเงินและแนบสลิปให้');
                 setShowForm(false);
                 setAmount('');
                 fetchData();
             } else {
-                alert(data.error || 'เกิดข้อผิดพลาด');
+                toast.error(data.error || 'เกิดข้อผิดพลาด');
             }
         } finally {
             setSubmitting(false);

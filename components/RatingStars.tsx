@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Star } from "lucide-react";
+import { useToast } from "@/components/Toast";
 
 interface RatingStarsProps {
     contentType: "novel" | "comic";
@@ -19,6 +20,7 @@ interface RatingSummary {
 
 // Average rating plus the viewer's own 1-5 star rating (click the same star again to remove it)
 export default function RatingStars({ contentType, contentId }: RatingStarsProps) {
+    const toast = useToast();
     const { data: session, status } = useSession();
     const router = useRouter();
     const [summary, setSummary] = useState<RatingSummary | null>(null);
@@ -50,7 +52,7 @@ export default function RatingStars({ contentType, contentId }: RatingStarsProps
             });
             const data = await res.json();
             if (res.ok) setSummary(data);
-            else alert(data.error || "เกิดข้อผิดพลาด");
+            else toast.error(data.error || "เกิดข้อผิดพลาด");
         } catch (error) {
             console.error(error);
         } finally {

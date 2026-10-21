@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Flag } from "lucide-react";
+import { useToast } from "@/components/Toast";
 
 interface ReportButtonProps {
     targetType: "NOVEL" | "COMIC" | "COMMENT";
@@ -19,6 +20,7 @@ const PRESET_REASONS = [
 ];
 
 export default function ReportButton({ targetType, targetId, compact = false }: ReportButtonProps) {
+    const toast = useToast();
     const { data: session } = useSession();
     const router = useRouter();
     const [open, setOpen] = useState(false);
@@ -46,15 +48,15 @@ export default function ReportButton({ targetType, targetId, compact = false }: 
             });
             const data = await res.json();
             if (res.ok) {
-                alert("ส่งรายงานเรียบร้อย ขอบคุณที่ช่วยแจ้งให้เราทราบ");
+                toast.success("ส่งรายงานเรียบร้อย ขอบคุณที่ช่วยแจ้งให้เราทราบ");
                 setOpen(false);
                 setDetails("");
             } else {
-                alert(data.error || "เกิดข้อผิดพลาด");
+                toast.error(data.error || "เกิดข้อผิดพลาด");
             }
         } catch (error) {
             console.error(error);
-            alert("เกิดข้อผิดพลาด");
+            toast.error("เกิดข้อผิดพลาด");
         } finally {
             setSubmitting(false);
         }

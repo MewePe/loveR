@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Coins, Upload, Send } from 'lucide-react';
+import { useToast } from '@/components/Toast';
 
 interface Topup { id: string; amount: number; status: string; rejection_reason: string | null; created_at: string; }
 interface Purchase { id: string; item_title: string; price: number; created_at: string; chapter_id: string | null; episode_id: string | null; comic_id: string | null; }
@@ -17,6 +18,7 @@ const statusColors: Record<string, string> = {
 };
 
 export default function CoinsPage() {
+    const toast = useToast();
     const { status } = useSession();
     const router = useRouter();
     const [loading, setLoading] = useState(true);
@@ -60,7 +62,7 @@ export default function CoinsPage() {
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         if (!slip) {
-            alert('กรุณาแนบสลิปการโอนเงิน');
+            toast.error('กรุณาแนบสลิปการโอนเงิน');
             return;
         }
         setSubmitting(true);
@@ -71,16 +73,16 @@ export default function CoinsPage() {
             const res = await fetch('/api/coins/topup', { method: 'POST', body: fd, credentials: 'include' });
             const data = await res.json();
             if (res.ok) {
-                alert('ส่งคำขอเติมเหรียญแล้ว เหรียญจะเข้าบัญชีเมื่อแอดมินตรวจสอบสลิปเรียบร้อย');
+                toast.success('ส่งคำขอเติมเหรียญแล้ว เหรียญจะเข้าบัญชีเมื่อแอดมินตรวจสอบสลิปเรียบร้อย');
                 setSlip(null);
                 setSlipPreview(null);
                 fetchData();
             } else {
-                alert(data.error || 'เกิดข้อผิดพลาด');
+                toast.error(data.error || 'เกิดข้อผิดพลาด');
             }
         } catch (error) {
             console.error(error);
-            alert('เกิดข้อผิดพลาด');
+            toast.error('เกิดข้อผิดพลาด');
         } finally {
             setSubmitting(false);
         }

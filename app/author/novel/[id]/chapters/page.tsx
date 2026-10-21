@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Plus, Edit, Trash2, Save, X, GripVertical, Eye } from 'lucide-react';
 import { useConfirm } from '@/components/ConfirmDialog';
+import { useToast } from '@/components/Toast';
 
 interface Chapter {
     id: string;
@@ -22,6 +23,7 @@ interface Novel {
 }
 
 export default function ChapterManagement() {
+    const toast = useToast();
     const confirm = useConfirm();
     const { data: session, status } = useSession();
     const router = useRouter();
@@ -94,12 +96,12 @@ export default function ChapterManagement() {
             });
 
             if (res.ok) {
-                alert(editingChapter ? 'แก้ไขบทสำเร็จ' : 'เพิ่มบทสำเร็จ');
+                toast.success(editingChapter ? 'แก้ไขบทสำเร็จ' : 'เพิ่มบทสำเร็จ');
                 setShowModal(false);
                 fetchData();
             } else {
                 const data = await res.json().catch(() => ({}));
-                alert(data.error || 'เกิดข้อผิดพลาด');
+                toast.error(data.error || 'เกิดข้อผิดพลาด');
             }
         } catch (error) {
             console.error(error);
@@ -118,10 +120,10 @@ export default function ChapterManagement() {
             });
 
             if (res.ok) {
-                alert('ลบบทสำเร็จ');
+                toast.success('ลบบทสำเร็จ');
                 fetchData();
             } else {
-                alert('เกิดข้อผิดพลาด');
+                toast.error('เกิดข้อผิดพลาด');
             }
         } catch (error) {
             console.error(error);

@@ -4,8 +4,10 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { FileText, Send, CheckCircle, AlertCircle, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { useToast } from '@/components/Toast';
 
 export default function BecomeAuthorPage() {
+    const toast = useToast();
     const { data: session, status } = useSession();
     const router = useRouter();
     const [loading, setLoading] = useState(true);
@@ -88,15 +90,15 @@ export default function BecomeAuthorPage() {
             });
 
             if (res.ok) {
-                alert('ส่งคำขอเรียบร้อย! กรุณารอการอนุมัติจากแอดมิน');
+                toast.success('ส่งคำขอเรียบร้อย! กรุณารอการอนุมัติจากแอดมิน');
                 checkExistingRequest();
             } else {
                 const data = await res.json();
-                alert(data.error || 'เกิดข้อผิดพลาด');
+                toast.error(data.error || 'เกิดข้อผิดพลาด');
             }
         } catch (error) {
             console.error(error);
-            alert('เกิดข้อผิดพลาด');
+            toast.error('เกิดข้อผิดพลาด');
         } finally {
             setSubmitting(false);
         }

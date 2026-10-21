@@ -8,6 +8,7 @@ import PaymentsPanel from '@/components/admin/PaymentsPanel';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import Image from 'next/image';
 import { useConfirm } from '@/components/ConfirmDialog';
+import { useToast } from '@/components/Toast';
 
 type TabType = 'dashboard' | 'users' | 'content' | 'reports' | 'writers' | 'payments' | 'categories' | 'settings';
 
@@ -30,6 +31,7 @@ interface WriterRequest { user_id: string; user_name: string; email: string; tit
 interface Category { id: string; name: string; slug: string; }
 
 export default function AdminPanel() {
+    const toast = useToast();
     const confirm = useConfirm();
     const { data: session, status } = useSession();
     const router = useRouter();
@@ -125,14 +127,14 @@ export default function AdminPanel() {
         if (!(await confirm(`Change role to ${newRole}?`))) return;
         const res = await fetch(`/api/admin/users/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role: newRole }), credentials: 'include' });
         if (res.ok) fetchTabData();
-        else alert('Failed to update user');
+        else toast.error('Failed to update user');
     }
 
     async function updateContentStatus(id: string, newStatus: string) {
         if (!(await confirm(`Change status to ${newStatus}?`))) return;
         const res = await fetch(`/api/admin/content/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus, type: contentTab }), credentials: 'include' });
         if (res.ok) fetchTabData();
-        else alert('Failed to update');
+        else toast.error('Failed to update');
     }
 
     async function updateReportStatus(id: string, newStatus: string) {
@@ -145,14 +147,14 @@ export default function AdminPanel() {
         if (!(await confirm('Delete this comment?', { danger: true }))) return;
         const res = await fetch(`/api/comments/${report.target_id}`, { method: 'DELETE', credentials: 'include' });
         if (res.ok || res.status === 404) await updateReportStatus(report.id, 'RESOLVED');
-        else alert('Failed to delete comment');
+        else toast.error('Failed to delete comment');
     }
 
     async function addCategory(e: React.FormEvent) {
         e.preventDefault();
         const res = await fetch('/api/admin/categories', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newCategory), credentials: 'include' });
         if (res.ok) { setNewCategory({ name: '', slug: '' }); fetchTabData(); }
-        else alert('Failed to add category');
+        else toast.error('Failed to add category');
     }
 
     async function deleteCategory(id: string) {
@@ -165,8 +167,8 @@ export default function AdminPanel() {
         e.preventDefault();
         setSaving(true);
         const res = await fetch('/api/admin/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(settings), credentials: 'include' });
-        if (res.ok) alert('Settings saved');
-        else alert('Failed to save');
+        if (res.ok) toast.success('Settings saved');
+        else toast.error('Failed to save');
         setSaving(false);
     }
 
@@ -179,11 +181,11 @@ export default function AdminPanel() {
             credentials: 'include'
         });
         if (res.ok) {
-            alert(action === 'APPROVED' ? 'อนุมัติเรียบร้อย' : 'ปฏิเสธเรียบร้อย');
+            toast.success(action === 'APPROVED' ? 'อนุมัติเรียบร้อย' : 'ปฏิเสธเรียบร้อย');
             setSelectedWriter(null);
             fetchTabData();
         } else {
-            alert('เกิดข้อผิดพลาด');
+            toast.error('เกิดข้อผิดพลาด');
         }
     }
 
