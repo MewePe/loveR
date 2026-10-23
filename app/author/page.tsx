@@ -133,7 +133,7 @@ function AuthorDashboard() {
 
         switch (activeTab) {
             case 'dashboard':
-                return <DashboardPanel stats={stats} novels={novels} onCreateNovel={() => setForm({ kind: 'novel' })} />;
+                return <DashboardPanel stats={stats} onCreateNovel={() => setForm({ kind: 'novel' })} />;
             case 'novels':
             case 'comics': {
                 const kind: WorkKind = activeTab === 'novels' ? 'novel' : 'comic';

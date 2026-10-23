@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { BarChart3, Users, BookOpen, AlertTriangle, Tag, Settings, LogOut, Search, Shield, Ban, CheckCircle, XCircle, Eye, Trash2, Plus, Save, FileText, Wallet } from 'lucide-react';
 import PaymentsPanel from '@/components/admin/PaymentsPanel';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import AnalyticsPanel from '@/components/admin/AnalyticsPanel';
 import { useConfirm } from '@/components/ConfirmDialog';
 import { useToast } from '@/components/Toast';
 
@@ -212,13 +212,6 @@ function AdminPanel() {
 
     if (status === 'unauthenticated' || (status === 'authenticated' && session?.user?.role?.toUpperCase() !== 'ADMIN')) return null;
 
-    const chartData = [
-        { name: 'ผู้ใช้', count: stats?.users || 0 },
-        { name: 'นิยาย', count: stats?.novels || 0 },
-        { name: 'การ์ตูน', count: stats?.comics || 0 },
-        { name: 'รายงาน', count: stats?.reports || 0 },
-    ];
-
     function renderContent() {
         switch (activeTab) {
             case 'dashboard': return renderDashboard();
@@ -243,12 +236,7 @@ function AdminPanel() {
                     <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border dark:border-gray-700"><div className="flex items-center justify-between mb-4"><h3 className="text-gray-500 dark:text-gray-400 font-medium">การ์ตูนทั้งหมด</h3><FileText className="w-6 h-6 text-pink-500" /></div><p className="text-3xl font-bold text-gray-900 dark:text-white">{stats?.comics}</p></div>
                     <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border dark:border-gray-700"><div className="flex items-center justify-between mb-4"><h3 className="text-gray-500 dark:text-gray-400 font-medium">รายงานที่รอตรวจสอบ</h3><AlertTriangle className="w-6 h-6 text-red-500" /></div><p className="text-3xl font-bold text-gray-900 dark:text-white">{stats?.reports}</p></div>
                 </div>
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border dark:border-gray-700 h-80">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">สถิติของระบบ</h3>
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={chartData}><CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} /><XAxis dataKey="name" stroke="#6B7280" /><YAxis stroke="#6B7280" /><Tooltip contentStyle={{ backgroundColor: '#1F2937', borderColor: '#374151', color: '#F3F4F6' }} /><Legend /><Bar dataKey="count" name="จำนวน" fill="#6366F1" radius={[4, 4, 0, 0]} /></BarChart>
-                    </ResponsiveContainer>
-                </div>
+                <AnalyticsPanel />
             </div>
         );
     }

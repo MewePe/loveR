@@ -47,3 +47,10 @@ export const WORK_KINDS = {
         cover: 'from-pink-500 to-rose-600',
     },
 } as const;
+
+export const STATUS_LABEL: Record<string, string> = {
+    DRAFT: 'ฉบับร่าง',
+    PUBLISHED: 'เผยแพร่แล้ว',
+    ARCHIVED: 'เก็บเข้าคลัง',
+    BANNED: 'ถูกระงับ',
+};
