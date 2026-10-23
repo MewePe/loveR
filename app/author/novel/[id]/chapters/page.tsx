@@ -179,7 +179,7 @@ export default function ChapterManagement() {
                                         <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400 mt-1">
                                             <span className="flex items-center gap-1">
                                                 <Eye className="w-4 h-4" />
-                                                {chapter.views || 0} views
+                                                {(chapter.views || 0).toLocaleString()} วิว
                                             </span>
                                             <span className={chapter.price > 0 ? 'text-amber-600 dark:text-amber-400' : ''}>
                                                 {chapter.price > 0 ? `🔒 ${chapter.price} เหรียญ` : 'ฟรี'}

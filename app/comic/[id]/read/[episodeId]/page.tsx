@@ -7,6 +7,7 @@ import Paywall from '@/components/Paywall';
 import { auth } from '@/lib/auth';
 import { canAccess, AccessItem } from '@/lib/coins';
 import { recordRead } from '@/lib/readingHistory';
+import { recordView } from '@/lib/views';
 
 async function getEpisode(comicId: string, episodeId: string) {
     const [rows] = await pool.query<RowDataPacket[]>(`
@@ -59,9 +60,8 @@ export default async function ReadEpisode({ params }: { params: Promise<{ id: st
     const pages = unlocked ? await getPages(episodeId) : [];
     const { prev, next } = await getNextPrevEpisodes(episode.comic_id, episode.episode_order);
 
-    // Update views
     if (unlocked) {
-        await pool.query('UPDATE comic_episodes SET views = views + 1 WHERE id = ?', [episodeId]);
+        await recordView('comic', episodeId, session?.user?.id, episode.author_id);
         if (session?.user?.id) await recordRead(session.user.id, 'comic', episode.comic_id, episodeId);
     }
 

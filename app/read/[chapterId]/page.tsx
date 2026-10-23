@@ -7,6 +7,7 @@ import Paywall from '@/components/Paywall';
 import { auth } from '@/lib/auth';
 import { canAccess, AccessItem } from '@/lib/coins';
 import { recordRead } from '@/lib/readingHistory';
+import { recordView } from '@/lib/views';
 
 // Content is loaded separately, only after the access check, so a locked chapter's text is never
 // fetched for the request (React dev mode also serializes awaited query results into the page).
@@ -50,7 +51,10 @@ export default async function ReadChapter({ params }: { params: Promise<{ chapte
 
     const { prev, next } = await getAdjacentChapters(chapter.novel_id, chapter.chapter_order);
     const content = unlocked ? await getChapterContent(chapter.id) : null;
-    if (unlocked && session?.user?.id) await recordRead(session.user.id, 'novel', chapter.novel_id, chapter.id);
+    if (unlocked) {
+        await recordView('novel', chapter.id, session?.user?.id, chapter.author_id);
+        if (session?.user?.id) await recordRead(session.user.id, 'novel', chapter.novel_id, chapter.id);
+    }
 
     return (
         <div className="min-h-screen bg-[#f9f9f9] dark:bg-gray-900 text-gray-800 dark:text-gray-100 font-serif transition-colors duration-200">
