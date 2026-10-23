@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { useSession, signIn, signOut } from 'next-auth/react';
 import { useState, useEffect } from 'react';
-import { Home, Search, Bookmark, Coins, History } from 'lucide-react';
+import { Home, Search, Bookmark, Coins, History, Trophy } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import NotificationBell from './NotificationBell';
 
@@ -72,6 +72,7 @@ export default function Navbar() {
                     {/* Desktop Menu */}
                     <div className="hidden md:flex items-center space-x-6">
                         <Link href="/" className="flex items-center gap-1 text-gray-600 hover:text-indigo-600 dark:text-gray-300 dark:hover:text-indigo-400 font-medium"><Home className="w-4 h-4" /> หน้าแรก</Link>
+                        <Link href="/ranking" className="flex items-center gap-1 text-gray-600 hover:text-indigo-600 dark:text-gray-300 dark:hover:text-indigo-400 font-medium"><Trophy className="w-4 h-4" /> อันดับ</Link>
                         <Link href="/search" aria-label="ค้นหา" className="flex items-center gap-1 text-gray-600 hover:text-indigo-600 dark:text-gray-300 dark:hover:text-indigo-400 font-medium"><Search className="w-4 h-4" /> </Link>
 
                         <div className="flex items-center gap-4">
@@ -190,6 +191,7 @@ export default function Navbar() {
                 <div className="md:hidden bg-white dark:bg-gray-900 border-t dark:border-gray-800">
                     <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
                         <Link href="/" className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 hover:bg-gray-50 dark:hover:bg-gray-800">หน้าแรก</Link>
+                        <Link href="/ranking" className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 hover:bg-gray-50 dark:hover:bg-gray-800">อันดับ</Link>
                         <Link href="/search" className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 hover:bg-gray-50 dark:hover:bg-gray-800">ค้นหา</Link>
                         {session ? (
                             <>

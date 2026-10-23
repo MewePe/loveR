@@ -7,9 +7,11 @@ import ReportButton from '@/components/ReportButton';
 import RatingStars from '@/components/RatingStars';
 import CommentSection from '@/components/CommentSection';
 import PriceBadge from '@/components/PriceBadge';
+import StoryCard from '@/components/StoryCard';
 import { auth } from '@/lib/auth';
 import { getPurchasedIds } from '@/lib/coins';
 import { canViewContent, isOwnerOrAdmin } from '@/lib/visibility';
+import { getSimilarStories } from '@/lib/ranking';
 
 async function getComic(id: string) {
     const [rows] = await pool.query<RowDataPacket[]>(`
@@ -41,6 +43,7 @@ export default async function ComicDetail({ params }: { params: Promise<{ id: st
 
     const episodes = await getEpisodes(id);
     const isOwner = isOwnerOrAdmin(session?.user, comic.author_id);
+    const similar = await getSimilarStories('comic', { id: comic.id, category_id: comic.category_id });
     const purchased = await getPurchasedIds(session?.user?.id, 'episode', episodes.filter(e => e.price > 0).map(e => e.id));
 
     return (
@@ -133,6 +136,15 @@ export default async function ComicDetail({ params }: { params: Promise<{ id: st
                             </div>
                         )}
                     </div>
+
+                    {similar.length > 0 && (
+                        <div className="mt-12">
+                            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">เรื่องที่คล้ายกัน</h2>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                                {similar.map((story) => <StoryCard key={story.id} story={story} type="comic" />)}
+                            </div>
+                        </div>
+                    )}
 
                     <div className="mt-12">
                         <CommentSection contentType="comic" contentId={id} accentColor="pink" />

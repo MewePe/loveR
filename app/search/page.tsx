@@ -13,6 +13,7 @@ interface Novel {
     author_name: string;
     category_name: string;
     views: number;
+    rating_avg: number | null;
 }
 
 interface Comic {
@@ -23,7 +24,16 @@ interface Comic {
     author_name: string;
     category_name: string;
     views: number;
+    rating_avg: number | null;
 }
+
+// Same keys as SEARCH_SORTS in lib/ranking.ts (not imported: that module uses the database)
+const SORT_OPTIONS = [
+    { value: 'newest', label: 'ใหม่ล่าสุด' },
+    { value: 'views', label: 'ยอดวิวสูงสุด' },
+    { value: 'rating', label: 'คะแนนสูงสุด' },
+] as const;
+type SortValue = typeof SORT_OPTIONS[number]['value'];
 
 interface Category {
     id: string;
@@ -40,6 +50,8 @@ function SearchContent() {
         validTypes.includes(rawType as 'all' | 'novels' | 'comics') ? (rawType as 'all' | 'novels' | 'comics') : 'all'
     );
     const [categoryId, setCategoryId] = useState(searchParams.get('category') || '');
+    const rawSort = searchParams.get('sort');
+    const [sort, setSort] = useState<SortValue>(SORT_OPTIONS.find((o) => o.value === rawSort)?.value ?? 'newest');
     const [novels, setNovels] = useState<Novel[]>([]);
     const [comics, setComics] = useState<Comic[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
@@ -52,7 +64,7 @@ function SearchContent() {
             const p = new URLSearchParams();
             if (query) p.set('search', query);
             if (categoryId) p.set('categoryId', categoryId);
-            p.set('status', 'PUBLISHED');
+            p.set('sort', sort);
 
             if (type === 'all' || type === 'novels') {
                 const res = await fetch(`/api/novels?${p}`);
@@ -72,7 +84,7 @@ function SearchContent() {
         } finally {
             setLoading(false);
         }
-    }, [query, type, categoryId]);
+    }, [query, type, categoryId, sort]);
 
     useEffect(() => {
         fetchCategories();
@@ -82,7 +94,7 @@ function SearchContent() {
 
     useEffect(() => {
         handleSearch();
-    }, [type, categoryId, handleSearch]);
+    }, [type, categoryId, sort, handleSearch]);
 
     async function fetchCategories() {
         try {
@@ -102,6 +114,7 @@ function SearchContent() {
         if (query) p.set('q', query);
         if (type !== 'all') p.set('type', type);
         if (categoryId) p.set('category', categoryId);
+        if (sort !== 'newest') p.set('sort', sort);
         router.push(`/search?${p}`);
     }
 
@@ -134,7 +147,7 @@ function SearchContent() {
             <div className="container mx-auto px-4 py-8">
                 {/* Filters */}
                 <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-wrap items-center gap-4">
                         {/* Type Filter */}
                         <div className="flex bg-white dark:bg-gray-800 rounded-lg p-1 shadow-sm">
                             <button
@@ -167,6 +180,21 @@ function SearchContent() {
                                 <option value="">หมวดหมู่ทั้งหมด</option>
                                 {categories.map(cat => (
                                     <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                ))}
+                            </select>
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                        </div>
+
+                        {/* Sort */}
+                        <div className="relative">
+                            <select
+                                value={sort}
+                                onChange={(e) => setSort(e.target.value as SortValue)}
+                                aria-label="เรียงตาม"
+                                className="appearance-none bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg px-4 py-2 pr-10 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none"
+                            >
+                                {SORT_OPTIONS.map((o) => (
+                                    <option key={o.value} value={o.value}>{o.label}</option>
                                 ))}
                             </select>
                             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
@@ -212,7 +240,7 @@ function SearchContent() {
                                                 <div className="p-3">
                                                     <h3 className="font-medium text-gray-900 dark:text-white line-clamp-2 text-sm group-hover:text-indigo-600 transition">{novel.title}</h3>
                                                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{novel.author_name}</p>
-                                                    <p className="text-xs text-gray-400 mt-1">👁 {novel.views?.toLocaleString() || 0}</p>
+                                                    <p className="text-xs text-gray-400 mt-1">👁 {novel.views?.toLocaleString() || 0}{novel.rating_avg != null && <span className="ml-2">⭐ {novel.rating_avg.toFixed(1)}</span>}</p>
                                                 </div>
                                             </div>
                                         </Link>
@@ -243,7 +271,7 @@ function SearchContent() {
                                                 <div className="p-3">
                                                     <h3 className="font-medium text-gray-900 dark:text-white line-clamp-2 text-sm group-hover:text-pink-600 transition">{comic.title}</h3>
                                                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{comic.author_name}</p>
-                                                    <p className="text-xs text-gray-400 mt-1">👁 {comic.views?.toLocaleString() || 0}</p>
+                                                    <p className="text-xs text-gray-400 mt-1">👁 {comic.views?.toLocaleString() || 0}{comic.rating_avg != null && <span className="ml-2">⭐ {comic.rating_avg.toFixed(1)}</span>}</p>
                                                 </div>
                                             </div>
                                         </Link>

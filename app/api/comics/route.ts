@@ -4,37 +4,20 @@ import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
 import { v4 as uuidv4 } from 'uuid';
 import { isPublicUploadUrl } from '@/lib/upload';
+import { isSortKey, listStories, SEARCH_SORTS } from '@/lib/ranking';
 
+// GET ?categoryId=&search=&sort=newest|views|rating — public listing, always PUBLISHED only
+// (authors use /api/author/comics, admins /api/admin/content). Each row includes rating_avg, rating_count, sales, bookmarks.
 export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
-    const categoryId = searchParams.get('categoryId');
-    const search = searchParams.get('search');
-    // Public listing is always PUBLISHED only; authors use /api/author/comics, admins /api/admin/content
-    const status = 'PUBLISHED';
-
-    let query = `
-    SELECT c.*, u.name as author_name, cat.name as category_name 
-    FROM comics c
-    LEFT JOIN users u ON c.author_id = u.id
-    LEFT JOIN categories cat ON c.category_id = cat.id
-    WHERE c.status = ?
-  `;
-    const params: string[] = [status];
-
-    if (categoryId) {
-        query += ` AND c.category_id = ?`;
-        params.push(categoryId);
-    }
-
-    if (search) {
-        query += ` AND (c.title LIKE ? OR c.description LIKE ?)`;
-        params.push(`%${search}%`, `%${search}%`);
-    }
-
-    query += ` ORDER BY c.created_at DESC`;
+    const sort = searchParams.get('sort');
 
     try {
-        const [rows] = await pool.query(query, params);
+        const rows = await listStories('comic', {
+            categoryId: searchParams.get('categoryId'),
+            search: searchParams.get('search'),
+            sort: isSortKey(SEARCH_SORTS, sort) ? sort : 'newest',
+        });
         return NextResponse.json(rows);
     } catch (error) {
         console.error('Database error:', error);
