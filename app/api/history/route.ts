@@ -3,6 +3,7 @@ import pool from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
 import { CONTENT_COLUMN, isContentType } from '@/lib/contentRef';
+import { clearReadItems } from '@/lib/readingHistory';
 
 const PAGE_SIZE = 20;
 
@@ -66,6 +67,7 @@ export async function DELETE(req: NextRequest) {
         const body = await req.json().catch(() => ({}));
         if (body.all === true) {
             await pool.query('DELETE FROM reading_history WHERE user_id = ?', [session.user.id]);
+            await clearReadItems(session.user.id);
             return NextResponse.json({ success: true });
         }
 
@@ -77,6 +79,7 @@ export async function DELETE(req: NextRequest) {
             `DELETE FROM reading_history WHERE user_id = ? AND ${CONTENT_COLUMN[content_type]} = ?`,
             [session.user.id, content_id]
         );
+        await clearReadItems(session.user.id, { type: content_type, contentId: content_id });
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Error deleting reading history:', error);

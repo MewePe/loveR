@@ -51,6 +51,7 @@ npx tsx scripts/add_comments_ratings.ts # ตาราง comments และ rat
 npx tsx scripts/add_register_attempts.ts # ตาราง register_attempts สำหรับจำกัดการสมัครสมาชิก (รันซ้ำได้)
 npx tsx scripts/add_reading_history.ts # ตาราง reading_history (รันซ้ำได้)
 npx tsx scripts/add_notifications.ts # ตาราง notifications และคอลัมน์ comments.parent_id (รันซ้ำได้)
+npx tsx scripts/add_item_reads.ts # ตาราง item_reads (บท/ตอนที่อ่านแล้ว) คัดลอกบทล่าสุดจาก reading_history มาให้ (รันซ้ำได้)
 ```
 
 `reset_db.ts` และ `drop_old_db.ts` ลบข้อมูล
@@ -134,6 +135,12 @@ npx tsx scripts/add_notifications.ts # ตาราง notifications และ�
 - `recordRead()` ถูกเรียกในหน้า `app/read/[chapterId]` และ `app/comic/[id]/read/[episodeId]` เฉพาะเมื่อผ่าน `canAccess()` แล้ว (หน้า paywall ไม่บันทึก) ถ้า error จะ log แล้วยังให้อ่านได้ตามปกติ
 - `GET /api/history?page=` (ล่าสุดก่อน หน้าละ 20) ซ่อนเรื่องที่ไม่ได้ `PUBLISHED` ยกเว้นเรื่องของตัวเอง (กฎเดียวกับ bookmarks) และ `DELETE /api/history` (`{ content_type, content_id }` หรือ `{ all: true }`) หน้า UI คือ `/history` ซึ่งมีปุ่ม "อ่านต่อ"
 - ถ้าบทถูกลบ แถวยังอยู่แต่ `chapter_id` เป็น NULL (ปุ่มอ่านต่อจะพาไปหน้าเรื่องแทน) `novelsRead`/`comicsRead` ใน `/api/profile` นับจากตารางนี้
+- `recordRead()` บันทึกลงตาราง `item_reads` ด้วย (1 แถวต่อคนต่อบท/ตอน ไว้ทำเครื่องหมาย "อ่านแล้ว") ทั้งสองตารางแยก try/catch กัน การลบประวัติ (`DELETE /api/history`) ลบ `item_reads` ของเรื่องนั้น/ทั้งหมดด้วย ผ่าน `clearReadItems()`
+
+**ปุ่มเลือกตอน** (`components/EpisodePicker.tsx`, `lib/episodeList.ts`): อยู่ในแถบบนและระหว่างปุ่มก่อนหน้า/ถัดไปของหน้าอ่านทั้งสองหน้า (การ์ตูนแทนลิงก์ "รายการตอน" เดิม และบนมือถือปุ่มก่อนหน้า/ถัดไปของแถบบนจะซ่อน เหลือแถบล่าง)
+- server ส่งรายการผ่าน `getEpisodeList()` เท่านั้น ซึ่งมีแค่ id/เลข/ชื่อ/ราคา/`locked`/`read` **ห้ามใส่ `content`** เพราะ props ถูก serialize ลงในหน้า ส่วน `locked` ใช้กฎเดียวกับ `canAccess()` (เจ้าของ/แอดมินไม่ล็อก) ถ้าเรื่องไม่ใช่ `PUBLISHED` (คือ `ARCHIVED` ที่คนซื้อเปิดได้) คนอื่นจะเห็นเฉพาะตอนที่ซื้อแล้ว ตอนอื่นจะเป็น 404
+- กดตอนที่ล็อกจะไปหน้าอ่านตอนนั้นซึ่งแสดง paywall ตามเดิม ช่องค้นหาเลขตอนแสดงเมื่อมีมากกว่า 20 ตอน (Enter = ไปตอนที่เลขตรงพอดี) ต้อง render ด้วย `key={currentId}` เพื่อให้ปิดและล้างช่องค้นหาเมื่อเปลี่ยนตอน
+- เทสต์อยู่ใน `tests/e2e/episode-picker.test.mjs` (อ่าน props จาก RSC payload ในหน้า HTML)
 
 **แจ้งเตือน** (`lib/notifications.ts`, ตาราง `notifications`):
 - สร้างผ่าน `notify(recipients, { type, message, link }, actorId)` / `notifyAdmins()` / `notifyNewItem()` เท่านั้น `type` ต้องอยู่ใน `NOTIFICATION_TYPES` (เก็บเป็น VARCHAR) `message` เป็น plain text ที่ server เขียน (ตัดข้อความจากผู้ใช้ด้วย `short()`) `link` เป็น path ภายในเว็บ
@@ -174,9 +181,10 @@ npx tsx scripts/add_notifications.ts # ตาราง notifications และ�
    npx tsx scripts/add_register_attempts.ts   # จำกัดการสมัครสมาชิก
    npx tsx scripts/add_reading_history.ts     # ประวัติการอ่าน
    npx tsx scripts/add_notifications.ts       # แจ้งเตือน + comments.parent_id (ตอบกลับ)
+   npx tsx scripts/add_item_reads.ts          # บท/ตอนที่อ่านแล้ว (ปุ่มเลือกตอน)
    ```
    DB ที่เก่ากว่านั้นให้รันสคริปต์ก่อนหน้าตามลำดับใน README ก่อน ส่วน DB ใหม่ใช้ `schema.sql` ได้เลยไม่ต้องรันพวกนี้
-3. ลบ `.next` แล้วเปิด `npm run dev` ใหม่ จากนั้นรัน `npm run test:e2e` เพื่อเช็ก (ต้องผ่านทั้งหมด 88 เทสต์)
+3. ลบ `.next` แล้วเปิด `npm run dev` ใหม่ จากนั้นรัน `npm run test:e2e` เพื่อเช็ก (ต้องผ่านทั้งหมด 94 เทสต์)
 
 **ผู้ดูแลต้องทำเอง**:
 - กรอก "ข้อมูลการชำระเงิน" ที่ `/admin` → ตั้งค่า (เครื่องนี้ยังเป็นข้อความตัวอย่างอยู่) ถ้ายังไม่กรอก ผู้อ่านจะเติมเหรียญไม่ได้
@@ -209,7 +217,7 @@ npx tsx scripts/add_notifications.ts # ตาราง notifications และ�
 | 11 | จัดอันดับและแนะนำ | ⚠️ (เกือบ ❌) | `/` (ยอดนิยม) | `app/page.tsx` |
 | 12 | ตรวจสอบเนื้อหาเบื้องต้นด้วย API | ❌ | — | — |
 | 13 | รักษาความปลอดภัย | ✅ | `/login` (ล็อกอินผิดเกิน 5 ครั้ง), เปิดตอนที่ยังไม่ซื้อ | `lib/auth.ts`, `lib/loginThrottle.ts`, `lib/upload.ts`, `lib/visibility.ts`, `tests/e2e/security.test.mjs` |
-| 14 | ทดสอบระบบและปรับ UX/UI | ⚠️ | `npm run test:e2e` (88 เทสต์) | `tests/e2e/` |
+| 14 | ทดสอบระบบและปรับ UX/UI | ⚠️ | `npm run test:e2e` (94 เทสต์) | `tests/e2e/` |
 
 **สิ่งที่ขาด**:
 - ~~ยอดวิวไม่เคยเพิ่ม~~ **แก้แล้ว 2026-10-23** (ดูหัวข้อ "ยอดวิว" ในสถาปัตยกรรม) ยอดวิวเก่าก่อนวันนั้นของนิยาย/บท/การ์ตูนยังเป็น 0 เพราะไม่มีข้อมูลย้อนหลัง

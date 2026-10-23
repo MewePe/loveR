@@ -59,6 +59,7 @@ npx tsx scripts/add_comments_ratings.ts      # คอมเมนต์และ
 npx tsx scripts/add_register_attempts.ts     # จำกัดการสมัครสมาชิก
 npx tsx scripts/add_reading_history.ts       # ประวัติการอ่าน
 npx tsx scripts/add_notifications.ts         # แจ้งเตือน และการตอบกลับคอมเมนต์
+npx tsx scripts/add_item_reads.ts            # บท/ตอนที่อ่านแล้ว (ใช้ในปุ่มเลือกตอน)
 ```
 
 ### รัน

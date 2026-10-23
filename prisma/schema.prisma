@@ -42,6 +42,7 @@ model chapters {
   updated_at    DateTime @default(now()) @db.Timestamp(0)
   purchases     purchases[]
   reading_history reading_history[]
+  item_reads    item_reads[]
   novels        novels?  @relation(fields: [novel_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "chapters_ibfk_1")
 
   @@index([novel_id], map: "novel_id")
@@ -60,6 +61,7 @@ model comic_episodes {
   comic_pages   comic_pages[]
   purchases     purchases[]
   reading_history reading_history[]
+  item_reads    item_reads[]
 
   @@index([comic_id], map: "comic_id")
 }
@@ -179,6 +181,7 @@ model users {
   comments        comments[]
   ratings         ratings[]
   reading_history reading_history[]
+  item_reads      item_reads[]
   notifications   notifications[] @relation("notification_recipient")
   notifications_caused notifications[] @relation("notification_actor")
   comics          comics[]
@@ -322,6 +325,22 @@ model reading_history {
   @@index([user_id, read_at], map: "idx_user_time")
   @@index([novel_id], map: "novel_id")
   @@index([comic_id], map: "comic_id")
+  @@index([chapter_id], map: "chapter_id")
+  @@index([episode_id], map: "episode_id")
+}
+
+model item_reads {
+  id             String          @id @db.VarChar(36)
+  user_id        String          @db.VarChar(36)
+  chapter_id     String?         @db.VarChar(36)
+  episode_id     String?         @db.VarChar(36)
+  read_at        DateTime        @default(now()) @db.Timestamp(3)
+  users          users           @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "item_reads_ibfk_1")
+  chapters       chapters?       @relation(fields: [chapter_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "item_reads_ibfk_2")
+  comic_episodes comic_episodes? @relation(fields: [episode_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "item_reads_ibfk_3")
+
+  @@unique([user_id, chapter_id], map: "uniq_user_chapter")
+  @@unique([user_id, episode_id], map: "uniq_user_episode")
   @@index([chapter_id], map: "chapter_id")
   @@index([episode_id], map: "episode_id")
 }

@@ -279,6 +279,20 @@ CREATE TABLE IF NOT EXISTS reading_history (
     FOREIGN KEY (episode_id) REFERENCES comic_episodes(id) ON DELETE SET NULL
 );
 
+-- Every chapter/episode each user has opened (lib/readingHistory.ts), for marking read items in the episode picker
+CREATE TABLE IF NOT EXISTS item_reads (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    chapter_id VARCHAR(36),
+    episode_id VARCHAR(36),
+    read_at TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP(3),
+    UNIQUE KEY uniq_user_chapter (user_id, chapter_id),
+    UNIQUE KEY uniq_user_episode (user_id, episode_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (chapter_id) REFERENCES chapters(id) ON DELETE CASCADE,
+    FOREIGN KEY (episode_id) REFERENCES comic_episodes(id) ON DELETE CASCADE
+);
+
 -- In-app notifications (lib/notifications.ts). message/link are written by the server; type is whitelisted in code
 CREATE TABLE IF NOT EXISTS notifications (
     id VARCHAR(36) PRIMARY KEY,

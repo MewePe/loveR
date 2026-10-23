@@ -4,10 +4,12 @@ import { notFound } from 'next/navigation';
 import { RowDataPacket } from 'mysql2';
 import ThemeToggle from '@/components/ThemeToggle';
 import Paywall from '@/components/Paywall';
+import EpisodePicker from '@/components/EpisodePicker';
 import { auth } from '@/lib/auth';
 import { canAccess, AccessItem } from '@/lib/coins';
 import { recordRead } from '@/lib/readingHistory';
 import { recordView } from '@/lib/views';
+import { getEpisodeList } from '@/lib/episodeList';
 
 // Content is loaded separately, only after the access check, so a locked chapter's text is never
 // fetched for the request (React dev mode also serializes awaited query results into the page).
@@ -55,6 +57,7 @@ export default async function ReadChapter({ params }: { params: Promise<{ chapte
         await recordView('novel', chapter.id, session?.user?.id, chapter.author_id);
         if (session?.user?.id) await recordRead(session.user.id, 'novel', chapter.novel_id, chapter.id);
     }
+    const episodes = await getEpisodeList('novel', chapter.novel_id, session?.user, { author_id: chapter.author_id, status: chapter.content_status });
 
     return (
         <div className="min-h-screen bg-[#f9f9f9] dark:bg-gray-900 text-gray-800 dark:text-gray-100 font-serif transition-colors duration-200">
@@ -64,7 +67,8 @@ export default async function ReadChapter({ params }: { params: Promise<{ chapte
                     &larr; <span className="hidden sm:inline">{chapter.novel_title}</span>
                 </Link>
                 <h1 className="text-sm md:text-base font-bold text-center truncate px-2 dark:text-white">{chapter.title}</h1>
-                <div className="w-[100px] flex justify-end items-center gap-2 text-sm">
+                <div className="shrink-0 flex justify-end items-center gap-2 text-sm">
+                    <EpisodePicker key={chapter.id} items={episodes} currentId={chapter.id} hrefPrefix="/read/" variant="compact" />
                     <button className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200 transition-colors p-1" aria-label="ตั้งค่าตัวอักษร">Aa</button>
                     <ThemeToggle />
                 </div>
@@ -85,29 +89,31 @@ export default async function ReadChapter({ params }: { params: Promise<{ chapte
 
             {/* Bottom Navigation */}
             <div className="max-w-3xl mx-auto px-6 pb-20">
-                <div className="flex items-center justify-between gap-4 border-t dark:border-gray-800 pt-8 transition-colors duration-200">
+                <div className="flex items-center justify-between gap-2 sm:gap-4 border-t dark:border-gray-800 pt-8 transition-colors duration-200">
                     {prev ? (
                         <Link
                             href={`/read/${prev.id}`}
-                            className="flex-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 py-4 rounded-xl text-center font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition shadow-sm"
+                            className="flex-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 px-2 py-4 rounded-xl text-center font-medium text-sm sm:text-base hover:bg-gray-50 dark:hover:bg-gray-700 transition shadow-sm"
                         >
                             &larr; บทก่อนหน้า
                         </Link>
                     ) : (
-                        <button disabled className="flex-1 bg-gray-100 dark:bg-gray-800/50 text-gray-400 dark:text-gray-500 py-4 rounded-xl text-center font-medium cursor-not-allowed border border-transparent dark:border-gray-800">
+                        <button disabled className="flex-1 bg-gray-100 dark:bg-gray-800/50 text-gray-400 dark:text-gray-500 px-2 py-4 rounded-xl text-center font-medium text-sm sm:text-base cursor-not-allowed border border-transparent dark:border-gray-800">
                             บทก่อนหน้า
                         </button>
                     )}
 
+                    <EpisodePicker key={chapter.id} items={episodes} currentId={chapter.id} hrefPrefix="/read/" />
+
                     {next ? (
                         <Link
                             href={`/read/${next.id}`}
-                            className="flex-1 bg-indigo-600 dark:bg-indigo-700 text-white py-4 rounded-xl text-center font-medium hover:bg-indigo-700 dark:hover:bg-indigo-600 transition shadow-lg hover:shadow-indigo-500/30"
+                            className="flex-1 bg-indigo-600 dark:bg-indigo-700 text-white px-2 py-4 rounded-xl text-center font-medium text-sm sm:text-base hover:bg-indigo-700 dark:hover:bg-indigo-600 transition shadow-lg hover:shadow-indigo-500/30"
                         >
                             บทถัดไป &rarr;
                         </Link>
                     ) : (
-                        <button disabled className="flex-1 bg-gray-100 dark:bg-gray-800/50 text-gray-400 dark:text-gray-500 py-4 rounded-xl text-center font-medium cursor-not-allowed border border-transparent dark:border-gray-800">
+                        <button disabled className="flex-1 bg-gray-100 dark:bg-gray-800/50 text-gray-400 dark:text-gray-500 px-2 py-4 rounded-xl text-center font-medium text-sm sm:text-base cursor-not-allowed border border-transparent dark:border-gray-800">
                             บทถัดไป
                         </button>
                     )}
