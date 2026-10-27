@@ -2,6 +2,7 @@ import mysql, { RowDataPacket } from 'mysql2/promise';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import dotenv from 'dotenv';
+import { defaultUsername } from '../lib/username';
 
 dotenv.config();
 
@@ -37,8 +38,8 @@ async function createAdmin() {
             const id = uuidv4();
 
             await connection.query(
-                'INSERT INTO users (id, name, email, password, role) VALUES (?, ?, ?, ?, ?)',
-                [id, name, email, hashedPassword, 'ADMIN']
+                'INSERT INTO users (id, name, email, password, role, username) VALUES (?, ?, ?, ?, ?, ?)',
+                [id, name, email, hashedPassword, 'ADMIN', defaultUsername(id)]
             );
             console.log(`Success! Created admin user.`);
             console.log(`Email: ${email}`);

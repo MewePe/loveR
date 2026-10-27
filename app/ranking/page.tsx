@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Trophy } from 'lucide-react';
+import AuthorLink from '@/components/AuthorLink';
 import { isContentType } from '@/lib/contentRef';
 import { isSortKey, listStories, RANKING_SORTS, SORTS, StoryRow } from '@/lib/ranking';
 
@@ -65,30 +66,32 @@ export default async function RankingPage({ searchParams }: { searchParams: Prom
                 ) : (
                     <ol className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700 overflow-hidden">
                         {stories.map((story, index) => (
-                            <li key={story.id}>
-                                <Link href={style.href + story.id} className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition group">
-                                    <span className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${MEDALS[index] ?? 'text-gray-500 dark:text-gray-400'}`}>
-                                        {index + 1}
-                                    </span>
-                                    <div className={`shrink-0 w-12 sm:w-14 aspect-[2/3] rounded-md overflow-hidden bg-gradient-to-br ${style.cover}`}>
-                                        {story.cover_image ? (
-                                            <img src={story.cover_image} alt={story.title} className="w-full h-full object-cover" />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-white/60">{style.icon}</div>
-                                        )}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <h2 className="font-bold text-gray-900 dark:text-white truncate group-hover:underline">{story.title}</h2>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                                            {story.author_name || 'ไม่ระบุชื่อ'}{story.categories.length > 0 && ` · ${story.categories.map((c) => c.name).join(', ')}`}
-                                        </p>
-                                        <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-500 dark:text-gray-400">
-                                            {statLine(story).map((stat, i) => (
-                                                <span key={i} className={RANKING_SORTS[i] === sort ? `font-semibold ${style.text}` : ''}>{stat}</span>
-                                            ))}
-                                        </p>
-                                    </div>
-                                </Link>
+                            <li key={story.id} className="relative flex items-center gap-3 sm:gap-4 p-3 sm:p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition group">
+                                <span className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${MEDALS[index] ?? 'text-gray-500 dark:text-gray-400'}`}>
+                                    {index + 1}
+                                </span>
+                                <div className={`shrink-0 w-12 sm:w-14 aspect-[2/3] rounded-md overflow-hidden bg-gradient-to-br ${style.cover}`}>
+                                    {story.cover_image ? (
+                                        <img src={story.cover_image} alt="" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-white/60">{style.icon}</div>
+                                    )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <h2 className="font-bold text-gray-900 dark:text-white truncate">
+                                        {/* Stretched over the whole row; the author link sits above it */}
+                                        <Link href={style.href + story.id} className="group-hover:underline after:absolute after:inset-0">{story.title}</Link>
+                                    </h2>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                                        <AuthorLink id={story.author_id} username={story.author_username} name={story.author_name} className="relative z-10" />
+                                        {story.categories.length > 0 && ` · ${story.categories.map((c) => c.name).join(', ')}`}
+                                    </p>
+                                    <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-500 dark:text-gray-400">
+                                        {statLine(story).map((stat, i) => (
+                                            <span key={i} className={RANKING_SORTS[i] === sort ? `font-semibold ${style.text}` : ''}>{stat}</span>
+                                        ))}
+                                    </p>
+                                </div>
                             </li>
                         ))}
                     </ol>

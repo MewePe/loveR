@@ -57,13 +57,15 @@ export async function getAuthorSharePercent(conn: PoolConnection | typeof pool =
     return Number.isFinite(value) && value >= 0 && value <= 100 ? value : 70;
 }
 
-// Earnings minus withdrawals that are pending or paid out. Rejected withdrawals return to the balance.
+// Earnings (chapter/episode sales + supports) minus withdrawals that are pending or paid out.
+// Rejected withdrawals return to the balance.
 export async function getAuthorBalance(authorId: string, conn: PoolConnection | typeof pool = pool) {
     const [rows] = await conn.query<RowDataPacket[]>(
         `SELECT
-            (SELECT COALESCE(SUM(author_earning), 0) FROM purchases WHERE author_id = ?) AS earned,
+            (SELECT COALESCE(SUM(author_earning), 0) FROM purchases WHERE author_id = ?)
+          + (SELECT COALESCE(SUM(author_earning), 0) FROM supports WHERE author_id = ?) AS earned,
             (SELECT COALESCE(SUM(amount), 0) FROM withdrawals WHERE user_id = ? AND status IN ('PENDING', 'APPROVED')) AS withdrawn`,
-        [authorId, authorId]
+        [authorId, authorId, authorId]
     );
     const earned = Number(rows[0].earned);
     const withdrawn = Number(rows[0].withdrawn);
@@ -133,4 +135,77 @@ export function parsePrice(value: unknown): number | null {
     const n = Number(value);
     if (!Number.isInteger(n) || n < 0 || n > 10000) return null;
     return n;
+}
+
+// ---------- supports ("สนับสนุน": coins sent straight to an author) ----------
+
+export const SUPPORT_MIN = 1;
+export const SUPPORT_MAX = 10000;
+export const SUPPORT_MESSAGE_MAX = 200;
+const SUPPORTS_PER_MINUTE = 5;
+
+export type SupportResult =
+    | { ok: true; coins: number; amount: number; authorEarning: number }
+    | { ok: false; status: number; error: string };
+
+// Validate the request body of POST /api/authors/[id]/support
+export function parseSupport(body: { amount?: unknown; message?: unknown }): { amount: number; message: string | null } | { error: string } {
+    const amount = Number(body.amount);
+    if (!Number.isInteger(amount) || amount < SUPPORT_MIN || amount > SUPPORT_MAX) {
+        return { error: `จำนวนเหรียญต้องเป็นจำนวนเต็ม ${SUPPORT_MIN}-${SUPPORT_MAX.toLocaleString()}` };
+    }
+    if (body.message !== undefined && body.message !== null && typeof body.message !== 'string') {
+        return { error: 'ข้อความไม่ถูกต้อง' };
+    }
+    const message = typeof body.message === 'string' ? body.message.trim() : '';
+    if (message.length > SUPPORT_MESSAGE_MAX) return { error: `ข้อความยาวได้ไม่เกิน ${SUPPORT_MESSAGE_MAX} ตัวอักษร` };
+    return { amount, message: message || null };
+}
+
+// Move `amount` coins from the supporter to the author's earnings (author_earning = amount x the current
+// author_share_percent, like a purchase). Same locking as purchaseItem() so concurrent requests can't
+// overspend. The caller checks that the author can be supported.
+export async function supportAuthor(userId: string, authorId: string, amount: number, message: string | null): Promise<SupportResult> {
+    if (userId === authorId) return { ok: false, status: 400, error: 'สนับสนุนตัวเองไม่ได้' };
+
+    const conn = await pool.getConnection();
+    try {
+        await conn.beginTransaction();
+
+        const [users] = await conn.query<RowDataPacket[]>('SELECT coins FROM users WHERE id = ? FOR UPDATE', [userId]);
+        if (!users[0]) {
+            await conn.rollback();
+            return { ok: false, status: 404, error: 'ไม่พบผู้ใช้' };
+        }
+        // Counted under the row lock, so parallel requests can't all slip under the limit
+        const [recent] = await conn.query<RowDataPacket[]>(
+            'SELECT COUNT(*) AS n FROM supports WHERE user_id = ? AND created_at > NOW(3) - INTERVAL 1 MINUTE',
+            [userId]
+        );
+        if (Number(recent[0].n) >= SUPPORTS_PER_MINUTE) {
+            await conn.rollback();
+            return { ok: false, status: 429, error: 'ส่งบ่อยเกินไป กรุณารอสักครู่' };
+        }
+        if (users[0].coins < amount) {
+            await conn.rollback();
+            return { ok: false, status: 402, error: 'เหรียญไม่พอ กรุณาเติมเหรียญ' };
+        }
+
+        const share = await getAuthorSharePercent(conn);
+        const authorEarning = Math.round(amount * share) / 100;
+
+        await conn.query('UPDATE users SET coins = coins - ? WHERE id = ?', [amount, userId]);
+        await conn.query(
+            'INSERT INTO supports (id, user_id, author_id, amount, author_earning, message) VALUES (?, ?, ?, ?, ?, ?)',
+            [uuidv4(), userId, authorId, amount, authorEarning, message]
+        );
+
+        await conn.commit();
+        return { ok: true, coins: users[0].coins - amount, amount, authorEarning };
+    } catch (error) {
+        await conn.rollback();
+        throw error;
+    } finally {
+        conn.release();
+    }
 }

@@ -19,15 +19,11 @@ export async function GET(req: Request) {
         const table = type === 'comics' ? 'comics' : 'novels';
 
         const [items] = await pool.query<RowDataPacket[]>(
-            `SELECT id, title, status, created_at, author_id FROM ${table} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+            `SELECT s.id, s.title, s.status, s.created_at, s.author_id, u.name AS author_name, u.username AS author_username
+             FROM ${table} s LEFT JOIN users u ON u.id = s.author_id
+             ORDER BY s.created_at DESC LIMIT ? OFFSET ?`,
             [limit, offset]
         );
-
-        // Fetch author names
-        for (const item of items) {
-            const [users] = await pool.query<RowDataPacket[]>('SELECT name FROM users WHERE id = ?', [item.author_id]);
-            item.author_name = users[0]?.name || 'Unknown';
-        }
 
         return NextResponse.json(items);
     } catch (error) {

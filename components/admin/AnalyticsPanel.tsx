@@ -36,7 +36,7 @@ export default function AnalyticsPanel() {
 
     const tiles = [
         { label: "ยอดเติมเหรียญที่อนุมัติ", value: `${baht(data.totals.topup_amount)} บาท`, icon: Coins, color: "text-amber-500 dark:text-amber-400" },
-        { label: "ยอดขายตอน", value: `${baht(data.totals.sales_amount)} เหรียญ`, icon: ShoppingCart, color: "text-indigo-500 dark:text-indigo-400" },
+        { label: "ยอดใช้เหรียญ (ซื้อตอน + สนับสนุน)", value: `${baht(data.totals.sales_amount)} เหรียญ`, icon: ShoppingCart, color: "text-indigo-500 dark:text-indigo-400" },
         { label: "ส่วนแบ่งของเว็บ", value: `${baht(data.totals.platform_amount)} บาท`, icon: Landmark, color: "text-green-500 dark:text-green-400" },
         { label: "สลิปรอตรวจ", value: `${data.totals.pending_topups} รายการ`, icon: Clock, color: "text-red-500 dark:text-red-400" },
     ];
@@ -70,7 +70,7 @@ export default function AnalyticsPanel() {
                         unit="บาท"
                         series={[
                             { key: "topup_amount", label: "เติมเหรียญ", color: SERIES_COLORS.indigo },
-                            { key: "sales_amount", label: "ยอดขายตอน", color: SERIES_COLORS.pink },
+                            { key: "sales_amount", label: "ยอดใช้เหรียญ", color: SERIES_COLORS.pink },
                         ]}
                     />
                 </div>

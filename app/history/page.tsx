@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import AuthorLink from "@/components/AuthorLink";
 import { BookOpen, History, Palette, Trash2 } from "lucide-react";
 import { useConfirm } from "@/components/ConfirmDialog";
 
@@ -13,6 +14,8 @@ interface HistoryItem {
     title: string;
     cover_image: string | null;
     author_name: string | null;
+    author_id: string | null;
+    author_username: string | null;
     last_item_id: string | null; // null if that chapter/episode was deleted
     last_item_title: string | null;
     read_at: string;
@@ -165,7 +168,7 @@ export default function HistoryPage() {
                                             {item.title || "ไม่ทราบชื่อ"}
                                         </h3>
                                     </Link>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{item.author_name || "ไม่ทราบผู้เขียน"}</p>
+                                    <AuthorLink id={item.author_id} username={item.author_username} name={item.author_name} fallback="ไม่ทราบผู้เขียน" className="block text-xs text-gray-500 dark:text-gray-400 truncate" />
                                     <p className="text-sm text-gray-600 dark:text-gray-300 truncate mt-1">
                                         อ่านล่าสุด: {item.last_item_title || "ตอนนี้ถูกลบแล้ว"}
                                     </p>

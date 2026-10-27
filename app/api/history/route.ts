@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
                    COALESCE(h.novel_id, h.comic_id) AS content_id,
                    COALESCE(n.title, c.title) AS title,
                    COALESCE(n.cover_image, c.cover_image) AS cover_image,
-                   u.name AS author_name,
+                   u.name AS author_name, u.id AS author_id, u.username AS author_username,
                    COALESCE(h.chapter_id, h.episode_id) AS last_item_id,
                    COALESCE(ch.title, ep.title) AS last_item_title,
                    h.read_at

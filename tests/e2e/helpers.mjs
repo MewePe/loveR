@@ -126,6 +126,7 @@ export async function cleanupUsers(db, userIds) {
     if (userIds.length === 0) return;
     await db.query('DELETE FROM reports WHERE reporter_id IN (?)', [userIds]);
     await db.query('DELETE FROM purchases WHERE user_id IN (?) OR author_id IN (?)', [userIds, userIds]);
+    await db.query('DELETE FROM supports WHERE user_id IN (?) OR author_id IN (?)', [userIds, userIds]);
     await db.query('DELETE FROM withdrawals WHERE user_id IN (?)', [userIds]);
     await db.query('DELETE FROM coin_topups WHERE user_id IN (?)', [userIds]);
     await db.query('DELETE FROM comics WHERE author_id IN (?)', [userIds]);

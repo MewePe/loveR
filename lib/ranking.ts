@@ -30,15 +30,15 @@ export function isSortKey<T extends readonly SortKey[]>(allowed: T, value: unkno
 
 export type StoryRow = RowDataPacket & {
     id: string; title: string; cover_image: string | null; views: number;
-    author_name: string | null; categories: CategoryTag[];
+    author_id: string | null; author_name: string | null; author_username: string | null; categories: CategoryTag[];
     rating_avg: number | null; rating_count: number; sales: number; bookmarks: number;
 };
 
-// s.* plus the author name and the aggregated stats. Ratings by BANNED users don't count (same as /api/ratings).
+// s.* plus the author's name/username and the aggregated stats. Ratings by BANNED users don't count (same as /api/ratings).
 function baseSql(type: ContentType) {
     const t = TABLES[type];
     return `
-    SELECT s.*, u.name AS author_name,
+    SELECT s.*, u.name AS author_name, u.username AS author_username,
            r.rating_avg, COALESCE(r.rating_count, 0) AS rating_count,
            COALESCE(p.sales, 0) AS sales, COALESCE(b.bookmarks, 0) AS bookmarks
     FROM ${t.table} s

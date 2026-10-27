@@ -5,8 +5,10 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Coins, Upload, Send } from 'lucide-react';
 import { useToast } from '@/components/Toast';
+import AuthorLink from '@/components/AuthorLink';
 
 interface Topup { id: string; amount: number; status: string; rejection_reason: string | null; created_at: string; }
+interface SupportSent { id: string; amount: number; message: string | null; created_at: string; author_id: string; author_name: string | null; author_username: string | null; }
 interface Purchase { id: string; item_title: string; price: number; created_at: string; chapter_id: string | null; episode_id: string | null; comic_id: string | null; }
 
 const PRESET_AMOUNTS = [50, 100, 300, 500, 1000];
@@ -26,6 +28,7 @@ export default function CoinsPage() {
     const [paymentInfo, setPaymentInfo] = useState('');
     const [topups, setTopups] = useState<Topup[]>([]);
     const [purchases, setPurchases] = useState<Purchase[]>([]);
+    const [supports, setSupports] = useState<SupportSent[]>([]);
     const [amount, setAmount] = useState(100);
     const [slip, setSlip] = useState<File | null>(null);
     const [slipPreview, setSlipPreview] = useState<string | null>(null);
@@ -45,6 +48,7 @@ export default function CoinsPage() {
                 setPaymentInfo(data.payment_info);
                 setTopups(data.topups);
                 setPurchases(data.purchases);
+                setSupports(data.supports ?? []);
             }
         } finally {
             setLoading(false);
@@ -179,6 +183,24 @@ export default function CoinsPage() {
                                     </li>
                                 );
                             })}
+                        </ul>
+                    )}
+                </div>
+
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-6">
+                    <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">เหรียญที่ส่งสนับสนุนนักเขียน</h2>
+                    {supports.length === 0 ? <p className="text-gray-500 dark:text-gray-400 text-sm">ยังไม่มีรายการ</p> : (
+                        <ul className="divide-y dark:divide-gray-700">
+                            {supports.map((s) => (
+                                <li key={s.id} className="py-3 flex justify-between gap-4 text-sm">
+                                    <span className="min-w-0 text-gray-700 dark:text-gray-200">
+                                        สนับสนุน <AuthorLink id={s.author_id} username={s.author_username} name={s.author_name} className="font-medium text-gray-900 dark:text-white" />
+                                        {s.message && <span className="block text-gray-600 dark:text-gray-300 break-words">&ldquo;{s.message}&rdquo;</span>}
+                                        <span className="block text-xs text-gray-500 dark:text-gray-400">{new Date(s.created_at).toLocaleString('th-TH')}</span>
+                                    </span>
+                                    <span className="font-semibold text-gray-900 dark:text-white">-{s.amount}</span>
+                                </li>
+                            ))}
                         </ul>
                     )}
                 </div>

@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
                    COALESCE(n.title, c.title) AS title,
                    COALESCE(n.cover_image, c.cover_image) AS cover_image,
                    COALESCE(n.description, c.description) AS description,
-                   u.name AS author_name
+                   u.name AS author_name, u.id AS author_id, u.username AS author_username
             FROM bookmarks b
             LEFT JOIN novels n ON b.novel_id = n.id
             LEFT JOIN comics c ON b.comic_id = c.id

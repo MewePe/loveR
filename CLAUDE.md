@@ -53,6 +53,7 @@ npx tsx scripts/add_reading_history.ts # ตาราง reading_history (รั
 npx tsx scripts/add_notifications.ts # ตาราง notifications และคอลัมน์ comments.parent_id (รันซ้ำได้)
 npx tsx scripts/add_item_reads.ts # ตาราง item_reads (บท/ตอนที่อ่านแล้ว) คัดลอกบทล่าสุดจาก reading_history มาให้ (รันซ้ำได้)
 npx tsx scripts/add_story_categories.ts # ตาราง novel_categories/comic_categories (หลายหมวดต่อเรื่อง) คัดลอกหมวดเดิมจาก category_id มาให้ (รันซ้ำได้)
+npx tsx scripts/add_author_profiles.ts # คอลัมน์โปรไฟล์ใน users (username/bio/cover_image/social_links), is_completed, ตาราง follows/supports และตั้ง username ให้ทุกคน (รันซ้ำได้)
 ```
 
 `reset_db.ts` และ `drop_old_db.ts` ลบข้อมูล
@@ -129,6 +130,17 @@ npx tsx scripts/add_story_categories.ts # ตาราง novel_categories/comic
 - ทั้งสองอย่างเช็ก `canViewContent()` (เรื่องที่ไม่ได้เผยแพร่ได้ 404 ยกเว้นเจ้าของ/แอดมิน) และซ่อนคอมเมนต์/ไม่นับคะแนนของผู้ใช้ที่เป็น `BANNED`
 - คะแนนเฉลี่ยในหน้ารายการ/ค้นหา/อันดับมาจาก `lib/ranking.ts` (ดูหัวข้อ "จัดอันดับและแนะนำ")
 
+**โปรไฟล์นักเขียนสาธารณะ** (`/profile/[username]`, `lib/authors.ts`, `lib/username.ts`):
+- มีเฉพาะ AUTHOR/ADMIN หรือคนที่มีเรื่อง PUBLISHED ส่วน READER และ `BANNED` ได้ 404 (`getPublicAuthor()`) รับได้ทั้ง username และ user id (id หรือตัวพิมพ์ใหญ่จะ redirect ไป URL ที่ถูกต้อง)
+- `users.username`: a-z 0-9 _ ยาว 3-30 (`USERNAME_PATTERN` ไม่มี `-` จึงไม่ชนกับ UUID) ค่าเริ่มต้นคือ `user_<hex จาก id>` (`defaultUsername()`) **ไม่สร้างจากอีเมล** เพราะจะเปิดเผยอีเมล ตั้งให้ตอนสมัคร (`ensureUsername()`), ใน `create_admin.ts` และใน migration ผู้ใช้ที่ยังไม่มี username ลิงก์จะใช้ id แทน
+- ลิงก์ชื่อนักเขียนทุกที่ใช้ `components/AuthorLink.tsx` / `profileHref()` (query ต้องคืน `author_username` และ `author_id`) ใน `StoryCard` และแถวของ `/ranking` ชื่อนักเขียนเป็นลิงก์แยกจากลิงก์เรื่อง (ห้ามซ้อน `<a>`: การ์ดแยกลิงก์ปก/ชื่อเรื่อง ส่วนแถวอันดับใช้ stretched link `after:absolute after:inset-0` + `relative z-10`) ในคอมเมนต์ลิงก์เฉพาะชื่อเจ้าของเรื่อง (API ส่ง `author_username` เฉพาะตอน `is_author`)
+- นักเขียนแก้ username, รูปปก (`/uploads/` เท่านั้น ไม่มีใช้ `public/images/default-cover.svg`), แนะนำตัว (plain text ≤1000 แสดงด้วย `whitespace-pre-line`) และลิงก์โซเชียล (`SOCIAL_PLATFORMS`, เก็บ JSON ใน `users.social_links`, รับเฉพาะ http(s) ผ่าน `isSafeUrl()`, แสดงด้วย `rel="noopener noreferrer nofollow ugc"`) ที่ `/author?tab=public-profile` (`components/author/PublicProfilePanel.tsx`, `GET/PATCH /api/author/public-profile`) ส่วนชื่อและรูปโปรไฟล์แก้ที่ `/profile`
+- **ติดตาม**: ตาราง `follows`, `POST/DELETE /api/authors/[id]/follow` (ซ้ำได้ ไม่ error) ห้ามติดตามตัวเอง ผู้ติดตามได้แจ้งเตือน `NEW_STORY` ตอนเรื่องเปลี่ยนจาก DRAFT เป็น PUBLISHED ครั้งแรก (`notifyNewStory()` เช็กว่าเคยส่งลิงก์นี้แล้วหรือยัง) และ `NEW_CHAPTER` รวมกับคนที่บุ๊กมาร์ก (ได้ครั้งเดียวแม้เป็นทั้งสองอย่าง)
+- **สนับสนุน**: `POST /api/authors/[id]/support` `{ amount, message? }` → `supportAuthor()` ใน `lib/coins.ts` (lock แถวผู้ส่ง `FOR UPDATE` แบบเดียวกับ `purchaseItem()`) 1-10,000 เหรียญ ข้อความ ≤200 ตัว (plain text) จำกัด 5 ครั้งต่อนาทีต่อคน (429) เหรียญไม่พอ 402 บันทึกในตาราง `supports` พร้อม `author_earning` = จำนวน × `author_share_percent` ณ ตอนส่ง แล้วแจ้งเตือน `SUPPORT` ถึงนักเขียน (มีชื่อผู้ส่งและข้อความ) ค่าคงที่ฝั่ง client ใน `components/profile/SupportDialog.tsx` ต้องตรงกับ `SUPPORT_MIN/MAX/MESSAGE_MAX`
+- **แฟนตัวยง** (`getTopFans()`): รวม `purchases.price` + `supports.amount` ต่อผู้ใช้ 10 อันดับ ไม่นับ `BANNED` และตัวนักเขียนเอง เท่ากันให้คนที่จ่ายก่อนขึ้นก่อน **ไม่แสดงจำนวนเงิน** ในหน้าเว็บ 3 อันดับแรกใช้สีทอง/เงิน/ทองแดงเดียวกับ `/ranking`
+- ผลงาน (`getAuthorWorks()`): เฉพาะ PUBLISHED แท็บ `?tab=novels|comics` มีจำนวนตอน วิว จำนวนคอมเมนต์ (ไม่นับ `BANNED`) หมวดหมู่ และป้าย "จบแล้ว" จาก `novels/comics.is_completed` (ติ๊กในฟอร์ม `WorkFormModal`, API รับ `isCompleted: boolean`) ป้ายนี้แสดงบน `StoryCard` และหน้าเรื่องด้วย
+- เทสต์อยู่ใน `tests/e2e/profiles.test.mjs`
+
 **หมวดหมู่** (`lib/categories.ts`, ตาราง `novel_categories`/`comic_categories`):
 - เรื่องละ 0-5 หมวด (`MAX_CATEGORIES`) เก็บลำดับที่ผู้เขียนเลือกใน `sort_order` หมวดแรกคือหมวดหลัก
 - **อ่านหมวดจากตารางเชื่อมเท่านั้น** คอลัมน์ `novels.category_id`/`comics.category_id` เก็บไว้เป็นสำเนาของหมวดแรก (ให้โค้ด/ข้อมูลสำรองเก่ายังใช้ได้) `setStoryCategories()` เขียนทั้งสองที่ใน transaction ของผู้เรียก ห้ามแก้คอลัมน์นี้ตรงๆ
@@ -150,8 +162,8 @@ npx tsx scripts/add_story_categories.ts # ตาราง novel_categories/comic
 
 **กราฟแดชบอร์ด** (`lib/analytics.ts`, `components/TimeSeriesChart.tsx` ใช้ recharts):
 - `?range=30d|12m` (ค่าอื่น = 30d) แบ่งเป็นรายวัน 30 จุดหรือรายเดือน 12 จุด key ของแต่ละจุดสร้างจาก `CURDATE()` ของ MySQL ให้ตรงกับ `DATE_FORMAT()` ใน query และเติม 0 ให้ช่วงที่ไม่มีข้อมูล (`seriesByBucket()`)
-- `GET /api/admin/analytics` (ADMIN): ยอดเติมเหรียญเฉพาะ `APPROVED` (นับตามเวลาที่อนุมัติคือ `updated_at`), ยอดขาย = SUM(`purchases.price`), ส่วนแบ่งเว็บ = price − `author_earning`, ผู้ใช้ใหม่ และยอดรวม + จำนวนสลิปรอตรวจ
-- `GET /api/author/analytics`: รายได้ของผู้เขียนตามช่วงเวลา และสถิติรายเรื่องของตัวเอง (ทุกสถานะ) คือ จำนวนตอน วิว ขายได้ รายได้ คะแนน คอมเมนต์ บุ๊กมาร์ก (ไม่นับคะแนน/คอมเมนต์ของผู้ใช้ `BANNED`) แสดงใน `components/author/DashboardPanel.tsx`
+- `GET /api/admin/analytics` (ADMIN): ยอดเติมเหรียญเฉพาะ `APPROVED` (นับตามเวลาที่อนุมัติคือ `updated_at`), ยอดใช้เหรียญ (`sales_amount`) = SUM(`purchases.price`) + SUM(`supports.amount`), ส่วนแบ่งเว็บ = ยอดนั้น − `author_earning`, ผู้ใช้ใหม่ และยอดรวม + จำนวนสลิปรอตรวจ
+- `GET /api/author/analytics`: รายได้ของผู้เขียนตามช่วงเวลา (รวม supports แต่ `sales` นับเฉพาะการซื้อตอน) และสถิติรายเรื่องของตัวเอง (ทุกสถานะ) คือ จำนวนตอน วิว ขายได้ รายได้ คะแนน คอมเมนต์ บุ๊กมาร์ก (ไม่นับคะแนน/คอมเมนต์ของผู้ใช้ `BANNED`) แสดงใน `components/author/DashboardPanel.tsx`
 - สีกราฟใช้ `SERIES_COLORS` (indigo `#6366F1`, pink `#EC4899` ผ่านการเช็กตาบอดสีและ contrast ทั้งพื้นสว่างและมืดแล้ว) ถ้าเพิ่ม series ต้องเลือกสีที่ผ่านการเช็กเดียวกัน ทุกกราฟมี "ดูเป็นตาราง" และไม่ใช้กราฟสองแกน y
 - เทสต์อยู่ใน `tests/e2e/analytics.test.mjs` (เทียบค่าก่อน/หลังใส่ข้อมูล เพราะ DB มีข้อมูลจริงปนอยู่)
 
@@ -173,7 +185,7 @@ npx tsx scripts/add_story_categories.ts # ตาราง novel_categories/comic
 - สร้างผ่าน `notify(recipients, { type, message, link }, actorId)` / `notifyAdmins()` / `notifyNewItem()` เท่านั้น `type` ต้องอยู่ใน `NOTIFICATION_TYPES` (เก็บเป็น VARCHAR) `message` เป็น plain text ที่ server เขียน (ตัดข้อความจากผู้ใช้ด้วย `short()`) `link` เป็น path ภายในเว็บ
 - เรียกหลังงานหลักสำเร็จ (หลัง commit) และ error จะถูก log แล้วกลืน แจ้งเตือนต้องไม่ทำให้งานหลักล้ม
 - `actorId` = คนที่ทำให้เกิด: ไม่แจ้งเตือนตัวเอง และ `actor_id ON DELETE CASCADE` ทำให้ลบผู้ใช้แล้วแจ้งเตือนที่เขาก่อหายด้วย (เทสต์อาศัยข้อนี้ ไม่ให้แอดมินจริงได้แจ้งเตือนขยะ) ฝั่งแอดมินส่งให้ ADMIN ทุกคน
-- จุดที่สร้าง: บท/ตอนใหม่ของเรื่อง PUBLISHED → คนที่บุ๊กมาร์ก, คอมเมนต์ → เจ้าของเรื่อง, ตอบกลับ → เจ้าของคอมเมนต์หลัก, ให้คะแนนครั้งแรก → เจ้าของเรื่อง (ไม่ระบุชื่อผู้ให้), ขายตอน → นักเขียน (ไม่ระบุชื่อผู้ซื้อ), ผลเติมเหรียญ / คำขอนักเขียน / การถอน → เจ้าของ, สลิปเติมเหรียญ / คำขอนักเขียน / คำขอถอน / รายงาน → แอดมิน
+- จุดที่สร้าง: บท/ตอนใหม่ของเรื่อง PUBLISHED → คนที่บุ๊กมาร์กและผู้ติดตามนักเขียน, เรื่องใหม่ (DRAFT → PUBLISHED ครั้งแรก) → ผู้ติดตาม, สนับสนุน → นักเขียน (มีชื่อผู้ส่ง), คอมเมนต์ → เจ้าของเรื่อง, ตอบกลับ → เจ้าของคอมเมนต์หลัก, ให้คะแนนครั้งแรก → เจ้าของเรื่อง (ไม่ระบุชื่อผู้ให้), ขายตอน → นักเขียน (ไม่ระบุชื่อผู้ซื้อ), ผลเติมเหรียญ / คำขอนักเขียน / การถอน → เจ้าของ, สลิปเติมเหรียญ / คำขอนักเขียน / คำขอถอน / รายงาน → แอดมิน
 - API: `GET /api/notifications` (`?page=` หรือ `?limit=`), `GET /api/notifications/count`, `PATCH /api/notifications/[id]` (อ่านแล้ว เฉพาะของตัวเอง), `POST /api/notifications/read-all` UI คือ `components/NotificationBell.tsx` ใน Navbar (poll ทุก 30 วินาทีเฉพาะตอนแท็บเปิดอยู่) และหน้า `/notifications`
 - `/admin` และ `/author` รับ `?tab=` เพื่อเปิดแท็บตรงจากลิงก์แจ้งเตือน
 
@@ -181,7 +193,7 @@ npx tsx scripts/add_story_categories.ts # ตาราง novel_categories/comic
 - 1 เหรียญ = 1 บาท ยอดเหรียญของผู้อ่านอยู่ที่ `users.coins` แต่ละบท/ตอนมี `price` (0 = ฟรี)
 - **เติมเหรียญ**: ผู้อ่านอัปโหลดสลิปที่ `/coins` → แถวใน `coin_topups` (PENDING) → แอดมินอนุมัติที่ `/admin` แท็บการเงิน แล้วเหรียญจึงเพิ่ม
 - **ซื้อตอน**: `purchaseItem()` ทำใน transaction ที่ lock แถว user (`FOR UPDATE`) แล้วบันทึกลง `purchases` พร้อม `author_earning` = ราคา × `system_settings.author_share_percent` ณ ตอนซื้อ (เปลี่ยนส่วนแบ่งแล้วไม่มีผลย้อนหลัง)
-- **ยอดของนักเขียนคำนวณสดเสมอ** ด้วย `getAuthorBalance()` = SUM(`purchases.author_earning`) − SUM(`withdrawals` ที่เป็น PENDING/APPROVED) ไม่มีคอลัมน์ยอดคงเหลือ ถ้าปฏิเสธการถอน เงินจะกลับเข้ายอดเอง
+- **ยอดของนักเขียนคำนวณสดเสมอ** ด้วย `getAuthorBalance()` = SUM(`purchases.author_earning`) + SUM(`supports.author_earning`) − SUM(`withdrawals` ที่เป็น PENDING/APPROVED) ไม่มีคอลัมน์ยอดคงเหลือ ถ้าปฏิเสธการถอน เงินจะกลับเข้ายอดเอง
 - **ถอนเงิน**: ต้องมี `writer_profiles` ที่อนุมัติแล้วและกรอกบัญชีธนาคาร แอดมินโอนเงินแล้วแนบสลิปเพื่ออนุมัติ
 - **การเปลี่ยนสถานะเงินทุกแบบ** (อนุมัติเติมเหรียญ, อนุมัติ/ปฏิเสธการถอน) ต้องมีเงื่อนไข `WHERE status = 'PENDING'` เพื่อกันการทำซ้ำ
 - **ทุกที่ที่ส่งเนื้อหาบท/ตอนออกไป** ต้องผ่าน `canAccess()` ได้แก่ `app/read/[chapterId]`, `app/comic/[id]/read/[episodeId]`, `/api/chapters`, `/api/novels/[id]/chapters` (ส่ง `content` ให้เฉพาะเจ้าของ), `/api/comics/[id]/episodes/[episodeId]` และ `.../pages` ถ้าเพิ่ม endpoint ใหม่ที่คืนเนื้อหา ต้องเช็กเหมือนกัน
@@ -219,9 +231,10 @@ npx tsx scripts/add_story_categories.ts # ตาราง novel_categories/comic
    npx tsx scripts/add_notifications.ts       # แจ้งเตือน + comments.parent_id (ตอบกลับ)
    npx tsx scripts/add_item_reads.ts          # บท/ตอนที่อ่านแล้ว (ปุ่มเลือกตอน)
    npx tsx scripts/add_story_categories.ts    # หลายหมวดต่อเรื่อง (คัดลอกหมวดเดิมมาให้)
+   npx tsx scripts/add_author_profiles.ts     # โปรไฟล์นักเขียน ติดตาม สนับสนุน ป้ายจบแล้ว
    ```
    DB ที่เก่ากว่านั้นให้รันสคริปต์ก่อนหน้าตามลำดับใน README ก่อน ส่วน DB ใหม่ใช้ `schema.sql` ได้เลยไม่ต้องรันพวกนี้
-3. ลบ `.next` แล้วเปิด `npm run dev` ใหม่ จากนั้นรัน `npm run test:e2e` เพื่อเช็ก (ต้องผ่านทั้งหมด 112 เทสต์)
+3. ลบ `.next` แล้วเปิด `npm run dev` ใหม่ จากนั้นรัน `npm run test:e2e` เพื่อเช็ก (ต้องผ่านทั้งหมด 124 เทสต์)
 
 **ผู้ดูแลต้องทำเอง**:
 - กรอก "ข้อมูลการชำระเงิน" ที่ `/admin` → ตั้งค่า (เครื่องนี้ยังเป็นข้อความตัวอย่างอยู่) ถ้ายังไม่กรอก ผู้อ่านจะเติมเหรียญไม่ได้
@@ -253,7 +266,7 @@ npx tsx scripts/add_story_categories.ts # ตาราง novel_categories/comic
 | 11 | จัดอันดับและแนะนำ | ✅ (อันดับรวมตลอดกาล) | `/ranking`, `/` (แนะนำสำหรับคุณ + ยอดนิยม), ล่างหน้า `/novel/[id]` (เรื่องที่คล้ายกัน), `/search` (เรียงตาม) | `lib/ranking.ts`, `app/ranking/page.tsx`, `components/StoryCard.tsx` |
 | 12 | ตรวจสอบเนื้อหาเบื้องต้นด้วย API | ❌ | — | — |
 | 13 | รักษาความปลอดภัย | ✅ | `/login` (ล็อกอินผิดเกิน 5 ครั้ง), เปิดตอนที่ยังไม่ซื้อ | `lib/auth.ts`, `lib/loginThrottle.ts`, `lib/upload.ts`, `lib/visibility.ts`, `tests/e2e/security.test.mjs` |
-| 14 | ทดสอบระบบและปรับ UX/UI | ⚠️ | `npm run test:e2e` (112 เทสต์) | `tests/e2e/` |
+| 14 | ทดสอบระบบและปรับ UX/UI | ⚠️ | `npm run test:e2e` (124 เทสต์) | `tests/e2e/` |
 
 **สิ่งที่ขาด**:
 - ~~ยอดวิวไม่เคยเพิ่ม~~ **แก้แล้ว 2026-10-23** (ดูหัวข้อ "ยอดวิว" ในสถาปัตยกรรม) ยอดวิวเก่าก่อนวันนั้นของนิยาย/บท/การ์ตูนยังเป็น 0 เพราะไม่มีข้อมูลย้อนหลัง

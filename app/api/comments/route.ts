@@ -12,19 +12,23 @@ const MAX_COMMENT_LENGTH = 1000;
 // Anti-spam: at most this many comments (replies included) per user per minute
 const MAX_COMMENTS_PER_MINUTE = 5;
 
-// Shape sent to the client: no user ids, plus what the viewer may do with it
+// Shape sent to the client: no user ids, plus what the viewer may do with it. Only the story's author gets a
+// profile link (author_username); other commenters have no public profile.
 function present(row: RowDataPacket, viewer: Viewer, contentAuthorId: string) {
-    const { user_id, ...c } = row;
+    const { user_id, user_username, ...c } = row;
     const canModerate = isOwnerOrAdmin(viewer, contentAuthorId);
+    const isAuthor = user_id === contentAuthorId;
     return {
         ...c,
-        is_author: user_id === contentAuthorId,
+        is_author: isAuthor,
+        author_username: isAuthor ? user_username : null,
         is_mine: !!viewer?.id && user_id === viewer.id,
         can_delete: canModerate || (!!viewer?.id && user_id === viewer.id),
     };
 }
 
-const SELECT_COMMENT = `SELECT cm.id, cm.parent_id, cm.body, cm.created_at, cm.user_id, u.name AS user_name, u.image AS user_image
+const SELECT_COMMENT = `SELECT cm.id, cm.parent_id, cm.body, cm.created_at, cm.user_id, u.name AS user_name, u.image AS user_image,
+                    u.username AS user_username
              FROM comments cm JOIN users u ON u.id = cm.user_id`;
 
 // GET /api/comments?content_type=novel|comic&content_id=...&page=1

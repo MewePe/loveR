@@ -12,6 +12,10 @@ CREATE TABLE IF NOT EXISTS users (
     image VARCHAR(255),
     role ENUM('VISITOR', 'READER', 'AUTHOR', 'ADMIN', 'BANNED') DEFAULT 'READER',
     coins INT NOT NULL DEFAULT 0, -- reader coin balance (1 coin = 1 baht)
+    username VARCHAR(30) UNIQUE, -- public profile URL /profile/<username>: lowercase a-z 0-9 _ (lib/authors.ts)
+    bio TEXT, -- public profile intro, plain text
+    cover_image VARCHAR(255), -- public profile banner, /uploads/... only
+    social_links TEXT, -- JSON { facebook, x, instagram, tiktok, youtube, website }, http(s) URLs only
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -30,6 +34,7 @@ CREATE TABLE IF NOT EXISTS novels (
     description TEXT,
     cover_image VARCHAR(255),
     status ENUM('DRAFT', 'PUBLISHED', 'ARCHIVED', 'BANNED') DEFAULT 'DRAFT',
+    is_completed TINYINT(1) NOT NULL DEFAULT 0, -- author marked the story as finished ("จบแล้ว")
     author_id VARCHAR(36),
     category_id VARCHAR(36),
     views INT DEFAULT 0,
@@ -60,6 +65,7 @@ CREATE TABLE IF NOT EXISTS comics (
     description TEXT,
     cover_image VARCHAR(255),
     status ENUM('DRAFT', 'PUBLISHED', 'ARCHIVED', 'BANNED') DEFAULT 'DRAFT',
+    is_completed TINYINT(1) NOT NULL DEFAULT 0, -- author marked the story as finished ("จบแล้ว")
     author_id VARCHAR(36),
     category_id VARCHAR(36),
     views INT DEFAULT 0,
@@ -329,4 +335,31 @@ CREATE TABLE IF NOT EXISTS comic_categories (
     INDEX idx_category (category_id),
     FOREIGN KEY (comic_id) REFERENCES comics(id) ON DELETE CASCADE,
     FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+);
+
+-- Readers following authors (public profile /profile/<username>). Followers hear about new stories and chapters.
+CREATE TABLE IF NOT EXISTS follows (
+    follower_id VARCHAR(36) NOT NULL,
+    author_id VARCHAR(36) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (follower_id, author_id),
+    INDEX idx_author (author_id),
+    FOREIGN KEY (follower_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Coins a reader sent to an author ("สนับสนุน"). Part of the author earnings ledger like purchases
+-- (author_earning = amount x author_share_percent at the time), so rows are not cascaded away.
+CREATE TABLE IF NOT EXISTS supports (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    author_id VARCHAR(36) NOT NULL,
+    amount INT NOT NULL,
+    author_earning DECIMAL(10, 2) NOT NULL,
+    message VARCHAR(200), -- plain text from the supporter
+    created_at TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP(3),
+    INDEX idx_author_time (author_id, created_at),
+    INDEX idx_user_time (user_id, created_at),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (author_id) REFERENCES users(id)
 );

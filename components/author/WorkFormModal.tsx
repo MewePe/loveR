@@ -25,6 +25,7 @@ export default function WorkFormModal({ kind, work, categories, onClose, onSaved
         title: work?.title ?? '',
         description: work?.description || '',
         categoryIds: work?.categories.map((c) => c.id) ?? [],
+        isCompleted: !!work?.is_completed,
     });
     const [coverFile, setCoverFile] = useState<File | null>(null);
     const [coverPreview, setCoverPreview] = useState<string | null>(work?.cover_image || null);
@@ -56,7 +57,7 @@ export default function WorkFormModal({ kind, work, categories, onClose, onSaved
             const res = await fetch(work ? `${k.api}/${work.id}` : k.api, {
                 method: work ? 'PATCH' : 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title: form.title, description: form.description, categoryIds: form.categoryIds, coverImage: coverImageUrl }),
+                body: JSON.stringify({ title: form.title, description: form.description, categoryIds: form.categoryIds, isCompleted: form.isCompleted, coverImage: coverImageUrl }),
                 credentials: 'include',
             });
 
@@ -141,6 +142,18 @@ export default function WorkFormModal({ kind, work, categories, onClose, onSaved
                             accent={k.accent}
                         />
                     </div>
+                    <label className="flex items-start gap-3 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={form.isCompleted}
+                            onChange={(e) => setForm({ ...form, isCompleted: e.target.checked })}
+                            className="mt-1 w-4 h-4 accent-emerald-700"
+                        />
+                        <span>
+                            <span className="block text-sm font-medium text-gray-700 dark:text-gray-300">เรื่องนี้จบแล้ว</span>
+                            <span className="block text-xs text-gray-500 dark:text-gray-400">แสดงป้าย &quot;จบแล้ว&quot; บนการ์ดเรื่องและหน้าโปรไฟล์ของคุณ</span>
+                        </span>
+                    </label>
                     <div className="flex gap-3 pt-4">
                         <button
                             type="button"

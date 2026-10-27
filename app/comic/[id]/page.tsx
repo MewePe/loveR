@@ -14,10 +14,11 @@ import { canViewContent, isOwnerOrAdmin } from '@/lib/visibility';
 import { getSimilarStories } from '@/lib/ranking';
 import { getCategoriesFor } from '@/lib/categories';
 import CategoryTags from '@/components/CategoryTags';
+import AuthorLink from '@/components/AuthorLink';
 
 async function getComic(id: string) {
     const [rows] = await pool.query<RowDataPacket[]>(`
-    SELECT c.*, u.name as author_name
+    SELECT c.*, u.name as author_name, u.username as author_username
     FROM comics c
     LEFT JOIN users u ON c.author_id = u.id
     WHERE c.id = ?
@@ -69,13 +70,16 @@ export default async function ComicDetail({ params }: { params: Promise<{ id: st
                         <div className="flex-grow">
                             <div className="flex flex-wrap items-center gap-3 mb-4">
                                 <span className="px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium">การ์ตูน</span>
+                                {!!comic.is_completed && (
+                                    <span className="px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 text-sm font-medium">จบแล้ว</span>
+                                )}
                                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${comic.status === 'PUBLISHED' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'}`}>
                                     {comic.status === 'PUBLISHED' ? 'เผยแพร่แล้ว' : 'ฉบับร่าง'}
                                 </span>
                             </div>
 
                             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4 break-words">{comic.title}</h1>
-                            <p className="text-xl text-gray-600 dark:text-gray-300 mb-4">โดย <span className="font-semibold text-gray-900 dark:text-white">{comic.author_name || 'ไม่ระบุชื่อ'}</span></p>
+                            <p className="text-xl text-gray-600 dark:text-gray-300 mb-4">โดย <AuthorLink id={comic.author_id} username={comic.author_username} name={comic.author_name} className="font-semibold text-gray-900 dark:text-white" /></p>
                             <CategoryTags categories={categories} type="comic" size="md" className="mb-8" />
 
                             <RatingStars contentType="comic" contentId={id} />

@@ -3,7 +3,7 @@ import pool from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
 
-// GET - Current user's coin balance, top-up history, purchase history and payment instructions
+// GET - Current user's coin balance, top-up history, purchase history, supports sent and payment instructions
 export async function GET() {
     const session = await auth();
     if (!session?.user?.id) {
@@ -24,12 +24,19 @@ export async function GET() {
              WHERE p.user_id = ? ORDER BY p.created_at DESC LIMIT 50`,
             [session.user.id]
         );
+        const [supports] = await pool.query<RowDataPacket[]>(
+            `SELECT s.id, s.amount, s.message, s.created_at, s.author_id, a.name AS author_name, a.username AS author_username
+             FROM supports s JOIN users a ON a.id = s.author_id
+             WHERE s.user_id = ? ORDER BY s.created_at DESC LIMIT 50`,
+            [session.user.id]
+        );
 
         return NextResponse.json({
             coins: users[0]?.coins ?? 0,
             payment_info: settings[0]?.payment_info || '',
             topups,
             purchases,
+            supports,
         });
     } catch (error) {
         console.error('Failed to fetch coins:', error);

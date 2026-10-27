@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { MessageCircle, Reply, Trash2, User } from "lucide-react";
 import ReportButton from "@/components/ReportButton";
+import AuthorLink from "@/components/AuthorLink";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
 
@@ -21,6 +22,7 @@ interface Comment {
     user_name: string | null;
     user_image: string | null;
     is_author: boolean;
+    author_username: string | null; // set only when is_author
     is_mine: boolean;
     can_delete: boolean;
     replies?: Comment[]; // top-level comments only; replies are one level deep
@@ -143,7 +145,11 @@ export default function CommentSection({ contentType, contentId, accentColor = "
                 </div>
                 <div className="flex-grow min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-gray-900 dark:text-white">{c.user_name || "ผู้ใช้"}</span>
+                        {c.is_author && c.author_username ? (
+                            <AuthorLink username={c.author_username} name={c.user_name} className="font-semibold text-gray-900 dark:text-white" />
+                        ) : (
+                            <span className="font-semibold text-gray-900 dark:text-white">{c.user_name || "ผู้ใช้"}</span>
+                        )}
                         {c.is_author && <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${accent.badge}`}>ผู้เขียน</span>}
                         <span className="text-xs text-gray-500 dark:text-gray-400">{new Date(c.created_at).toLocaleString("th-TH")}</span>
                         <span className="ml-auto flex items-center gap-1">

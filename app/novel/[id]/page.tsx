@@ -14,10 +14,11 @@ import { canViewContent, isOwnerOrAdmin } from '@/lib/visibility';
 import { getSimilarStories } from '@/lib/ranking';
 import { getCategoriesFor } from '@/lib/categories';
 import CategoryTags from '@/components/CategoryTags';
+import AuthorLink from '@/components/AuthorLink';
 
 async function getNovel(id: string) {
     const [rows] = await pool.query<RowDataPacket[]>(`
-    SELECT n.*, u.name as author_name
+    SELECT n.*, u.name as author_name, u.username as author_username
     FROM novels n
     LEFT JOIN users u ON n.author_id = u.id
     WHERE n.id = ?
@@ -69,13 +70,16 @@ export default async function NovelDetail({ params }: { params: Promise<{ id: st
                         <div className="flex-grow">
                             <div className="flex flex-wrap items-center gap-3 mb-4">
                                 <span className="px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium">นิยาย</span>
+                                {!!novel.is_completed && (
+                                    <span className="px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 text-sm font-medium">จบแล้ว</span>
+                                )}
                                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${novel.status === 'PUBLISHED' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'}`}>
                                     {novel.status === 'PUBLISHED' ? 'เผยแพร่แล้ว' : 'ฉบับร่าง'}
                                 </span>
                             </div>
 
                             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4 break-words">{novel.title}</h1>
-                            <p className="text-xl text-gray-600 dark:text-gray-300 mb-4">โดย <span className="font-semibold text-gray-900 dark:text-white">{novel.author_name || 'ไม่ระบุชื่อ'}</span></p>
+                            <p className="text-xl text-gray-600 dark:text-gray-300 mb-4">โดย <AuthorLink id={novel.author_id} username={novel.author_username} name={novel.author_name} className="font-semibold text-gray-900 dark:text-white" /></p>
                             <CategoryTags categories={categories} type="novel" size="md" className="mb-8" />
 
                             <RatingStars contentType="novel" contentId={id} />

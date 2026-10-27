@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { RowDataPacket } from 'mysql2';
 import { clientIp } from '@/lib/loginThrottle';
 import { hitRegisterLimit } from '@/lib/registerThrottle';
+import { ensureUsername } from '@/lib/authors';
 
 export async function POST(req: Request) {
     try {
@@ -51,6 +52,7 @@ export async function POST(req: Request) {
             'INSERT INTO users (id, name, email, password, role) VALUES (?, ?, ?, ?, ?)',
             [id, name, email, hashedPassword, 'READER']
         );
+        await ensureUsername(id);
 
         return NextResponse.json({ message: 'User created successfully' }, { status: 201 });
     } catch (error) {

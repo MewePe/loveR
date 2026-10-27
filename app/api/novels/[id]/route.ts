@@ -5,6 +5,7 @@ import { RowDataPacket } from 'mysql2';
 import { AUTHOR_SETTABLE_STATUSES, canViewContent } from '@/lib/visibility';
 import { isPublicUploadUrl } from '@/lib/upload';
 import { categoryIdsFromBody, getCategoriesFor, parseCategoryIds, setStoryCategories } from '@/lib/categories';
+import { notifyNewStory } from '@/lib/notifications';
 
 // GET - Fetch single novel
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -41,7 +42,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
 
     // Get user
-    const [users] = await pool.query<RowDataPacket[]>('SELECT id FROM users WHERE email = ?', [session.user.email]);
+    const [users] = await pool.query<RowDataPacket[]>('SELECT id, name FROM users WHERE email = ?', [session.user.email]);
     if (!users[0]) {
         return NextResponse.json({ error: 'ไม่พบผู้ใช้' }, { status: 404 });
     }
@@ -54,7 +55,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
 
     const body = await req.json();
-    const { title, description, status, coverImage } = body;
+    const { title, description, status, coverImage, isCompleted } = body;
+    if (isCompleted !== undefined && typeof isCompleted !== 'boolean') {
+        return NextResponse.json({ error: 'ข้อมูลไม่ถูกต้อง' }, { status: 400 });
+    }
     if (coverImage && !isPublicUploadUrl(coverImage)) {
         return NextResponse.json({ error: 'รูปปกไม่ถูกต้อง' }, { status: 400 });
     }
@@ -81,12 +85,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const conn = await pool.getConnection();
     try {
         const updates: string[] = [];
-        const values: (string | null)[] = [];
+        const values: (string | number | null)[] = [];
 
         if (title !== undefined) { updates.push('title = ?'); values.push(title); }
         if (description !== undefined) { updates.push('description = ?'); values.push(description); }
         if (status !== undefined) { updates.push('status = ?'); values.push(status); }
         if (coverImage !== undefined) { updates.push('cover_image = ?'); values.push(coverImage); }
+        if (isCompleted !== undefined) { updates.push('is_completed = ?'); values.push(isCompleted ? 1 : 0); }
 
         if (updates.length === 0 && categoryIds === null) {
             return NextResponse.json({ error: 'ไม่มีข้อมูลที่ต้องแก้ไข' }, { status: 400 });
@@ -99,6 +104,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         }
         if (categoryIds !== null) await setStoryCategories(conn, 'novel', id, categoryIds);
         await conn.commit();
+
+        // First time out of draft: tell the author's followers
+        if (status === 'PUBLISHED' && novels[0].status === 'DRAFT') {
+            await notifyNewStory('novel', { id, title: title ?? novels[0].title, author_id: userId }, users[0].name);
+        }
 
         return NextResponse.json({ success: true });
     } catch (error) {

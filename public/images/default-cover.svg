@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 500" preserveAspectRatio="xMidYMid slice">
+  <!-- Default profile banner: LoveRead's indigo -> purple -> pink gradient with soft book/page shapes -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4f46e5"/>
+      <stop offset="0.55" stop-color="#9333ea"/>
+      <stop offset="1" stop-color="#db2777"/>
+    </linearGradient>
+  </defs>
+  <rect width="1500" height="500" fill="url(#bg)"/>
+  <g fill="#fff" opacity="0.08">
+    <circle cx="1280" cy="80" r="220"/>
+    <circle cx="160" cy="470" r="180"/>
+    <circle cx="760" cy="-40" r="140"/>
+  </g>
+  <g fill="none" stroke="#fff" stroke-width="10" stroke-linejoin="round" opacity="0.14">
+    <path d="M1040 330 q90 -40 180 0 v-150 q-90 -40 -180 0 z"/>
+    <path d="M1220 330 q90 -40 180 0 v-150 q-90 -40 -180 0 z"/>
+    <path d="M300 200 l40 -70 l40 70 l-40 70 z"/>
+    <path d="M560 380 h120 M560 410 h80"/>
+  </g>
+</svg>

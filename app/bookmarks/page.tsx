@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import AuthorLink from "@/components/AuthorLink";
 import { Bookmark, BookOpen, Palette, Trash2 } from "lucide-react";
 
 interface BookmarkItem {
@@ -14,6 +15,8 @@ interface BookmarkItem {
     cover_image: string | null;
     description: string | null;
     author_name: string | null;
+    author_id: string | null;
+    author_username: string | null;
     created_at: string;
 }
 
@@ -152,7 +155,7 @@ export default function BookmarksPage() {
                                             {bookmark.title || "ไม่ทราบชื่อ"}
                                         </h3>
                                     </Link>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{bookmark.author_name || "ไม่ทราบผู้เขียน"}</p>
+                                    <AuthorLink id={bookmark.author_id} username={bookmark.author_username} name={bookmark.author_name} fallback="ไม่ทราบผู้เขียน" className="block text-xs text-gray-500 dark:text-gray-400 mt-1 truncate" />
 
                                     {/* Remove Button */}
                                     <button

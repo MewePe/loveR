@@ -34,9 +34,12 @@ export async function GET(req: NextRequest) {
         const range = parseRange(req.nextUrl.searchParams.get('range'));
         const keys = await bucketKeys(range);
 
+        // Earnings include supports; `sales` counts only chapter/episode purchases
         const series = await seriesByBucket(keys, ['earning', 'sales'],
-            `SELECT ${bucketExpr(range, 'created_at')} AS bucket, SUM(author_earning) AS earning, COUNT(*) AS sales
-             FROM purchases WHERE author_id = ? AND created_at >= ${rangeStart(range)} GROUP BY bucket`, [authorId]);
+            `SELECT ${bucketExpr(range, 'created_at')} AS bucket, SUM(author_earning) AS earning, SUM(is_sale) AS sales
+             FROM (SELECT author_earning, created_at, 1 AS is_sale FROM purchases WHERE author_id = ?
+                   UNION ALL SELECT author_earning, created_at, 0 FROM supports WHERE author_id = ?) e
+             WHERE created_at >= ${rangeStart(range)} GROUP BY bucket`, [authorId, authorId]);
 
         const [works] = await pool.query<RowDataPacket[]>(
             `${WORKS_SQL('novel')} UNION ALL ${WORKS_SQL('comic')} ORDER BY views DESC, title ASC`,

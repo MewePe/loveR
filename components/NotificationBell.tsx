@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, BookOpen, CheckCircle, Coins, Flag, MessageCircle, ShoppingCart, Star, UserCheck, Wallet, XCircle } from "lucide-react";
+import { Bell, BookOpen, CheckCircle, Coins, Flag, HeartHandshake, MessageCircle, ShoppingCart, Sparkles, Star, UserCheck, Wallet, XCircle } from "lucide-react";
 
 export interface NotificationItem {
     id: string;
@@ -20,12 +20,14 @@ const DROPDOWN_LIMIT = 10;
 // Icon and colour per notification type (lib/notifications.ts NOTIFICATION_TYPES)
 const ICONS: Record<string, { icon: typeof Bell; color: string }> = {
     NEW_CHAPTER: { icon: BookOpen, color: "text-indigo-500 dark:text-indigo-400" },
+    NEW_STORY: { icon: Sparkles, color: "text-indigo-500 dark:text-indigo-400" },
     TOPUP_APPROVED: { icon: Coins, color: "text-green-500 dark:text-green-400" },
     TOPUP_REJECTED: { icon: XCircle, color: "text-red-500 dark:text-red-400" },
     COMMENT_REPLY: { icon: MessageCircle, color: "text-blue-500 dark:text-blue-400" },
     NEW_COMMENT: { icon: MessageCircle, color: "text-blue-500 dark:text-blue-400" },
     NEW_RATING: { icon: Star, color: "text-yellow-500 dark:text-yellow-400" },
     PURCHASE: { icon: ShoppingCart, color: "text-green-500 dark:text-green-400" },
+    SUPPORT: { icon: HeartHandshake, color: "text-pink-500 dark:text-pink-400" },
     WRITER_APPROVED: { icon: UserCheck, color: "text-green-500 dark:text-green-400" },
     WRITER_REJECTED: { icon: XCircle, color: "text-red-500 dark:text-red-400" },
     WITHDRAWAL_APPROVED: { icon: Wallet, color: "text-green-500 dark:text-green-400" },

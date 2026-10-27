@@ -1,6 +1,6 @@
 "use client";
 import { Suspense, useCallback, useEffect, useState } from 'react';
-import { LayoutDashboard, BookOpen, DollarSign, Wallet, User, LogOut, ImageIcon } from 'lucide-react';
+import { LayoutDashboard, BookOpen, DollarSign, Wallet, User, LogOut, ImageIcon, IdCard } from 'lucide-react';
 import { signOut, useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -10,9 +10,10 @@ import WorkFormModal from '@/components/author/WorkFormModal';
 import EarningsPanel from '@/components/author/EarningsPanel';
 import WalletPanel from '@/components/author/WalletPanel';
 import WriterProfilePanel from '@/components/author/WriterProfilePanel';
+import PublicProfilePanel from '@/components/author/PublicProfilePanel';
 import { Category, Work, WorkKind } from '@/components/author/types';
 
-type TabType = 'dashboard' | 'novels' | 'comics' | 'earnings' | 'wallet' | 'profile';
+type TabType = 'dashboard' | 'novels' | 'comics' | 'earnings' | 'wallet' | 'public-profile' | 'profile';
 
 const menuItems = [
     { name: 'ภาพรวมนักเขียน', key: 'dashboard' as TabType, icon: LayoutDashboard },
@@ -20,11 +21,12 @@ const menuItems = [
     { name: 'การ์ตูนของฉัน', key: 'comics' as TabType, icon: ImageIcon },
     { name: 'รายได้ของฉัน', key: 'earnings' as TabType, icon: DollarSign },
     { name: 'กระเป๋าเงินนักเขียน', key: 'wallet' as TabType, icon: Wallet },
+    { name: 'โปรไฟล์สาธารณะ', key: 'public-profile' as TabType, icon: IdCard },
     { name: 'ข้อมูลนักเขียน', key: 'profile' as TabType, icon: User },
 ];
 
 // Writer Center: sidebar + one panel per tab (components/author/). This page loads the data the dashboard,
-// novels and comics tabs share; earnings, wallet and profile panels load their own.
+// novels and comics tabs share; earnings, wallet, public profile and profile panels load their own.
 function AuthorDashboard() {
     const { data: session, status } = useSession();
     const router = useRouter();
@@ -119,6 +121,8 @@ function AuthorDashboard() {
                 return <EarningsPanel />;
             case 'wallet':
                 return <WalletPanel />;
+            case 'public-profile':
+                return <PublicProfilePanel />;
             case 'profile':
                 return <WriterProfilePanel />;
         }

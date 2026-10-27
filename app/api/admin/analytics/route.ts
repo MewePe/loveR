@@ -5,8 +5,10 @@ import { RowDataPacket } from 'mysql2';
 import { bucketExpr, bucketKeys, parseRange, rangeStart, seriesByBucket } from '@/lib/analytics';
 
 // GET /api/admin/analytics?range=30d|12m — money totals and the time series for the admin dashboard charts.
-// Top-ups count only APPROVED ones (by when they were approved); sales are coins spent on chapters/episodes,
-// and the platform share is what's left after author_earning.
+// Top-ups count only APPROVED ones (by when they were approved); sales are coins spent on chapters/episodes
+// plus supports sent to authors, and the platform share is what's left after author_earning.
+const SPENT_SQL = `(SELECT price AS amount, author_earning, created_at FROM purchases
+                    UNION ALL SELECT amount, author_earning, created_at FROM supports)`;
 export async function GET(req: NextRequest) {
     const session = await auth();
     if (session?.user?.role !== 'ADMIN') {
@@ -23,9 +25,9 @@ export async function GET(req: NextRequest) {
                 `SELECT ${bucketExpr(range, 'updated_at')} AS bucket, SUM(amount) AS topup_amount
                  FROM coin_topups WHERE status = 'APPROVED' AND updated_at >= ${start} GROUP BY bucket`, []),
             seriesByBucket(keys, ['sales_amount', 'platform_amount'],
-                `SELECT ${bucketExpr(range, 'created_at')} AS bucket, SUM(price) AS sales_amount,
-                        SUM(price - author_earning) AS platform_amount
-                 FROM purchases WHERE created_at >= ${start} GROUP BY bucket`, []),
+                `SELECT ${bucketExpr(range, 'created_at')} AS bucket, SUM(amount) AS sales_amount,
+                        SUM(amount - author_earning) AS platform_amount
+                 FROM ${SPENT_SQL} spent WHERE created_at >= ${start} GROUP BY bucket`, []),
             seriesByBucket(keys, ['new_users'],
                 `SELECT ${bucketExpr(range, 'created_at')} AS bucket, COUNT(*) AS new_users
                  FROM users WHERE created_at >= ${start} GROUP BY bucket`, []),
@@ -34,8 +36,8 @@ export async function GET(req: NextRequest) {
         const [totals] = await pool.query<RowDataPacket[]>(`
             SELECT
                 (SELECT COALESCE(SUM(amount), 0) FROM coin_topups WHERE status = 'APPROVED') AS topup_amount,
-                (SELECT COALESCE(SUM(price), 0) FROM purchases) AS sales_amount,
-                (SELECT COALESCE(SUM(price - author_earning), 0) FROM purchases) AS platform_amount,
+                (SELECT COALESCE(SUM(amount), 0) FROM ${SPENT_SQL} spent) AS sales_amount,
+                (SELECT COALESCE(SUM(amount - author_earning), 0) FROM ${SPENT_SQL} spent) AS platform_amount,
                 (SELECT COUNT(*) FROM coin_topups WHERE status = 'PENDING') AS pending_topups`);
 
         return NextResponse.json({

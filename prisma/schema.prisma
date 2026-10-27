@@ -84,6 +84,7 @@ model comics {
   description    String?          @db.Text
   cover_image    String?          @db.VarChar(255)
   status         comics_status?   @default(DRAFT)
+  is_completed Boolean @default(false)
   author_id      String?          @db.VarChar(36)
   category_id    String?          @db.VarChar(36)
   views          Int?             @default(0)
@@ -128,6 +129,7 @@ model novels {
   description String?        @db.Text
   cover_image String?        @db.VarChar(255)
   status      novels_status? @default(DRAFT)
+  is_completed Boolean @default(false)
   author_id   String?        @db.VarChar(36)
   category_id String?        @db.VarChar(36)
   views       Int?           @default(0)
@@ -178,8 +180,18 @@ model users {
   image           String?           @db.VarChar(255)
   role            users_role?       @default(READER)
   coins           Int               @default(0)
+  /// Public profile (/profile/<username>, lib/authors.ts)
+  username        String?           @unique(map: "username") @db.VarChar(30)
+  bio             String?           @db.Text
+  cover_image     String?           @db.VarChar(255)
+  /// JSON { facebook, x, instagram, tiktok, youtube, website }
+  social_links    String?           @db.Text
   created_at      DateTime          @default(now()) @db.Timestamp(0)
   updated_at      DateTime          @default(now()) @db.Timestamp(0)
+  following       follows[]         @relation("follows_follower")
+  followers       follows[]         @relation("follows_author")
+  supports_sent   supports[]        @relation("supports_supporter")
+  supports_received supports[]      @relation("supports_author")
   bookmarks       bookmarks[]
   coin_topups     coin_topups[]
   comments        comments[]
@@ -442,4 +454,32 @@ model comic_categories {
 
   @@id([comic_id, category_id])
   @@index([category_id], map: "idx_category")
+}
+
+/// Readers following authors. Followers hear about new stories and chapters.
+model follows {
+  follower_id String   @db.VarChar(36)
+  author_id   String   @db.VarChar(36)
+  created_at  DateTime @default(now()) @db.Timestamp(0)
+  follower    users    @relation("follows_follower", fields: [follower_id], references: [id], onDelete: Cascade)
+  author      users    @relation("follows_author", fields: [author_id], references: [id], onDelete: Cascade)
+
+  @@id([follower_id, author_id])
+  @@index([author_id], map: "idx_author")
+}
+
+/// Coins sent to an author ("สนับสนุน"); part of the author earnings ledger like purchases
+model supports {
+  id             String   @id @db.VarChar(36)
+  user_id        String   @db.VarChar(36)
+  author_id      String   @db.VarChar(36)
+  amount         Int
+  author_earning Decimal  @db.Decimal(10, 2)
+  message        String?  @db.VarChar(200)
+  created_at     DateTime @default(now()) @db.Timestamp(3)
+  supporter      users    @relation("supports_supporter", fields: [user_id], references: [id], onDelete: Restrict)
+  author         users    @relation("supports_author", fields: [author_id], references: [id], onDelete: Restrict)
+
+  @@index([author_id, created_at], map: "idx_author_time")
+  @@index([user_id, created_at], map: "idx_user_time")
 }

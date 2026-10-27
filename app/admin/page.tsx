@@ -8,6 +8,7 @@ import PaymentsPanel from '@/components/admin/PaymentsPanel';
 import AnalyticsPanel from '@/components/admin/AnalyticsPanel';
 import { useConfirm } from '@/components/ConfirmDialog';
 import { useToast } from '@/components/Toast';
+import AuthorLink from '@/components/AuthorLink';
 
 type TabType = 'dashboard' | 'users' | 'content' | 'reports' | 'writers' | 'payments' | 'categories' | 'settings';
 
@@ -30,7 +31,7 @@ const REPORT_TARGET_LABEL: Record<string, string> = { NOVEL: 'นิยาย', 
 
 interface AdminStats { users: number; novels: number; chapters: number; comics: number; reports: number; }
 interface User { id: string; name: string; email: string; role: string; created_at: string; }
-interface ContentItem { id: string; title: string; author_name: string; status: string; created_at: string; }
+interface ContentItem { id: string; title: string; author_id: string | null; author_name: string | null; author_username: string | null; status: string; created_at: string; }
 interface Report { id: string; reporter_name: string; target_type: string; target_id: string; target_title: string | null; parent_type: string | null; parent_id: string | null; comment_author_name: string | null; reason: string; status: string; created_at: string; }
 interface WriterRequest { user_id: string; user_name: string; email: string; title: string; first_name: string; last_name: string; id_card_number: string; phone_number: string; province: string; bank_name: string; bank_account_name: string; bank_account_number: string; id_card_image: string; bank_book_image: string; status: string; rejection_reason: string; created_at: string; }
 interface Category { id: string; name: string; slug: string; }
@@ -285,7 +286,7 @@ function AdminPanel() {
                             {contentItems.map((item) => (
                                 <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                     <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{item.title}</td>
-                                    <td className="px-6 py-4 text-gray-500 dark:text-gray-400">{item.author_name}</td>
+                                    <td className="px-6 py-4 text-gray-500 dark:text-gray-400"><AuthorLink id={item.author_id} username={item.author_username} name={item.author_name} fallback="ไม่ทราบชื่อ" /></td>
                                     <td className="px-6 py-4"><span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${item.status === 'PUBLISHED' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : item.status === 'BANNED' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'}`}>{CONTENT_STATUS_LABEL[item.status] ?? item.status}</span></td>
                                     <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{new Date(item.created_at).toLocaleDateString('th-TH')}</td>
                                     <td className="px-6 py-4 text-right space-x-2">{item.status !== 'PUBLISHED' && <button onClick={() => updateContentStatus(item.id, 'PUBLISHED')} className="text-gray-500 dark:text-gray-400 hover:text-green-600" title="เผยแพร่"><CheckCircle className="w-4 h-4" /></button>}{item.status !== 'BANNED' && <button onClick={() => updateContentStatus(item.id, 'BANNED')} className="text-gray-500 dark:text-gray-400 hover:text-red-600" title="ระงับ"><Ban className="w-4 h-4" /></button>}</td>
