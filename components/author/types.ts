@@ -7,7 +7,7 @@ export interface Work {
     description: string | null;
     cover_image: string | null;
     status: string;
-    category_id: string | null;
+    categories: { id: string; name: string; slug: string }[]; // in the order the author picked them
     views: number;
 }
 
@@ -30,6 +30,7 @@ export const WORK_KINDS = {
         deleteConfirm: 'ต้องการลบนิยายนี้หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้',
         createError: 'เกิดข้อผิดพลาดในการสร้างนิยาย',
         button: 'bg-indigo-600 hover:bg-indigo-700',
+        accent: 'indigo',
         ring: 'focus:ring-indigo-500',
         dropzone: 'hover:border-indigo-500',
         cover: 'from-indigo-500 to-purple-600',
@@ -42,6 +43,7 @@ export const WORK_KINDS = {
         deleteConfirm: 'ต้องการลบการ์ตูนนี้หรือไม่?',
         createError: 'เกิดข้อผิดพลาด',
         button: 'bg-pink-600 hover:bg-pink-700',
+        accent: 'pink',
         ring: 'focus:ring-pink-500',
         dropzone: 'hover:border-pink-500',
         cover: 'from-pink-500 to-rose-600',

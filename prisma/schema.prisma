@@ -28,6 +28,8 @@ model categories {
   slug   String?  @unique(map: "slug") @db.VarChar(255)
   comics comics[]
   novels novels[]
+  novel_categories novel_categories[]
+  comic_categories comic_categories[]
 }
 
 model chapters {
@@ -92,6 +94,7 @@ model comics {
   comments       comments[]
   ratings        ratings[]
   reading_history reading_history[]
+  comic_categories comic_categories[]
   users          users?           @relation(fields: [author_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "comics_ibfk_1")
   categories     categories?      @relation(fields: [category_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "comics_ibfk_2")
 
@@ -135,6 +138,7 @@ model novels {
   comments    comments[]
   ratings     ratings[]
   reading_history reading_history[]
+  novel_categories novel_categories[]
   users       users?         @relation(fields: [author_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "novels_ibfk_1")
   categories  categories?    @relation(fields: [category_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "novels_ibfk_2")
 
@@ -414,4 +418,28 @@ enum writer_profiles_status {
   PENDING
   APPROVED
   REJECTED
+}
+
+/// Categories of each novel (up to 5, in the order picked). novels.category_id mirrors the first one.
+model novel_categories {
+  novel_id    String     @db.VarChar(36)
+  category_id String     @db.VarChar(36)
+  sort_order  Int        @default(0) @db.TinyInt
+  novels      novels     @relation(fields: [novel_id], references: [id], onDelete: Cascade)
+  categories  categories @relation(fields: [category_id], references: [id], onDelete: Cascade)
+
+  @@id([novel_id, category_id])
+  @@index([category_id], map: "idx_category")
+}
+
+/// Categories of each comic (up to 5, in the order picked). comics.category_id mirrors the first one.
+model comic_categories {
+  comic_id    String     @db.VarChar(36)
+  category_id String     @db.VarChar(36)
+  sort_order  Int        @default(0) @db.TinyInt
+  comics      comics     @relation(fields: [comic_id], references: [id], onDelete: Cascade)
+  categories  categories @relation(fields: [category_id], references: [id], onDelete: Cascade)
+
+  @@id([comic_id, category_id])
+  @@index([category_id], map: "idx_category")
 }

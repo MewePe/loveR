@@ -2,6 +2,7 @@
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { BookOpen, Edit, Eye, FileText, ImageIcon, Plus, Send, Trash2 } from 'lucide-react';
+import CategoryTags from '@/components/CategoryTags';
 import { useConfirm } from '@/components/ConfirmDialog';
 import { useToast } from '@/components/Toast';
 import { Work, WorkKind, WORK_KINDS } from './types';
@@ -84,6 +85,7 @@ export default function WorksPanel({ kind, works, onCreate, onEdit, onChanged }:
                             <div className="p-4">
                                 <h3 className="font-bold text-gray-900 dark:text-white truncate">{work.title}</h3>
                                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{work.description}</p>
+                                <CategoryTags categories={work.categories} type={kind} className="mt-2" />
                                 <div className="flex items-center justify-between mt-3">
                                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${work.status === 'PUBLISHED' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'}`}>
                                         {work.status === 'PUBLISHED' ? 'เผยแพร่แล้ว' : 'ฉบับร่าง'}
@@ -112,12 +114,16 @@ export default function WorksPanel({ kind, works, onCreate, onEdit, onChanged }:
                                     </button>
                                     <button
                                         onClick={() => onEdit(work)}
+                                        title={`แก้ไขข้อมูล${k.label}`}
+                                        aria-label={`แก้ไขข้อมูล${k.label} ${work.title}`}
                                         className="px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-sm rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition"
                                     >
                                         <Edit className="w-4 h-4" />
                                     </button>
                                     <button
                                         onClick={() => handleDelete(work.id)}
+                                        title={`ลบ${k.label}`}
+                                        aria-label={`ลบ${k.label} ${work.title}`}
                                         className="px-3 py-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-sm rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition"
                                     >
                                         <Trash2 className="w-4 h-4" />

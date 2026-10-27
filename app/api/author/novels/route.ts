@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
+import { withCategories } from '@/lib/categories';
 
 export async function GET() {
     try {
@@ -19,15 +20,14 @@ export async function GET() {
 
         // Get novels (all status)
         const [novels] = await pool.query<RowDataPacket[]>(
-            `SELECT n.*, c.name as category_name 
+            `SELECT n.*
              FROM novels n 
-             LEFT JOIN categories c ON n.category_id = c.id 
              WHERE n.author_id = ? 
              ORDER BY n.created_at DESC`,
             [userId]
         );
 
-        return NextResponse.json(novels);
+        return NextResponse.json(await withCategories('novel', novels as (RowDataPacket & { id: string })[]));
     } catch (error) {
         console.error('Error fetching novels:', error);
         return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });

@@ -308,3 +308,25 @@ CREATE TABLE IF NOT EXISTS notifications (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
+-- Categories of each novel/comic (lib/categories.ts), up to 5 per story in the order the author picked them.
+-- novels.category_id / comics.category_id are kept in sync with the first one for older code and backups; read these tables.
+CREATE TABLE IF NOT EXISTS novel_categories (
+    novel_id VARCHAR(36) NOT NULL,
+    category_id VARCHAR(36) NOT NULL,
+    sort_order TINYINT NOT NULL DEFAULT 0,
+    PRIMARY KEY (novel_id, category_id),
+    INDEX idx_category (category_id),
+    FOREIGN KEY (novel_id) REFERENCES novels(id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS comic_categories (
+    comic_id VARCHAR(36) NOT NULL,
+    category_id VARCHAR(36) NOT NULL,
+    sort_order TINYINT NOT NULL DEFAULT 0,
+    PRIMARY KEY (comic_id, category_id),
+    INDEX idx_category (category_id),
+    FOREIGN KEY (comic_id) REFERENCES comics(id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+);

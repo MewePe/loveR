@@ -60,6 +60,7 @@ npx tsx scripts/add_register_attempts.ts     # จำกัดการสมั
 npx tsx scripts/add_reading_history.ts       # ประวัติการอ่าน
 npx tsx scripts/add_notifications.ts         # แจ้งเตือน และการตอบกลับคอมเมนต์
 npx tsx scripts/add_item_reads.ts            # บท/ตอนที่อ่านแล้ว (ใช้ในปุ่มเลือกตอน)
+npx tsx scripts/add_story_categories.ts      # หลายหมวดต่อเรื่อง (คัดลอกหมวดเดิมของทุกเรื่องมาให้)
 ```
 
 ### รัน

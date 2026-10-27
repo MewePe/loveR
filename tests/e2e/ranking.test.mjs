@@ -31,6 +31,9 @@ before(async () => {
     await db.query(`UPDATE users SET role = 'BANNED' WHERE id = ?`, [ids.banned]);
     await db.query(`INSERT INTO bookmarks (id, user_id, novel_id) VALUES (?, ?, ?), (?, ?, ?)`, [uuid(), ids.other, c.d, uuid(), ids.author, c.d]);
     await db.query(`INSERT INTO comics (id, title, status, author_id, category_id) VALUES (?, 'E2E RK ${TAG} Comic', 'PUBLISHED', ?, ?)`, [c.comic, ids.author, c.cat]);
+    // Categories live in novel_categories / comic_categories (lib/categories.ts)
+    await db.query('INSERT INTO novel_categories (novel_id, category_id) VALUES (?, ?), (?, ?), (?, ?)', [c.a, c.cat, c.b, c.cat, c.draft, c.cat]);
+    await db.query('INSERT INTO comic_categories (comic_id, category_id) VALUES (?, ?)', [c.comic, c.cat]);
 });
 
 after(async () => {

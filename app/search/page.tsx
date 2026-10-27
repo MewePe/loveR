@@ -2,30 +2,8 @@
 import { Suspense, useEffect, useState, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Search, BookOpen, ImageIcon, X, ChevronDown } from 'lucide-react';
-import Image from 'next/image';
-import Link from 'next/link';
-
-interface Novel {
-    id: string;
-    title: string;
-    description: string;
-    cover_image: string | null;
-    author_name: string;
-    category_name: string;
-    views: number;
-    rating_avg: number | null;
-}
-
-interface Comic {
-    id: string;
-    title: string;
-    description: string;
-    cover_image: string | null;
-    author_name: string;
-    category_name: string;
-    views: number;
-    rating_avg: number | null;
-}
+import StoryCard, { StoryCardData } from '@/components/StoryCard';
+import CategoryPicker from '@/components/CategoryPicker';
 
 // Same keys as SEARCH_SORTS in lib/ranking.ts (not imported: that module uses the database)
 const SORT_OPTIONS = [
@@ -34,6 +12,9 @@ const SORT_OPTIONS = [
     { value: 'rating', label: 'คะแนนสูงสุด' },
 ] as const;
 type SortValue = typeof SORT_OPTIONS[number]['value'];
+
+// The API reads at most this many category filters (MAX_CATEGORIES in lib/categories.ts)
+const MAX_FILTER_CATEGORIES = 5;
 
 interface Category {
     id: string;
@@ -49,21 +30,23 @@ function SearchContent() {
     const [type, setType] = useState<'all' | 'novels' | 'comics'>(
         validTypes.includes(rawType as 'all' | 'novels' | 'comics') ? (rawType as 'all' | 'novels' | 'comics') : 'all'
     );
-    const [categoryId, setCategoryId] = useState(searchParams.get('category') || '');
+    // ?category=a,b (or repeated ?category=)
+    const [categoryIds, setCategoryIds] = useState<string[]>(() =>
+        [...new Set(searchParams.getAll('category').flatMap((v) => v.split(',')).filter(Boolean))].slice(0, MAX_FILTER_CATEGORIES)
+    );
     const rawSort = searchParams.get('sort');
     const [sort, setSort] = useState<SortValue>(SORT_OPTIONS.find((o) => o.value === rawSort)?.value ?? 'newest');
-    const [novels, setNovels] = useState<Novel[]>([]);
-    const [comics, setComics] = useState<Comic[]>([]);
+    const [novels, setNovels] = useState<StoryCardData[]>([]);
+    const [comics, setComics] = useState<StoryCardData[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(false);
-
 
     const handleSearch = useCallback(async () => {
         setLoading(true);
         try {
             const p = new URLSearchParams();
             if (query) p.set('search', query);
-            if (categoryId) p.set('categoryId', categoryId);
+            for (const id of categoryIds) p.append('categoryId', id);
             p.set('sort', sort);
 
             if (type === 'all' || type === 'novels') {
@@ -84,7 +67,7 @@ function SearchContent() {
         } finally {
             setLoading(false);
         }
-    }, [query, type, categoryId, sort]);
+    }, [query, type, categoryIds, sort]);
 
     useEffect(() => {
         fetchCategories();
@@ -94,7 +77,7 @@ function SearchContent() {
 
     useEffect(() => {
         handleSearch();
-    }, [type, categoryId, sort, handleSearch]);
+    }, [type, categoryIds, sort, handleSearch]);
 
     async function fetchCategories() {
         try {
@@ -105,15 +88,13 @@ function SearchContent() {
         }
     }
 
-
-
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         handleSearch();
         const p = new URLSearchParams();
         if (query) p.set('q', query);
         if (type !== 'all') p.set('type', type);
-        if (categoryId) p.set('category', categoryId);
+        if (categoryIds.length > 0) p.set('category', categoryIds.join(','));
         if (sort !== 'newest') p.set('sort', sort);
         router.push(`/search?${p}`);
     }
@@ -134,7 +115,7 @@ function SearchContent() {
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
                                 placeholder="ค้นหาชื่อเรื่อง..."
-                                className="w-full pl-12 pr-4 py-4 rounded-full text-lg outline-none focus:ring-4 focus:ring-white/30 dark:bg-gray-800 dark:text-white"
+                                className="w-full pl-12 pr-4 py-4 rounded-full text-lg outline-none focus:ring-4 focus:ring-white/30 bg-white text-gray-900 dark:bg-gray-800 dark:text-white"
                             />
                             <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 bg-indigo-600 text-white px-6 py-2 rounded-full hover:bg-indigo-700 transition">
                                 ค้นหา
@@ -146,7 +127,7 @@ function SearchContent() {
 
             <div className="container mx-auto px-4 py-8">
                 {/* Filters */}
-                <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+                <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
                     <div className="flex flex-wrap items-center gap-4">
                         {/* Type Filter */}
                         <div className="flex bg-white dark:bg-gray-800 rounded-lg p-1 shadow-sm">
@@ -170,21 +151,6 @@ function SearchContent() {
                             </button>
                         </div>
 
-                        {/* Category Filter */}
-                        <div className="relative">
-                            <select
-                                value={categoryId}
-                                onChange={(e) => setCategoryId(e.target.value)}
-                                className="appearance-none bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg px-4 py-2 pr-10 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none"
-                            >
-                                <option value="">หมวดหมู่ทั้งหมด</option>
-                                {categories.map(cat => (
-                                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                                ))}
-                            </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400 pointer-events-none" />
-                        </div>
-
                         {/* Sort */}
                         <div className="relative">
                             <select
@@ -200,9 +166,9 @@ function SearchContent() {
                             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400 pointer-events-none" />
                         </div>
 
-                        {categoryId && (
-                            <button onClick={() => setCategoryId('')} className="flex items-center gap-1 text-sm text-red-500 dark:text-red-400 hover:text-red-600">
-                                <X className="w-4 h-4" /> ล้างตัวกรอง
+                        {categoryIds.length > 0 && (
+                            <button onClick={() => setCategoryIds([])} className="flex items-center gap-1 text-sm text-red-600 dark:text-red-400 hover:text-red-700">
+                                <X className="w-4 h-4" /> ล้างหมวดหมู่
                             </button>
                         )}
                     </div>
@@ -211,6 +177,22 @@ function SearchContent() {
                         พบ <span className="font-bold text-gray-900 dark:text-white">{totalResults}</span> รายการ
                     </p>
                 </div>
+
+                {/* Category Filter */}
+                {categories.length > 0 && (
+                    <div className="mb-8">
+                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            หมวดหมู่ <span className="font-normal text-gray-500 dark:text-gray-400">(เลือกหลายหมวด = ต้องมีครบทุกหมวดที่เลือก)</span>
+                        </p>
+                        <CategoryPicker
+                            label="กรองตามหมวดหมู่"
+                            options={categories}
+                            value={categoryIds}
+                            onChange={setCategoryIds}
+                            max={MAX_FILTER_CATEGORIES}
+                        />
+                    </div>
+                )}
 
                 {loading ? (
                     <div className="flex justify-center py-12">
@@ -224,27 +206,8 @@ function SearchContent() {
                                 <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
                                     <BookOpen className="w-5 h-5 text-indigo-600 dark:text-indigo-400" /> นิยาย ({novels.length})
                                 </h2>
-                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
-                                    {novels.map(novel => (
-                                        <Link key={novel.id} href={`/novel/${novel.id}`} className="group">
-                                            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 overflow-hidden hover:shadow-lg transition">
-                                                <div className="relative aspect-[3/4]">
-                                                    {novel.cover_image ? (
-                                                        <Image src={novel.cover_image} alt={novel.title} fill className="object-cover group-hover:scale-105 transition" />
-                                                    ) : (
-                                                        <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-                                                            <BookOpen className="w-12 h-12 text-white/70" />
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <div className="p-3">
-                                                    <h3 className="font-medium text-gray-900 dark:text-white line-clamp-2 text-sm group-hover:text-indigo-600 transition">{novel.title}</h3>
-                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{novel.author_name}</p>
-                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">👁 {novel.views?.toLocaleString() || 0}{novel.rating_avg != null && <span className="ml-2">⭐ {novel.rating_avg.toFixed(1)}</span>}</p>
-                                                </div>
-                                            </div>
-                                        </Link>
-                                    ))}
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 sm:gap-6">
+                                    {novels.map((novel) => <StoryCard key={novel.id} story={novel} type="novel" />)}
                                 </div>
                             </div>
                         )}
@@ -255,27 +218,8 @@ function SearchContent() {
                                 <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
                                     <ImageIcon className="w-5 h-5 text-pink-600 dark:text-pink-400" /> การ์ตูน ({comics.length})
                                 </h2>
-                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
-                                    {comics.map(comic => (
-                                        <Link key={comic.id} href={`/comic/${comic.id}`} className="group">
-                                            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 overflow-hidden hover:shadow-lg transition">
-                                                <div className="relative aspect-[3/4]">
-                                                    {comic.cover_image ? (
-                                                        <Image src={comic.cover_image} alt={comic.title} fill className="object-cover group-hover:scale-105 transition" />
-                                                    ) : (
-                                                        <div className="w-full h-full bg-gradient-to-br from-pink-500 to-red-600 flex items-center justify-center">
-                                                            <ImageIcon className="w-12 h-12 text-white/70" />
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <div className="p-3">
-                                                    <h3 className="font-medium text-gray-900 dark:text-white line-clamp-2 text-sm group-hover:text-pink-600 transition">{comic.title}</h3>
-                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{comic.author_name}</p>
-                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">👁 {comic.views?.toLocaleString() || 0}{comic.rating_avg != null && <span className="ml-2">⭐ {comic.rating_avg.toFixed(1)}</span>}</p>
-                                                </div>
-                                            </div>
-                                        </Link>
-                                    ))}
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 sm:gap-6">
+                                    {comics.map((comic) => <StoryCard key={comic.id} story={comic} type="comic" />)}
                                 </div>
                             </div>
                         )}

@@ -171,9 +171,10 @@ function AdminPanel() {
     }
 
     async function deleteCategory(id: string) {
-        if (!(await confirm('ลบหมวดหมู่นี้?', { danger: true }))) return;
+        if (!(await confirm('ลบหมวดหมู่นี้? เรื่องที่อยู่ในหมวดนี้จะถูกเอาหมวดนี้ออก', { danger: true }))) return;
         const res = await fetch(`/api/admin/categories/${id}`, { method: 'DELETE', credentials: 'include' });
         if (res.ok) fetchTabData();
+        else toast.error('ลบหมวดหมู่ไม่สำเร็จ');
     }
 
     async function saveSettings(e: React.FormEvent) {

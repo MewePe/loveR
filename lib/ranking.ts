@@ -1,8 +1,10 @@
 import pool from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 import { ContentType } from '@/lib/contentRef';
+import { CATEGORY_TABLES, CategoryTag, withCategories } from '@/lib/categories';
 
-// Rankings, "similar stories" and "recommended for you". Every query here only returns PUBLISHED novels/comics.
+// Rankings, "similar stories" and "recommended for you". Every query here only returns PUBLISHED novels/comics,
+// and every row comes back with its `categories` (lib/categories.ts).
 // Table/column names and ORDER BY clauses are fixed per content type and sort key (never built from input).
 
 const TABLES = {
@@ -28,20 +30,19 @@ export function isSortKey<T extends readonly SortKey[]>(allowed: T, value: unkno
 
 export type StoryRow = RowDataPacket & {
     id: string; title: string; cover_image: string | null; views: number;
-    author_name: string | null; category_name: string | null;
+    author_name: string | null; categories: CategoryTag[];
     rating_avg: number | null; rating_count: number; sales: number; bookmarks: number;
 };
 
-// s.* plus author/category names and the aggregated stats. Ratings by BANNED users don't count (same as /api/ratings).
+// s.* plus the author name and the aggregated stats. Ratings by BANNED users don't count (same as /api/ratings).
 function baseSql(type: ContentType) {
     const t = TABLES[type];
     return `
-    SELECT s.*, u.name AS author_name, cat.name AS category_name,
+    SELECT s.*, u.name AS author_name,
            r.rating_avg, COALESCE(r.rating_count, 0) AS rating_count,
            COALESCE(p.sales, 0) AS sales, COALESCE(b.bookmarks, 0) AS bookmarks
     FROM ${t.table} s
     LEFT JOIN users u ON u.id = s.author_id
-    LEFT JOIN categories cat ON cat.id = s.category_id
     LEFT JOIN (SELECT r.${t.ref} AS cid, AVG(r.score) AS rating_avg, COUNT(*) AS rating_count
                FROM ratings r JOIN users ru ON ru.id = r.user_id
                WHERE r.${t.ref} IS NOT NULL AND ru.role != 'BANNED' GROUP BY r.${t.ref}) r ON r.cid = s.id
@@ -52,27 +53,31 @@ function baseSql(type: ContentType) {
     WHERE s.status = 'PUBLISHED'`;
 }
 
-// mysql2 returns AVG()/COUNT() as strings; normalise so pages and JSON get numbers
-function normalise(rows: RowDataPacket[]) {
-    return rows.map((row) => ({
+// mysql2 returns AVG()/COUNT() as strings; normalise so pages and JSON get numbers. Also attaches categories.
+async function normalise(type: ContentType, rows: RowDataPacket[]) {
+    const stories = await withCategories(type, rows.map((row) => ({
         ...row,
+        id: row.id as string,
         views: Number(row.views) || 0,
         rating_avg: row.rating_avg === null ? null : Math.round(Number(row.rating_avg) * 10) / 10,
         rating_count: Number(row.rating_count),
         sales: Number(row.sales),
         bookmarks: Number(row.bookmarks),
-    })) as StoryRow[];
+    })));
+    return stories as StoryRow[];
 }
 
-// Public list for /api/novels, /api/comics and /ranking
+// Public list for /api/novels, /api/comics, /ranking and /category/[slug]
 export async function listStories(type: ContentType, options: {
-    sort?: SortKey; categoryId?: string | null; search?: string | null; limit?: number;
+    sort?: SortKey; categoryIds?: string[]; search?: string | null; limit?: number;
 } = {}) {
     let sql = baseSql(type);
-    const params: (string | number)[] = [];
-    if (options.categoryId) {
-        sql += ' AND s.category_id = ?';
-        params.push(options.categoryId);
+    const params: (string | number | string[])[] = [];
+    // Only stories that have every one of the chosen categories
+    if (options.categoryIds?.length) {
+        const c = CATEGORY_TABLES[type];
+        sql += ` AND s.id IN (SELECT ${c.fk} FROM ${c.table} WHERE category_id IN (?) GROUP BY ${c.fk} HAVING COUNT(*) = ?)`;
+        params.push(options.categoryIds, options.categoryIds.length);
     }
     if (options.search) {
         sql += ' AND (s.title LIKE ? OR s.description LIKE ?)';
@@ -84,44 +89,52 @@ export async function listStories(type: ContentType, options: {
         params.push(options.limit);
     }
     const [rows] = await pool.query<RowDataPacket[]>(sql, params);
-    return normalise(rows);
+    return normalise(type, rows);
 }
 
-// Other stories for the detail page: same category first, then the most viewed, so the section is never empty
-// just because a category is small.
-export async function getSimilarStories(type: ContentType, story: { id: string; category_id: string | null }, limit = 6) {
+// Other stories for the detail page: the most categories in common first, then the most viewed, so the section
+// is never empty just because the categories are small (or the story has none).
+export async function getSimilarStories(type: ContentType, storyId: string, limit = 6) {
+    const c = CATEGORY_TABLES[type];
     const [rows] = await pool.query<RowDataPacket[]>(
-        `${baseSql(type)} AND s.id != ?
-         ORDER BY (s.category_id <=> ?) DESC, s.views DESC, s.created_at DESC LIMIT ?`,
-        [story.id, story.category_id, limit]
+        `SELECT s.*, COALESCE(m.shared, 0) AS shared FROM (${baseSql(type)}) s
+         LEFT JOIN (SELECT ${c.fk} AS sid, COUNT(*) AS shared FROM ${c.table}
+                    WHERE category_id IN (SELECT category_id FROM ${c.table} WHERE ${c.fk} = ?)
+                    GROUP BY ${c.fk}) m ON m.sid = s.id
+         WHERE s.id != ?
+         ORDER BY shared DESC, s.views DESC, s.created_at DESC LIMIT ?`,
+        [storyId, storyId, limit]
     );
-    return normalise(rows);
+    return normalise(type, rows);
 }
 
-// "แนะนำสำหรับคุณ": stories in the categories the user bookmarks (weight 2) and reads (weight 1), counting
-// novels and comics together, minus what they've already read or bookmarked and their own work.
-// Empty when the user has no history yet.
+// "แนะนำสำหรับคุณ": every category of each story the user bookmarked gets weight 2, of each story they read
+// weight 1, counting novels and comics together. A story scores the sum of the weights of all its categories.
+// Minus what they've already read or bookmarked and their own work. Empty when the user has no history yet.
 export async function getRecommendations(userId: string, limit = 6) {
     const weightsSql = `
         SELECT category_id, SUM(w) AS weight FROM (
-            SELECT n.category_id, 2 AS w FROM bookmarks b JOIN novels n ON n.id = b.novel_id WHERE b.user_id = ?
-            UNION ALL SELECT c.category_id, 2 FROM bookmarks b JOIN comics c ON c.id = b.comic_id WHERE b.user_id = ?
-            UNION ALL SELECT n.category_id, 1 FROM reading_history h JOIN novels n ON n.id = h.novel_id WHERE h.user_id = ?
-            UNION ALL SELECT c.category_id, 1 FROM reading_history h JOIN comics c ON c.id = h.comic_id WHERE h.user_id = ?
-        ) x WHERE category_id IS NOT NULL GROUP BY category_id`;
+            SELECT nc.category_id, 2 AS w FROM bookmarks b JOIN novel_categories nc ON nc.novel_id = b.novel_id WHERE b.user_id = ?
+            UNION ALL SELECT cc.category_id, 2 FROM bookmarks b JOIN comic_categories cc ON cc.comic_id = b.comic_id WHERE b.user_id = ?
+            UNION ALL SELECT nc.category_id, 1 FROM reading_history h JOIN novel_categories nc ON nc.novel_id = h.novel_id WHERE h.user_id = ?
+            UNION ALL SELECT cc.category_id, 1 FROM reading_history h JOIN comic_categories cc ON cc.comic_id = h.comic_id WHERE h.user_id = ?
+        ) x GROUP BY category_id`;
 
     const lists = await Promise.all((['novel', 'comic'] as const).map(async (type) => {
         const ref = TABLES[type].ref;
+        const c = CATEGORY_TABLES[type];
         const [rows] = await pool.query<RowDataPacket[]>(
-            `SELECT * FROM (${baseSql(type)}) s
-             JOIN (${weightsSql}) w ON w.category_id = s.category_id
+            `SELECT s.*, w.weight FROM (${baseSql(type)}) s
+             JOIN (SELECT sc.${c.fk} AS sid, SUM(uw.weight) AS weight
+                   FROM ${c.table} sc JOIN (${weightsSql}) uw ON uw.category_id = sc.category_id
+                   GROUP BY sc.${c.fk}) w ON w.sid = s.id
              WHERE NOT (s.author_id <=> ?)
                AND s.id NOT IN (SELECT ${ref} FROM reading_history WHERE user_id = ? AND ${ref} IS NOT NULL)
                AND s.id NOT IN (SELECT ${ref} FROM bookmarks WHERE user_id = ? AND ${ref} IS NOT NULL)
              ORDER BY w.weight DESC, s.views DESC LIMIT ?`,
             [userId, userId, userId, userId, userId, userId, userId, limit]
         );
-        return normalise(rows).map((row) => ({ ...row, type, weight: Number(row.weight) }));
+        return (await normalise(type, rows)).map((row) => ({ ...row, type, weight: Number(row.weight) }));
     }));
 
     return lists.flat()

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { Trash2, Upload } from 'lucide-react';
 import { useToast } from '@/components/Toast';
+import CategoryPicker from '@/components/CategoryPicker';
 import { Category, Work, WorkKind, WORK_KINDS } from './types';
 
 interface WorkFormModalProps {
@@ -13,14 +14,17 @@ interface WorkFormModalProps {
     onSaved: () => void;
 }
 
-// Create / edit form for a novel or comic: title, synopsis, cover (uploaded via /api/upload) and category
+// Create / edit form for a novel or comic: title, synopsis, cover (uploaded via /api/upload) and up to
+// MAX_CATEGORIES categories (same limit as lib/categories.ts, which the API enforces)
+const MAX_CATEGORIES = 5;
+
 export default function WorkFormModal({ kind, work, categories, onClose, onSaved }: WorkFormModalProps) {
     const toast = useToast();
     const k = WORK_KINDS[kind];
     const [form, setForm] = useState({
         title: work?.title ?? '',
         description: work?.description || '',
-        categoryId: work?.category_id || '',
+        categoryIds: work?.categories.map((c) => c.id) ?? [],
     });
     const [coverFile, setCoverFile] = useState<File | null>(null);
     const [coverPreview, setCoverPreview] = useState<string | null>(work?.cover_image || null);
@@ -52,7 +56,7 @@ export default function WorkFormModal({ kind, work, categories, onClose, onSaved
             const res = await fetch(work ? `${k.api}/${work.id}` : k.api, {
                 method: work ? 'PATCH' : 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title: form.title, description: form.description, categoryId: form.categoryId, coverImage: coverImageUrl }),
+                body: JSON.stringify({ title: form.title, description: form.description, categoryIds: form.categoryIds, coverImage: coverImageUrl }),
                 credentials: 'include',
             });
 
@@ -60,7 +64,8 @@ export default function WorkFormModal({ kind, work, categories, onClose, onSaved
                 toast.success(`${work ? 'แก้ไข' : 'สร้าง'}${k.label}สำเร็จ`);
                 onSaved();
             } else {
-                toast.error(work ? 'เกิดข้อผิดพลาด' : k.createError);
+                const data = await res.json().catch(() => ({}));
+                toast.error(data.error || (work ? 'เกิดข้อผิดพลาด' : k.createError));
             }
         } catch (error) {
             console.error(error);
@@ -126,17 +131,15 @@ export default function WorkFormModal({ kind, work, categories, onClose, onSaved
                         </div>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">หมวดหมู่ (ไม่บังคับ)</label>
-                        <select
-                            value={form.categoryId}
-                            onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
-                            className={inputClass}
-                        >
-                            <option value="">ไม่ระบุหมวดหมู่</option>
-                            {categories.map((cat) => (
-                                <option key={cat.id} value={cat.id}>{cat.name}</option>
-                            ))}
-                        </select>
+                        <p className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">หมวดหมู่ (ไม่บังคับ เลือกได้สูงสุด {MAX_CATEGORIES} หมวด)</p>
+                        <CategoryPicker
+                            label="หมวดหมู่"
+                            options={categories}
+                            value={form.categoryIds}
+                            onChange={(categoryIds) => setForm({ ...form, categoryIds })}
+                            max={MAX_CATEGORIES}
+                            accent={k.accent}
+                        />
                     </div>
                     <div className="flex gap-3 pt-4">
                         <button

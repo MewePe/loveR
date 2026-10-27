@@ -80,7 +80,7 @@ export default async function RankingPage({ searchParams }: { searchParams: Prom
                                     <div className="flex-1 min-w-0">
                                         <h2 className="font-bold text-gray-900 dark:text-white truncate group-hover:underline">{story.title}</h2>
                                         <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                                            {story.author_name || 'ไม่ระบุชื่อ'}{story.category_name && ` · ${story.category_name}`}
+                                            {story.author_name || 'ไม่ระบุชื่อ'}{story.categories.length > 0 && ` · ${story.categories.map((c) => c.name).join(', ')}`}
                                         </p>
                                         <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-500 dark:text-gray-400">
                                             {statLine(story).map((stat, i) => (

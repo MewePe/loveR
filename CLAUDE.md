@@ -52,6 +52,7 @@ npx tsx scripts/add_register_attempts.ts # ตาราง register_attempts ส
 npx tsx scripts/add_reading_history.ts # ตาราง reading_history (รันซ้ำได้)
 npx tsx scripts/add_notifications.ts # ตาราง notifications และคอลัมน์ comments.parent_id (รันซ้ำได้)
 npx tsx scripts/add_item_reads.ts # ตาราง item_reads (บท/ตอนที่อ่านแล้ว) คัดลอกบทล่าสุดจาก reading_history มาให้ (รันซ้ำได้)
+npx tsx scripts/add_story_categories.ts # ตาราง novel_categories/comic_categories (หลายหมวดต่อเรื่อง) คัดลอกหมวดเดิมจาก category_id มาให้ (รันซ้ำได้)
 ```
 
 `reset_db.ts` และ `drop_old_db.ts` ลบข้อมูล
@@ -128,12 +129,23 @@ npx tsx scripts/add_item_reads.ts # ตาราง item_reads (บท/ตอน
 - ทั้งสองอย่างเช็ก `canViewContent()` (เรื่องที่ไม่ได้เผยแพร่ได้ 404 ยกเว้นเจ้าของ/แอดมิน) และซ่อนคอมเมนต์/ไม่นับคะแนนของผู้ใช้ที่เป็น `BANNED`
 - คะแนนเฉลี่ยในหน้ารายการ/ค้นหา/อันดับมาจาก `lib/ranking.ts` (ดูหัวข้อ "จัดอันดับและแนะนำ")
 
+**หมวดหมู่** (`lib/categories.ts`, ตาราง `novel_categories`/`comic_categories`):
+- เรื่องละ 0-5 หมวด (`MAX_CATEGORIES`) เก็บลำดับที่ผู้เขียนเลือกใน `sort_order` หมวดแรกคือหมวดหลัก
+- **อ่านหมวดจากตารางเชื่อมเท่านั้น** คอลัมน์ `novels.category_id`/`comics.category_id` เก็บไว้เป็นสำเนาของหมวดแรก (ให้โค้ด/ข้อมูลสำรองเก่ายังใช้ได้) `setStoryCategories()` เขียนทั้งสองที่ใน transaction ของผู้เรียก ห้ามแก้คอลัมน์นี้ตรงๆ
+- API รับ `categoryIds: string[]` (POST สร้าง / PATCH แก้ไข ไม่ส่ง = ไม่เปลี่ยน, `[]` = ล้าง) ยังรับ `categoryId` เดี่ยวแบบเก่าได้ ตรวจด้วย `parseCategoryIds()` (ไม่เกิน 5, ต้องมีอยู่จริง, ตัดตัวซ้ำ) ผิดได้ 400 และไม่บันทึกอะไรเลย
+- ทุกแถวจาก `lib/ranking.ts`, `/api/novels/[id]`, `/api/comics/[id]`, `/api/author/novels|comics` มี `categories: { id, name, slug }[]` (ต่อด้วย `withCategories()`/`getCategoriesFor()`) ไม่มี `category_name` แล้ว
+- กรอง: `/api/novels|comics?categoryId=a&categoryId=b` (หรือ `a,b`) คืนเฉพาะเรื่องที่มี**ทุก**หมวดที่เลือก หน้า `/search?category=a,b` ใช้ `components/CategoryPicker.tsx`
+- ป้ายหมวด `components/CategoryTags.tsx` ลิงก์ไป `/category/[slug]` (นิยาย+การ์ตูนในหมวดนั้น เรียงตาม `SEARCH_SORTS`) อยู่บน `StoryCard` (นอกลิงก์หลักของการ์ด เพราะห้ามซ้อน `<a>`) และหน้าเรื่อง ส่วนหน้า `/ranking` แสดงเป็นข้อความเพราะทั้งแถวเป็นลิงก์
+- ฟอร์มสร้าง/แก้ไขคือ `WorkFormModal` (เลือกด้วย `CategoryPicker` แบบ `max={5}`)
+- แอดมินลบหมวดที่มีเรื่องใช้อยู่ได้: หมวดนั้นหายจากทุกเรื่อง (FK cascade) และ `category_id` ย้ายไปหมวดถัดไปของเรื่องนั้นก่อน
+- เทสต์อยู่ใน `tests/e2e/categories.test.mjs` (รวมการรันสคริปต์ migration)
+
 **จัดอันดับและแนะนำ** (`lib/ranking.ts`, ทุก query คืนเฉพาะ `PUBLISHED`):
 - `baseSql()` รวมสถิติต่อเรื่องด้วย derived table: `rating_avg`/`rating_count` (ไม่นับผู้ใช้ `BANNED` เหมือน `/api/ratings`), `sales` (จำนวนแถวใน `purchases` ของบท/ตอนในเรื่อง), `bookmarks` ลำดับการเรียงอยู่ใน `SORTS` เท่านั้น (รับจาก input ผ่าน `isSortKey()` ห้ามต่อ ORDER BY จาก input)
 - `/ranking?type=novel|comic&sort=views|rating|sales|bookmarks` (`RANKING_SORTS`) 50 อันดับ เป็นอันดับรวมตลอดกาล (ถ้าจะทำรายสัปดาห์ต้องมีตารางเก็บวิวรายวัน) ลิงก์อยู่ใน Navbar และ "ดูอันดับทั้งหมด" ในหน้าแรก
 - `/api/novels`, `/api/comics` รับ `?sort=newest|views|rating` (`SEARCH_SORTS`, ค่าอื่น = newest) และทุกแถวมีสถิติข้างบน หน้า `/search` มี dropdown เรียงลำดับ (`SORT_OPTIONS` ในหน้า ต้องตรงกับ `SEARCH_SORTS` เพราะ import `lib/ranking.ts` ใน client ไม่ได้)
-- `getSimilarStories()`: "เรื่องที่คล้ายกัน" ในหน้า `/novel/[id]`, `/comic/[id]` หมวดเดียวกันก่อน แล้วเติมด้วยเรื่องที่วิวสูง
-- `getRecommendations()`: "แนะนำสำหรับคุณ" ในหน้าแรก (เฉพาะคนล็อกอินที่มีประวัติ) ให้น้ำหนักหมวดจากบุ๊กมาร์ก 2 และ `reading_history` 1 รวมนิยายกับการ์ตูน ตัดเรื่องที่อ่าน/บุ๊กมาร์กแล้วและเรื่องของตัวเองออก
+- `getSimilarStories()`: "เรื่องที่คล้ายกัน" ในหน้า `/novel/[id]`, `/comic/[id]` เรียงตามจำนวนหมวดที่ตรงกันมากสุดก่อน แล้วเติมด้วยเรื่องที่วิวสูง
+- `getRecommendations()`: "แนะนำสำหรับคุณ" ในหน้าแรก (เฉพาะคนล็อกอินที่มีประวัติ) ทุกหมวดของเรื่องที่บุ๊กมาร์กได้น้ำหนัก 2 ของเรื่องใน `reading_history` ได้ 1 (รวมนิยายกับการ์ตูน) คะแนนของเรื่อง = ผลรวมน้ำหนักของทุกหมวดที่มัน ตัดเรื่องที่อ่าน/บุ๊กมาร์กแล้วและเรื่องของตัวเองออก
 - การ์ดปกใช้ `components/StoryCard.tsx` ร่วมกัน เทสต์อยู่ใน `tests/e2e/ranking.test.mjs` (ใช้ยอดวิวหลักพันล้านให้เรื่องทดสอบอยู่บนสุดเหนือข้อมูลจริง)
 
 **กราฟแดชบอร์ด** (`lib/analytics.ts`, `components/TimeSeriesChart.tsx` ใช้ recharts):
@@ -206,9 +218,10 @@ npx tsx scripts/add_item_reads.ts # ตาราง item_reads (บท/ตอน
    npx tsx scripts/add_reading_history.ts     # ประวัติการอ่าน
    npx tsx scripts/add_notifications.ts       # แจ้งเตือน + comments.parent_id (ตอบกลับ)
    npx tsx scripts/add_item_reads.ts          # บท/ตอนที่อ่านแล้ว (ปุ่มเลือกตอน)
+   npx tsx scripts/add_story_categories.ts    # หลายหมวดต่อเรื่อง (คัดลอกหมวดเดิมมาให้)
    ```
    DB ที่เก่ากว่านั้นให้รันสคริปต์ก่อนหน้าตามลำดับใน README ก่อน ส่วน DB ใหม่ใช้ `schema.sql` ได้เลยไม่ต้องรันพวกนี้
-3. ลบ `.next` แล้วเปิด `npm run dev` ใหม่ จากนั้นรัน `npm run test:e2e` เพื่อเช็ก (ต้องผ่านทั้งหมด 101 เทสต์)
+3. ลบ `.next` แล้วเปิด `npm run dev` ใหม่ จากนั้นรัน `npm run test:e2e` เพื่อเช็ก (ต้องผ่านทั้งหมด 112 เทสต์)
 
 **ผู้ดูแลต้องทำเอง**:
 - กรอก "ข้อมูลการชำระเงิน" ที่ `/admin` → ตั้งค่า (เครื่องนี้ยังเป็นข้อความตัวอย่างอยู่) ถ้ายังไม่กรอก ผู้อ่านจะเติมเหรียญไม่ได้
@@ -240,7 +253,7 @@ npx tsx scripts/add_item_reads.ts # ตาราง item_reads (บท/ตอน
 | 11 | จัดอันดับและแนะนำ | ✅ (อันดับรวมตลอดกาล) | `/ranking`, `/` (แนะนำสำหรับคุณ + ยอดนิยม), ล่างหน้า `/novel/[id]` (เรื่องที่คล้ายกัน), `/search` (เรียงตาม) | `lib/ranking.ts`, `app/ranking/page.tsx`, `components/StoryCard.tsx` |
 | 12 | ตรวจสอบเนื้อหาเบื้องต้นด้วย API | ❌ | — | — |
 | 13 | รักษาความปลอดภัย | ✅ | `/login` (ล็อกอินผิดเกิน 5 ครั้ง), เปิดตอนที่ยังไม่ซื้อ | `lib/auth.ts`, `lib/loginThrottle.ts`, `lib/upload.ts`, `lib/visibility.ts`, `tests/e2e/security.test.mjs` |
-| 14 | ทดสอบระบบและปรับ UX/UI | ⚠️ | `npm run test:e2e` (101 เทสต์) | `tests/e2e/` |
+| 14 | ทดสอบระบบและปรับ UX/UI | ⚠️ | `npm run test:e2e` (112 เทสต์) | `tests/e2e/` |
 
 **สิ่งที่ขาด**:
 - ~~ยอดวิวไม่เคยเพิ่ม~~ **แก้แล้ว 2026-10-23** (ดูหัวข้อ "ยอดวิว" ในสถาปัตยกรรม) ยอดวิวเก่าก่อนวันนั้นของนิยาย/บท/การ์ตูนยังเป็น 0 เพราะไม่มีข้อมูลย้อนหลัง

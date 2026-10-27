@@ -12,13 +12,14 @@ import { auth } from '@/lib/auth';
 import { getPurchasedIds } from '@/lib/coins';
 import { canViewContent, isOwnerOrAdmin } from '@/lib/visibility';
 import { getSimilarStories } from '@/lib/ranking';
+import { getCategoriesFor } from '@/lib/categories';
+import CategoryTags from '@/components/CategoryTags';
 
 async function getComic(id: string) {
     const [rows] = await pool.query<RowDataPacket[]>(`
-    SELECT c.*, u.name as author_name, cat.name as category_name 
+    SELECT c.*, u.name as author_name
     FROM comics c
     LEFT JOIN users u ON c.author_id = u.id
-    LEFT JOIN categories cat ON c.category_id = cat.id
     WHERE c.id = ?
   `, [id]);
     return rows[0];
@@ -43,7 +44,8 @@ export default async function ComicDetail({ params }: { params: Promise<{ id: st
 
     const episodes = await getEpisodes(id);
     const isOwner = isOwnerOrAdmin(session?.user, comic.author_id);
-    const similar = await getSimilarStories('comic', { id: comic.id, category_id: comic.category_id });
+    const similar = await getSimilarStories('comic', comic.id);
+    const categories = (await getCategoriesFor('comic', [comic.id])).get(comic.id) ?? [];
     const purchased = await getPurchasedIds(session?.user?.id, 'episode', episodes.filter(e => e.price > 0).map(e => e.id));
 
     return (
@@ -65,22 +67,21 @@ export default async function ComicDetail({ params }: { params: Promise<{ id: st
 
                         {/* Info */}
                         <div className="flex-grow">
-                            <div className="flex flex-wrap gap-3 mb-4">
-                                <span className="px-3 py-1 rounded-full bg-pink-100 dark:bg-pink-900/30 text-pink-800 dark:text-pink-300 text-sm font-medium">
-                                    {comic.category_name || 'Comic'}
-                                </span>
+                            <div className="flex flex-wrap items-center gap-3 mb-4">
+                                <span className="px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium">การ์ตูน</span>
                                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${comic.status === 'PUBLISHED' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'}`}>
                                     {comic.status === 'PUBLISHED' ? 'เผยแพร่แล้ว' : 'ฉบับร่าง'}
                                 </span>
                             </div>
 
-                            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">{comic.title}</h1>
-                            <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">By <span className="font-semibold text-gray-900 dark:text-white">{comic.author_name || 'Unknown'}</span></p>
+                            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4 break-words">{comic.title}</h1>
+                            <p className="text-xl text-gray-600 dark:text-gray-300 mb-4">โดย <span className="font-semibold text-gray-900 dark:text-white">{comic.author_name || 'ไม่ระบุชื่อ'}</span></p>
+                            <CategoryTags categories={categories} type="comic" size="md" className="mb-8" />
 
                             <RatingStars contentType="comic" contentId={id} />
-                            <div className="flex gap-4 mb-10">
+                            <div className="flex flex-wrap gap-3 sm:gap-4 mb-10">
                                 {episodes.length > 0 ? (
-                                    <Link href={`/comic/${id}/read/${episodes[0].id}`} className="bg-pink-600 text-white px-8 py-3 rounded-lg font-bold hover:bg-pink-700 transition shadow-lg hover:shadow-pink-500/30">
+                                    <Link href={`/comic/${id}/read/${episodes[0].id}`} className="whitespace-nowrap bg-pink-600 text-white px-8 py-3 rounded-lg font-bold hover:bg-pink-700 transition shadow-lg hover:shadow-pink-500/30">
                                         เริ่มอ่าน
                                     </Link>
                                 ) : (

@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
 import { AUTHOR_SETTABLE_STATUSES, canViewContent } from '@/lib/visibility';
 import { isPublicUploadUrl } from '@/lib/upload';
+import { categoryIdsFromBody, getCategoriesFor, parseCategoryIds, setStoryCategories } from '@/lib/categories';
 
 // GET - Fetch single comic
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -11,10 +12,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
     try {
         const [comics] = await pool.query<RowDataPacket[]>(
-            `SELECT c.*, u.name as author_name, cat.name as category_name 
+            `SELECT c.*, u.name as author_name
              FROM comics c 
              LEFT JOIN users u ON c.author_id = u.id 
-             LEFT JOIN categories cat ON c.category_id = cat.id 
              WHERE c.id = ?`,
             [id]
         );
@@ -24,7 +24,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             return NextResponse.json({ error: 'ไม่พบการ์ตูนเรื่องนี้' }, { status: 404 });
         }
 
-        return NextResponse.json(comics[0]);
+        const categories = (await getCategoriesFor('comic', [id])).get(id) ?? [];
+        return NextResponse.json({ ...comics[0], categories });
     } catch (error) {
         console.error('Database error:', error);
         return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
@@ -51,9 +52,19 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
 
     const body = await req.json();
-    const { title, description, status, categoryId, coverImage } = body;
+    const { title, description, status, coverImage } = body;
     if (coverImage && !isPublicUploadUrl(coverImage)) {
         return NextResponse.json({ error: 'รูปปกไม่ถูกต้อง' }, { status: 400 });
+    }
+
+    const rawCategoryIds = categoryIdsFromBody(body);
+    let categoryIds: string[] | null = null;
+    if (rawCategoryIds !== undefined) {
+        const parsed = await parseCategoryIds(rawCategoryIds);
+        if ('error' in parsed) {
+            return NextResponse.json({ error: parsed.error }, { status: 400 });
+        }
+        categoryIds = parsed.ids;
     }
 
     if (status !== undefined) {
@@ -65,6 +76,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         }
     }
 
+    const conn = await pool.getConnection();
     try {
         const updates: string[] = [];
         const values: (string | null)[] = [];
@@ -72,20 +84,27 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         if (title !== undefined) { updates.push('title = ?'); values.push(title); }
         if (description !== undefined) { updates.push('description = ?'); values.push(description); }
         if (status !== undefined) { updates.push('status = ?'); values.push(status); }
-        if (categoryId !== undefined) { updates.push('category_id = ?'); values.push(categoryId || null); }
         if (coverImage !== undefined) { updates.push('cover_image = ?'); values.push(coverImage); }
 
-        if (updates.length === 0) {
+        if (updates.length === 0 && categoryIds === null) {
             return NextResponse.json({ error: 'ไม่มีข้อมูลที่ต้องแก้ไข' }, { status: 400 });
         }
 
-        values.push(id);
-        await pool.query(`UPDATE comics SET ${updates.join(', ')} WHERE id = ?`, values);
+        await conn.beginTransaction();
+        if (updates.length > 0) {
+            values.push(id);
+            await conn.query(`UPDATE comics SET ${updates.join(', ')} WHERE id = ?`, values);
+        }
+        if (categoryIds !== null) await setStoryCategories(conn, 'comic', id, categoryIds);
+        await conn.commit();
 
         return NextResponse.json({ success: true });
     } catch (error) {
+        await conn.rollback();
         console.error('Database error:', error);
         return NextResponse.json({ error: 'แก้ไขการ์ตูนไม่สำเร็จ' }, { status: 500 });
+    } finally {
+        conn.release();
     }
 }
 
