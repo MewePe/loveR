@@ -114,8 +114,8 @@ export default function WorkFormModal({ kind, work, categories, onClose, onSaved
                                 </div>
                             ) : (
                                 <label className={`w-24 h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg flex flex-col items-center justify-center cursor-pointer ${k.dropzone} transition`}>
-                                    <Upload className="w-6 h-6 text-gray-400" />
-                                    <span className="text-xs text-gray-400 mt-1">อัพโหลด</span>
+                                    <Upload className="w-6 h-6 text-gray-500 dark:text-gray-400" />
+                                    <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">อัพโหลด</span>
                                     <input type="file" accept="image/*" onChange={handleCoverChange} className="hidden" />
                                 </label>
                             )}

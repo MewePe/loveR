@@ -105,7 +105,7 @@ export default function DashboardPanel({ stats, onCreateNovel }: DashboardPanelP
                 {analytics ? (
                     <TimeSeriesChart data={analytics.series} unit="บาท" series={[{ key: 'earning', label: 'รายได้', color: SERIES_COLORS.indigo }]} />
                 ) : (
-                    <div className="h-64 flex items-center justify-center text-gray-400">กำลังโหลด...</div>
+                    <div className="h-64 flex items-center justify-center text-gray-500 dark:text-gray-400">กำลังโหลด...</div>
                 )}
             </div>
 
@@ -113,9 +113,9 @@ export default function DashboardPanel({ stats, onCreateNovel }: DashboardPanelP
             <div className={card}>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">สถิติรายเรื่อง</h3>
                 {!analytics ? (
-                    <div className="py-8 text-center text-gray-400">กำลังโหลด...</div>
+                    <div className="py-8 text-center text-gray-500 dark:text-gray-400">กำลังโหลด...</div>
                 ) : analytics.works.length === 0 ? (
-                    <div className="text-center py-12 text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed dark:border-gray-700">
+                    <div className="text-center py-12 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed dark:border-gray-700">
                         ยังไม่มีผลงาน เริ่มเขียนกันเลย!
                     </div>
                 ) : (
@@ -138,7 +138,7 @@ export default function DashboardPanel({ stats, onCreateNovel }: DashboardPanelP
                                     <tr key={`${w.type}-${w.id}`}>
                                         <td className="py-3 pr-3">
                                             <Link href={`/${w.type}/${w.id}`} className="font-medium text-gray-900 dark:text-white hover:underline">{w.title}</Link>
-                                            <div className="text-xs text-gray-400 mt-0.5">{WORK_KINDS[w.type].label} · {STATUS_LABEL[w.status] ?? w.status}</div>
+                                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{WORK_KINDS[w.type].label} · {STATUS_LABEL[w.status] ?? w.status}</div>
                                         </td>
                                         <td className="py-3 px-3 text-right tabular-nums">{w.items}</td>
                                         <td className="py-3 px-3 text-right tabular-nums">{w.views.toLocaleString()}</td>

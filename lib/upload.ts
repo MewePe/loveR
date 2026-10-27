@@ -54,7 +54,7 @@ export async function saveImageUpload(file: File, subdir = ''): Promise<SaveResu
 
 // Validate and save a comic page privately, namespaced by the uploading author
 export async function savePrivateComicPage(file: File, userId: string): Promise<SaveResult> {
-    if (!USER_ID_RE.test(userId)) return { error: 'Invalid user', status: 400 };
+    if (!USER_ID_RE.test(userId)) return { error: 'ผู้ใช้ไม่ถูกต้อง', status: 400 };
     const result = await validateAndWrite(file, path.join(PRIVATE_COMIC_DIR, userId));
     if ('error' in result) return result;
     return { url: `${PRIVATE_COMIC_URL_PREFIX}${userId}/${result.filename}` };
@@ -83,7 +83,7 @@ export type PrivateDocCategory = typeof PRIVATE_DOC_CATEGORIES[number];
 const PRIVATE_DOC_DIR = path.join(process.cwd(), 'storage', 'private');
 
 export async function savePrivateDocument(file: File, category: PrivateDocCategory, ownerId: string): Promise<SaveResult> {
-    if (!USER_ID_RE.test(ownerId)) return { error: 'Invalid user', status: 400 };
+    if (!USER_ID_RE.test(ownerId)) return { error: 'ผู้ใช้ไม่ถูกต้อง', status: 400 };
     const result = await validateAndWrite(file, path.join(PRIVATE_DOC_DIR, category, ownerId));
     if ('error' in result) return result;
     return { url: `/api/media/private/${category}/${ownerId}/${result.filename}` };

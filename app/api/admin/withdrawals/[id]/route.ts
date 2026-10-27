@@ -12,7 +12,7 @@ import { baht, notify, short } from '@/lib/notifications';
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
     const session = await auth();
     if (session?.user?.role !== 'ADMIN') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
 
     const { id } = await params;
@@ -22,7 +22,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const status = form ? form.get('status') : body.status;
 
     if (status !== 'APPROVED' && status !== 'REJECTED') {
-        return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+        return NextResponse.json({ error: 'สถานะไม่ถูกต้อง' }, { status: 400 });
     }
 
     try {
@@ -57,6 +57,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Failed to update withdrawal:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }

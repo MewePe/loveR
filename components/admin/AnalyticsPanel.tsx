@@ -31,14 +31,14 @@ export default function AnalyticsPanel() {
 
     useEffect(() => { load(); }, [load]);
 
-    if (failed) return <p className="text-red-500">โหลดข้อมูลกราฟไม่สำเร็จ</p>;
-    if (!data) return <div className="h-40 flex items-center justify-center text-gray-400">กำลังโหลด...</div>;
+    if (failed) return <p className="text-red-500 dark:text-red-400">โหลดข้อมูลกราฟไม่สำเร็จ</p>;
+    if (!data) return <div className="h-40 flex items-center justify-center text-gray-500 dark:text-gray-400">กำลังโหลด...</div>;
 
     const tiles = [
-        { label: "ยอดเติมเหรียญที่อนุมัติ", value: `${baht(data.totals.topup_amount)} บาท`, icon: Coins, color: "text-amber-500" },
-        { label: "ยอดขายตอน", value: `${baht(data.totals.sales_amount)} เหรียญ`, icon: ShoppingCart, color: "text-indigo-500" },
-        { label: "ส่วนแบ่งของเว็บ", value: `${baht(data.totals.platform_amount)} บาท`, icon: Landmark, color: "text-green-500" },
-        { label: "สลิปรอตรวจ", value: `${data.totals.pending_topups} รายการ`, icon: Clock, color: "text-red-500" },
+        { label: "ยอดเติมเหรียญที่อนุมัติ", value: `${baht(data.totals.topup_amount)} บาท`, icon: Coins, color: "text-amber-500 dark:text-amber-400" },
+        { label: "ยอดขายตอน", value: `${baht(data.totals.sales_amount)} เหรียญ`, icon: ShoppingCart, color: "text-indigo-500 dark:text-indigo-400" },
+        { label: "ส่วนแบ่งของเว็บ", value: `${baht(data.totals.platform_amount)} บาท`, icon: Landmark, color: "text-green-500 dark:text-green-400" },
+        { label: "สลิปรอตรวจ", value: `${data.totals.pending_topups} รายการ`, icon: Clock, color: "text-red-500 dark:text-red-400" },
     ];
     const card = "bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border dark:border-gray-700";
 

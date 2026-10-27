@@ -7,8 +7,8 @@ interface Withdrawal { id: string; amount: string; bank_name: string; bank_accou
 
 const statusText: Record<string, string> = { PENDING: 'รอโอน', APPROVED: 'โอนแล้ว', REJECTED: 'ถูกปฏิเสธ' };
 const statusColors: Record<string, string> = {
-    PENDING: 'text-yellow-600 dark:text-yellow-400',
-    APPROVED: 'text-green-600 dark:text-green-400',
+    PENDING: 'text-yellow-700 dark:text-yellow-400',
+    APPROVED: 'text-green-700 dark:text-green-400',
     REJECTED: 'text-red-600 dark:text-red-400',
 };
 
@@ -101,7 +101,7 @@ export default function WalletPanel() {
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-6">
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">ประวัติการถอนเงิน</h3>
                 {withdrawals.length === 0 ? (
-                    <div className="text-center py-12 text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed dark:border-gray-700">
+                    <div className="text-center py-12 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed dark:border-gray-700">
                         ยังไม่มีประวัติการถอนเงิน
                     </div>
                 ) : (
@@ -110,13 +110,13 @@ export default function WalletPanel() {
                             <li key={w.id} className="py-3 flex justify-between text-sm">
                                 <span className="text-gray-600 dark:text-gray-300">
                                     {new Date(w.created_at).toLocaleString('th-TH')}
-                                    <span className="block text-xs text-gray-400">{w.bank_name} {w.bank_account_number}</span>
+                                    <span className="block text-xs text-gray-500 dark:text-gray-400">{w.bank_name} {w.bank_account_number}</span>
                                 </span>
                                 <span className="text-right">
                                     <span className="font-semibold text-gray-900 dark:text-white">{baht(w.amount)}</span>{' '}
                                     <span className={statusColors[w.status]}>{statusText[w.status]}</span>
-                                    {w.slip_image && <a href={w.slip_image} target="_blank" rel="noreferrer" className="block text-xs text-indigo-600 hover:underline">ดูสลิป</a>}
-                                    {w.rejection_reason && <span className="block text-xs text-gray-500">{w.rejection_reason}</span>}
+                                    {w.slip_image && <a href={w.slip_image} target="_blank" rel="noreferrer" className="block text-xs text-indigo-600 dark:text-indigo-400 hover:underline">ดูสลิป</a>}
+                                    {w.rejection_reason && <span className="block text-xs text-gray-500 dark:text-gray-400">{w.rejection_reason}</span>}
                                 </span>
                             </li>
                         ))}

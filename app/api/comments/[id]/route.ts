@@ -8,7 +8,7 @@ import { isOwnerOrAdmin } from '@/lib/visibility';
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
     const session = await auth();
     if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
     const { id } = await params;
 
@@ -23,16 +23,16 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
         );
         const comment = rows[0];
         if (!comment) {
-            return NextResponse.json({ error: 'Comment not found' }, { status: 404 });
+            return NextResponse.json({ error: 'ไม่พบคอมเมนต์' }, { status: 404 });
         }
         if (comment.user_id !== session.user.id && !isOwnerOrAdmin(session.user, comment.content_author_id)) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+            return NextResponse.json({ error: 'ไม่มีสิทธิ์ทำรายการนี้' }, { status: 403 });
         }
 
         await pool.query('DELETE FROM comments WHERE id = ?', [id]);
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Error deleting comment:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }

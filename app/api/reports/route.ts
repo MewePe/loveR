@@ -13,7 +13,7 @@ const TARGET_TABLES: Record<string, string> = { NOVEL: 'novels', COMIC: 'comics'
 export async function POST(req: Request) {
     const session = await auth();
     if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
 
     try {
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
 
         const table = TARGET_TABLES[target_type];
         if (!table || typeof target_id !== 'string') {
-            return NextResponse.json({ error: 'Invalid target' }, { status: 400 });
+            return NextResponse.json({ error: 'สิ่งที่รายงานไม่ถูกต้อง' }, { status: 400 });
         }
 
         const trimmedReason = typeof reason === 'string' ? reason.trim() : '';
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
 
         const [targets] = await pool.query<RowDataPacket[]>(`SELECT id FROM ${table} WHERE id = ?`, [target_id]);
         if (!targets[0]) {
-            return NextResponse.json({ error: 'Content not found' }, { status: 404 });
+            return NextResponse.json({ error: 'ไม่พบเรื่องนี้' }, { status: 404 });
         }
 
         const [existing] = await pool.query<RowDataPacket[]>(
@@ -55,6 +55,6 @@ export async function POST(req: Request) {
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Failed to create report:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }

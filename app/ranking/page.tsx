@@ -11,7 +11,7 @@ const TYPES = {
 };
 
 // Gold, silver and bronze for the top three
-const MEDALS = ['bg-amber-400 text-white', 'bg-gray-400 text-white', 'bg-orange-400 text-white'];
+const MEDALS = ['bg-amber-400 text-amber-950', 'bg-gray-300 text-gray-900', 'bg-orange-300 text-orange-950'];
 
 function statLine(story: StoryRow) {
     return [
@@ -33,7 +33,7 @@ export default async function RankingPage({ searchParams }: { searchParams: Prom
         <main className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
             <div className="container mx-auto px-4 py-10 max-w-4xl">
                 <h1 className="flex items-center gap-3 text-3xl font-bold text-gray-900 dark:text-white mb-6">
-                    <Trophy className="w-8 h-8 text-amber-500" /> จัดอันดับ
+                    <Trophy className="w-8 h-8 text-amber-500 dark:text-amber-400" /> จัดอันดับ
                 </h1>
 
                 <div className="flex gap-2 mb-4">
@@ -67,7 +67,7 @@ export default async function RankingPage({ searchParams }: { searchParams: Prom
                         {stories.map((story, index) => (
                             <li key={story.id}>
                                 <Link href={style.href + story.id} className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition group">
-                                    <span className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${MEDALS[index] ?? 'text-gray-400'}`}>
+                                    <span className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${MEDALS[index] ?? 'text-gray-500 dark:text-gray-400'}`}>
                                         {index + 1}
                                     </span>
                                     <div className={`shrink-0 w-12 sm:w-14 aspect-[2/3] rounded-md overflow-hidden bg-gradient-to-br ${style.cover}`}>
@@ -82,7 +82,7 @@ export default async function RankingPage({ searchParams }: { searchParams: Prom
                                         <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
                                             {story.author_name || 'ไม่ระบุชื่อ'}{story.category_name && ` · ${story.category_name}`}
                                         </p>
-                                        <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-400">
+                                        <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-500 dark:text-gray-400">
                                             {statLine(story).map((stat, i) => (
                                                 <span key={i} className={RANKING_SORTS[i] === sort ? `font-semibold ${style.text}` : ''}>{stat}</span>
                                             ))}

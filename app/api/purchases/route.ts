@@ -7,13 +7,13 @@ import { notify, short } from '@/lib/notifications';
 export async function POST(req: Request) {
     const session = await auth();
     if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
 
     try {
         const { kind, id } = await req.json();
         if (!['chapter', 'episode'].includes(kind) || typeof id !== 'string') {
-            return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+            return NextResponse.json({ error: 'คำขอไม่ถูกต้อง' }, { status: 400 });
         }
 
         const result = await purchaseItem(session.user.id, kind as ItemKind, id);
@@ -31,6 +31,6 @@ export async function POST(req: Request) {
         return NextResponse.json({ success: true, coins: result.coins });
     } catch (error) {
         console.error('Purchase failed:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }

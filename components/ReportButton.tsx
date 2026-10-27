@@ -65,7 +65,7 @@ export default function ReportButton({ targetType, targetId, compact = false }: 
     return (
         <>
             {compact ? (
-                <button onClick={handleOpen} title="รายงานความคิดเห็น" className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400">
+                <button onClick={handleOpen} title="รายงานความคิดเห็น" className="p-1 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400">
                     <Flag className="w-4 h-4" />
                 </button>
             ) : (

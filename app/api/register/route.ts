@@ -55,6 +55,6 @@ export async function POST(req: Request) {
         return NextResponse.json({ message: 'User created successfully' }, { status: 201 });
     } catch (error) {
         console.error('Registration error:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }

@@ -12,14 +12,14 @@ export async function PATCH(
 ) {
     const session = await auth();
     if (session?.user?.role !== 'ADMIN') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
 
     const { id } = await params;
     const { role } = await req.json();
 
     if (!ASSIGNABLE_ROLES.includes(role)) {
-        return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
+        return NextResponse.json({ error: 'สิทธิ์ไม่ถูกต้อง' }, { status: 400 });
     }
     // Prevent admins from demoting/banning themselves and locking everyone out
     if (id === session.user.id) {
@@ -29,11 +29,11 @@ export async function PATCH(
     try {
         const [result] = await pool.query<ResultSetHeader>('UPDATE users SET role = ? WHERE id = ?', [role, id]);
         if (result.affectedRows === 0) {
-            return NextResponse.json({ error: 'User not found' }, { status: 404 });
+            return NextResponse.json({ error: 'ไม่พบผู้ใช้' }, { status: 404 });
         }
         return NextResponse.json({ message: 'User updated successfully' });
     } catch (error) {
         console.error('Failed to update user:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }

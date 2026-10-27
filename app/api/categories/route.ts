@@ -7,6 +7,6 @@ export async function GET() {
         return NextResponse.json(rows);
     } catch (error) {
         console.error('Error fetching categories:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }

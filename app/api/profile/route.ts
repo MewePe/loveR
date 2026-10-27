@@ -8,7 +8,7 @@ export async function GET() {
     try {
         const session = await auth();
         if (!session?.user?.email) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
         }
 
         // Get user profile
@@ -18,7 +18,7 @@ export async function GET() {
         );
 
         if (!users[0]) {
-            return NextResponse.json({ error: 'User not found' }, { status: 404 });
+            return NextResponse.json({ error: 'ไม่พบผู้ใช้' }, { status: 404 });
         }
 
         const user = users[0];
@@ -44,7 +44,7 @@ export async function GET() {
         return NextResponse.json({ user, stats });
     } catch (error) {
         console.error('Error fetching profile:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }
 
@@ -52,7 +52,7 @@ export async function PATCH(req: Request) {
     try {
         const session = await auth();
         if (!session?.user?.email) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
         }
 
         const body = await req.json();
@@ -62,7 +62,7 @@ export async function PATCH(req: Request) {
             return NextResponse.json({ error: 'ชื่อต้องมี 1-100 ตัวอักษร' }, { status: 400 });
         }
         if (image && !isPublicUploadUrl(image)) {
-            return NextResponse.json({ error: 'Invalid image' }, { status: 400 });
+            return NextResponse.json({ error: 'รูปไม่ถูกต้อง' }, { status: 400 });
         }
 
         const updates: string[] = [];
@@ -78,7 +78,7 @@ export async function PATCH(req: Request) {
         }
 
         if (updates.length === 0) {
-            return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
+            return NextResponse.json({ error: 'ไม่มีข้อมูลที่ต้องแก้ไข' }, { status: 400 });
         }
 
         values.push(session.user.email);
@@ -90,6 +90,6 @@ export async function PATCH(req: Request) {
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Error updating profile:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }

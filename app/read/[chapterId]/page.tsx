@@ -69,7 +69,7 @@ export default async function ReadChapter({ params }: { params: Promise<{ chapte
                 <h1 className="text-sm md:text-base font-bold text-center truncate px-2 dark:text-white">{chapter.title}</h1>
                 <div className="shrink-0 flex justify-end items-center gap-2 text-sm">
                     <EpisodePicker key={chapter.id} items={episodes} currentId={chapter.id} hrefPrefix="/read/" variant="compact" />
-                    <button className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200 transition-colors p-1" aria-label="ตั้งค่าตัวอักษร">Aa</button>
+                    <button className="text-gray-500 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200 transition-colors p-1" aria-label="ตั้งค่าตัวอักษร">Aa</button>
                     <ThemeToggle />
                 </div>
             </div>
@@ -98,7 +98,7 @@ export default async function ReadChapter({ params }: { params: Promise<{ chapte
                             &larr; บทก่อนหน้า
                         </Link>
                     ) : (
-                        <button disabled className="flex-1 bg-gray-100 dark:bg-gray-800/50 text-gray-400 dark:text-gray-500 px-2 py-4 rounded-xl text-center font-medium text-sm sm:text-base cursor-not-allowed border border-transparent dark:border-gray-800">
+                        <button disabled className="flex-1 bg-gray-100 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400 px-2 py-4 rounded-xl text-center font-medium text-sm sm:text-base cursor-not-allowed border border-transparent dark:border-gray-800">
                             บทก่อนหน้า
                         </button>
                     )}
@@ -113,7 +113,7 @@ export default async function ReadChapter({ params }: { params: Promise<{ chapte
                             บทถัดไป &rarr;
                         </Link>
                     ) : (
-                        <button disabled className="flex-1 bg-gray-100 dark:bg-gray-800/50 text-gray-400 dark:text-gray-500 px-2 py-4 rounded-xl text-center font-medium text-sm sm:text-base cursor-not-allowed border border-transparent dark:border-gray-800">
+                        <button disabled className="flex-1 bg-gray-100 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400 px-2 py-4 rounded-xl text-center font-medium text-sm sm:text-base cursor-not-allowed border border-transparent dark:border-gray-800">
                             บทถัดไป
                         </button>
                     )}

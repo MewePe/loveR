@@ -24,12 +24,12 @@ export async function GET(req: Request) {
                 [chapterId]
             );
             const chapter = rows[0];
-            if (!chapter) return NextResponse.json({ error: 'Chapter not found' }, { status: 404 });
+            if (!chapter) return NextResponse.json({ error: 'ไม่พบบทนี้' }, { status: 404 });
 
             if (!(await canAccess(session?.user, 'chapter', chapter as AccessItem))) {
                 // Unpublished novels don't exist for other users; published paid chapters are just locked
                 if (chapter.content_status !== 'PUBLISHED') {
-                    return NextResponse.json({ error: 'Chapter not found' }, { status: 404 });
+                    return NextResponse.json({ error: 'ไม่พบบทนี้' }, { status: 404 });
                 }
                 return NextResponse.json({ ...chapter, content: null, locked: true });
             }
@@ -40,7 +40,7 @@ export async function GET(req: Request) {
         if (novelId) {
             const [novels] = await pool.query<RowDataPacket[]>('SELECT status, author_id FROM novels WHERE id = ?', [novelId]);
             if (!novels[0] || !canViewContent(session?.user, novels[0])) {
-                return NextResponse.json({ error: 'Novel not found' }, { status: 404 });
+                return NextResponse.json({ error: 'ไม่พบนิยายเรื่องนี้' }, { status: 404 });
             }
             const [rows] = await pool.query(
                 `SELECT id, title, chapter_order, price, created_at
@@ -52,9 +52,9 @@ export async function GET(req: Request) {
             return NextResponse.json(rows);
         }
 
-        return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
+        return NextResponse.json({ error: 'ข้อมูลไม่ครบ' }, { status: 400 });
     } catch (error) {
         console.error('Database error:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }

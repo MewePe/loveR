@@ -30,7 +30,7 @@ export default function StoryCard({ story, type }: { story: StoryCardData; type:
                 <div className="p-3 flex-1 flex flex-col">
                     <h3 className={`font-bold text-gray-900 dark:text-white ${style.hover} transition line-clamp-1 text-sm`}>{story.title}</h3>
                     <p className="text-gray-500 dark:text-gray-400 text-xs mt-1">{story.author_name || 'ไม่ระบุชื่อ'}</p>
-                    <div className="flex items-center justify-between text-xs text-gray-400 mt-2">
+                    <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mt-2">
                         <span>👁️ {(story.views || 0).toLocaleString()}</span>
                         {story.rating_avg != null && <span>⭐ {story.rating_avg.toFixed(1)}</span>}
                     </div>

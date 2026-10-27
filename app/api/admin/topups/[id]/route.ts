@@ -8,13 +8,13 @@ import { notify, short } from '@/lib/notifications';
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
     const session = await auth();
     if (session?.user?.role !== 'ADMIN') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
 
     const { id } = await params;
     const { status, reason } = await req.json();
     if (!['APPROVED', 'REJECTED'].includes(status)) {
-        return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+        return NextResponse.json({ error: 'สถานะไม่ถูกต้อง' }, { status: 400 });
     }
 
     const connection = await pool.getConnection();
@@ -24,7 +24,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         const [rows] = await connection.query<RowDataPacket[]>('SELECT user_id, amount FROM coin_topups WHERE id = ? FOR UPDATE', [id]);
         if (!rows[0]) {
             await connection.rollback();
-            return NextResponse.json({ error: 'Top-up not found' }, { status: 404 });
+            return NextResponse.json({ error: 'ไม่พบรายการเติมเหรียญ' }, { status: 404 });
         }
 
         // Only a PENDING request can change state, so coins are never credited twice
@@ -49,7 +49,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     } catch (error) {
         await connection.rollback();
         console.error('Failed to update top-up:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     } finally {
         connection.release();
     }

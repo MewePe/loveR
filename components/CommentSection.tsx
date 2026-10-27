@@ -139,17 +139,17 @@ export default function CommentSection({ contentType, contentId, accentColor = "
         return (
             <div className="flex gap-3">
                 <div className={`${small ? "w-8 h-8" : "w-10 h-10"} rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 overflow-hidden flex items-center justify-center`}>
-                    {c.user_image ? <img src={c.user_image} alt="" className="w-full h-full object-cover" /> : <User className="w-5 h-5 text-gray-400" />}
+                    {c.user_image ? <img src={c.user_image} alt="" className="w-full h-full object-cover" /> : <User className="w-5 h-5 text-gray-500 dark:text-gray-400" />}
                 </div>
                 <div className="flex-grow min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-semibold text-gray-900 dark:text-white">{c.user_name || "ผู้ใช้"}</span>
                         {c.is_author && <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${accent.badge}`}>ผู้เขียน</span>}
-                        <span className="text-xs text-gray-400">{new Date(c.created_at).toLocaleString("th-TH")}</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">{new Date(c.created_at).toLocaleString("th-TH")}</span>
                         <span className="ml-auto flex items-center gap-1">
                             {!c.is_mine && session?.user && <ReportButton targetType="COMMENT" targetId={c.id} compact />}
                             {c.can_delete && (
-                                <button onClick={() => handleDelete(c, parentId)} title="ลบความคิดเห็น" className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400">
+                                <button onClick={() => handleDelete(c, parentId)} title="ลบความคิดเห็น" className="p-1 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400">
                                     <Trash2 className="w-4 h-4" />
                                 </button>
                             )}
@@ -187,7 +187,7 @@ export default function CommentSection({ contentType, contentId, accentColor = "
                         className={`w-full px-4 py-3 border rounded-xl bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white focus:ring-2 ${accent.ring} outline-none resize-none`}
                     />
                     <div className="flex items-center justify-between mt-2">
-                        <span className="text-xs text-gray-400">{text.length}/{MAX_LENGTH}</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">{text.length}/{MAX_LENGTH}</span>
                         <button type="submit" disabled={posting || !text.trim()} className={`px-5 py-2 text-white rounded-lg font-medium disabled:opacity-50 ${accent.button}`}>
                             {posting ? "กำลังส่ง..." : "ส่งความคิดเห็น"}
                         </button>

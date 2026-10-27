@@ -13,16 +13,29 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* Dark mode follows the .dark class from next-themes (which already tracks the OS setting when the
+   theme is "system"). A prefers-color-scheme rule here would paint the page dark under a light theme. */
 .dark {
   --background: #0a0a0a;
   --foreground: #ededed;
+}
+
+/* Tailwind v4 draws a bare `border` in currentColor (near-black text = heavy black outlines).
+   Default to theme greys instead; border-* utilities still override these. Form controls get a
+   darker grey so their outline stays visible against the page. */
+@layer base {
+  *, ::after, ::before, ::backdrop, ::file-selector-button {
+    border-color: var(--color-gray-200);
+  }
+  input, select, textarea {
+    border-color: var(--color-gray-400);
+  }
+  .dark *, .dark ::after, .dark ::before, .dark ::backdrop, .dark ::file-selector-button {
+    border-color: var(--color-gray-700);
+  }
+  .dark input, .dark select, .dark textarea {
+    border-color: var(--color-gray-500);
+  }
 }
 
 body {

@@ -20,7 +20,7 @@ const REQUIRED_FOR_APPLICATION = [
 export async function GET() {
     const session = await auth();
     if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
 
     try {
@@ -31,7 +31,7 @@ export async function GET() {
         return NextResponse.json(rows[0] || {});
     } catch (error) {
         console.error('Failed to fetch profile:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }
 
@@ -39,7 +39,7 @@ export async function GET() {
 export async function POST(req: Request) {
     const session = await auth();
     if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
 
     try {
@@ -110,6 +110,6 @@ export async function POST(req: Request) {
         return NextResponse.json({ message: 'Profile saved successfully' });
     } catch (error) {
         console.error('Failed to save profile:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }

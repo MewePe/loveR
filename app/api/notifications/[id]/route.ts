@@ -7,7 +7,7 @@ import { ResultSetHeader } from 'mysql2';
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
     const session = await auth();
     if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
     const { id } = await params;
     try {
@@ -16,11 +16,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
             [id, session.user.id]
         );
         if (result.affectedRows === 0) {
-            return NextResponse.json({ error: 'Notification not found' }, { status: 404 });
+            return NextResponse.json({ error: 'ไม่พบการแจ้งเตือน' }, { status: 404 });
         }
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Error updating notification:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }

@@ -19,25 +19,25 @@ const DROPDOWN_LIMIT = 10;
 
 // Icon and colour per notification type (lib/notifications.ts NOTIFICATION_TYPES)
 const ICONS: Record<string, { icon: typeof Bell; color: string }> = {
-    NEW_CHAPTER: { icon: BookOpen, color: "text-indigo-500" },
-    TOPUP_APPROVED: { icon: Coins, color: "text-green-500" },
-    TOPUP_REJECTED: { icon: XCircle, color: "text-red-500" },
-    COMMENT_REPLY: { icon: MessageCircle, color: "text-blue-500" },
-    NEW_COMMENT: { icon: MessageCircle, color: "text-blue-500" },
-    NEW_RATING: { icon: Star, color: "text-yellow-500" },
-    PURCHASE: { icon: ShoppingCart, color: "text-green-500" },
-    WRITER_APPROVED: { icon: UserCheck, color: "text-green-500" },
-    WRITER_REJECTED: { icon: XCircle, color: "text-red-500" },
-    WITHDRAWAL_APPROVED: { icon: Wallet, color: "text-green-500" },
-    WITHDRAWAL_REJECTED: { icon: Wallet, color: "text-red-500" },
-    ADMIN_TOPUP: { icon: Coins, color: "text-amber-500" },
-    ADMIN_WRITER_REQUEST: { icon: UserCheck, color: "text-purple-500" },
-    ADMIN_WITHDRAWAL: { icon: Wallet, color: "text-amber-500" },
-    ADMIN_REPORT: { icon: Flag, color: "text-red-500" },
+    NEW_CHAPTER: { icon: BookOpen, color: "text-indigo-500 dark:text-indigo-400" },
+    TOPUP_APPROVED: { icon: Coins, color: "text-green-500 dark:text-green-400" },
+    TOPUP_REJECTED: { icon: XCircle, color: "text-red-500 dark:text-red-400" },
+    COMMENT_REPLY: { icon: MessageCircle, color: "text-blue-500 dark:text-blue-400" },
+    NEW_COMMENT: { icon: MessageCircle, color: "text-blue-500 dark:text-blue-400" },
+    NEW_RATING: { icon: Star, color: "text-yellow-500 dark:text-yellow-400" },
+    PURCHASE: { icon: ShoppingCart, color: "text-green-500 dark:text-green-400" },
+    WRITER_APPROVED: { icon: UserCheck, color: "text-green-500 dark:text-green-400" },
+    WRITER_REJECTED: { icon: XCircle, color: "text-red-500 dark:text-red-400" },
+    WITHDRAWAL_APPROVED: { icon: Wallet, color: "text-green-500 dark:text-green-400" },
+    WITHDRAWAL_REJECTED: { icon: Wallet, color: "text-red-500 dark:text-red-400" },
+    ADMIN_TOPUP: { icon: Coins, color: "text-amber-500 dark:text-amber-400" },
+    ADMIN_WRITER_REQUEST: { icon: UserCheck, color: "text-purple-500 dark:text-purple-400" },
+    ADMIN_WITHDRAWAL: { icon: Wallet, color: "text-amber-500 dark:text-amber-400" },
+    ADMIN_REPORT: { icon: Flag, color: "text-red-500 dark:text-red-400" },
 };
 
 export function NotificationIcon({ type }: { type: string }) {
-    const { icon: Icon, color } = ICONS[type] ?? { icon: CheckCircle, color: "text-gray-400" };
+    const { icon: Icon, color } = ICONS[type] ?? { icon: CheckCircle, color: "text-gray-500 dark:text-gray-400" };
     return <Icon className={`w-5 h-5 flex-shrink-0 ${color}`} />;
 }
 
@@ -175,7 +175,7 @@ export default function NotificationBell() {
                                         <NotificationIcon type={n.type} />
                                         <span className="flex-1 min-w-0">
                                             <span className={`block text-sm break-words ${n.is_read ? "text-gray-600 dark:text-gray-300" : "text-gray-900 dark:text-white font-medium"}`}>{n.message}</span>
-                                            <span className="block text-xs text-gray-400 mt-0.5">{timeAgo(n.created_at)}</span>
+                                            <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">{timeAgo(n.created_at)}</span>
                                         </span>
                                         {!n.is_read && <span className="w-2 h-2 mt-1.5 rounded-full bg-indigo-600 flex-shrink-0" aria-label="ยังไม่อ่าน" />}
                                     </button>

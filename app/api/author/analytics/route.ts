@@ -26,7 +26,7 @@ const WORKS_SQL = (type: 'novel' | 'comic') => {
 export async function GET(req: NextRequest) {
     const session = await auth();
     if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
 
     try {
@@ -56,6 +56,6 @@ export async function GET(req: NextRequest) {
         });
     } catch (error) {
         console.error('Failed to load author analytics:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }

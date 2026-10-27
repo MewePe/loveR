@@ -168,10 +168,10 @@ export default function ChapterManagement() {
                         <div className="divide-y dark:divide-gray-700">
                             {chapters.map((chapter, index) => (
                                 <div key={chapter.id} className="p-4 flex items-center gap-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
-                                    <div className="text-gray-400 dark:text-gray-500">
+                                    <div className="text-gray-500 dark:text-gray-400">
                                         <GripVertical className="w-5 h-5" />
                                     </div>
-                                    <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold">
+                                    <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center text-indigo-700 dark:text-indigo-400 font-bold">
                                         {index + 1}
                                     </div>
                                     <div className="flex-1">
@@ -181,7 +181,7 @@ export default function ChapterManagement() {
                                                 <Eye className="w-4 h-4" />
                                                 {(chapter.views || 0).toLocaleString()} วิว
                                             </span>
-                                            <span className={chapter.price > 0 ? 'text-amber-600 dark:text-amber-400' : ''}>
+                                            <span className={chapter.price > 0 ? 'text-amber-700 dark:text-amber-400' : ''}>
                                                 {chapter.price > 0 ? `🔒 ${chapter.price} เหรียญ` : 'ฟรี'}
                                             </span>
                                             <span>{new Date(chapter.created_at).toLocaleDateString('th-TH')}</span>
@@ -190,13 +190,13 @@ export default function ChapterManagement() {
                                     <div className="flex items-center gap-2">
                                         <button
                                             onClick={() => openEditModal(chapter)}
-                                            className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition"
+                                            className="p-2 text-gray-500 dark:text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition"
                                         >
                                             <Edit className="w-5 h-5" />
                                         </button>
                                         <button
                                             onClick={() => handleDelete(chapter.id)}
-                                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
+                                            className="p-2 text-gray-500 dark:text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
                                         >
                                             <Trash2 className="w-5 h-5" />
                                         </button>
@@ -207,7 +207,7 @@ export default function ChapterManagement() {
                     ) : (
                         <div className="p-12 text-center">
                             <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <Plus className="w-8 h-8 text-gray-400" />
+                                <Plus className="w-8 h-8 text-gray-500 dark:text-gray-400" />
                             </div>
                             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">ยังไม่มีบท</h3>
                             <p className="text-gray-500 dark:text-gray-400 mb-4">เริ่มเขียนบทแรกของนิยายกันเลย!</p>
@@ -234,7 +234,7 @@ export default function ChapterManagement() {
                                 onClick={() => setShowModal(false)}
                                 className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                             >
-                                <X className="w-5 h-5 text-gray-500" />
+                                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                             </button>
                         </div>
                         <form onSubmit={handleSubmit} className="p-6 space-y-4">

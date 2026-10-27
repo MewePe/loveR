@@ -128,7 +128,7 @@ export default function ProfilePage() {
                                     {avatarPreview ? (
                                         <Image src={avatarPreview} alt="รูปโปรไฟล์" fill className="object-cover" />
                                     ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-gray-400 text-4xl">
+                                        <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-400 text-4xl">
                                             <User className="w-16 h-16" />
                                         </div>
                                     )}
@@ -162,7 +162,7 @@ export default function ProfilePage() {
                                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${profile?.role === 'ADMIN' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' : profile?.role === 'AUTHOR' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}>
                                         {profile?.role === 'ADMIN' ? '👑 Admin' : profile?.role === 'AUTHOR' ? '✍️ นักเขียน' : '👤 ผู้อ่าน'}
                                     </span>
-                                    <span className="text-sm text-gray-400 flex items-center gap-1">
+                                    <span className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
                                         <Calendar className="w-4 h-4" />
                                         เข้าร่วมเมื่อ {profile?.created_at ? new Date(profile.created_at).toLocaleDateString('th-TH') : '-'}
                                     </span>
@@ -194,17 +194,17 @@ export default function ProfilePage() {
                 {/* Stats */}
                 <div className="grid grid-cols-3 gap-4 mt-6">
                     <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border dark:border-gray-700 text-center">
-                        <BookOpen className="w-8 h-8 text-indigo-500 mx-auto mb-2" />
+                        <BookOpen className="w-8 h-8 text-indigo-500 dark:text-indigo-400 mx-auto mb-2" />
                         <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.novelsRead}</p>
                         <p className="text-sm text-gray-500 dark:text-gray-400">นิยายที่อ่าน</p>
                     </div>
                     <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border dark:border-gray-700 text-center">
-                        <ImageIcon className="w-8 h-8 text-pink-500 mx-auto mb-2" />
+                        <ImageIcon className="w-8 h-8 text-pink-500 dark:text-pink-400 mx-auto mb-2" />
                         <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.comicsRead}</p>
                         <p className="text-sm text-gray-500 dark:text-gray-400">การ์ตูนที่อ่าน</p>
                     </div>
                     <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border dark:border-gray-700 text-center">
-                        <Bookmark className="w-8 h-8 text-yellow-500 mx-auto mb-2" />
+                        <Bookmark className="w-8 h-8 text-yellow-500 dark:text-yellow-400 mx-auto mb-2" />
                         <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.bookmarks}</p>
                         <p className="text-sm text-gray-500 dark:text-gray-400">บุ๊กมาร์ก</p>
                     </div>
@@ -215,22 +215,22 @@ export default function ProfilePage() {
                     <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">เมนูลัด</h2>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <a href="/bookmarks" className="flex items-center gap-3 p-4 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
-                            <Bookmark className="w-5 h-5 text-yellow-500" />
+                            <Bookmark className="w-5 h-5 text-yellow-500 dark:text-yellow-400" />
                             <span className="text-gray-700 dark:text-gray-300">บุ๊กมาร์ก</span>
                         </a>
                         <a href="/history" className="flex items-center gap-3 p-4 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
-                            <Eye className="w-5 h-5 text-blue-500" />
+                            <Eye className="w-5 h-5 text-blue-500 dark:text-blue-400" />
                             <span className="text-gray-700 dark:text-gray-300">ประวัติการอ่าน</span>
                         </a>
                         {profile?.role === 'AUTHOR' && (
                             <a href="/author" className="flex items-center gap-3 p-4 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
-                                <BookOpen className="w-5 h-5 text-purple-500" />
+                                <BookOpen className="w-5 h-5 text-purple-500 dark:text-purple-400" />
                                 <span className="text-gray-700 dark:text-gray-300">หน้านักเขียน</span>
                             </a>
                         )}
                         {profile?.role === 'ADMIN' && (
                             <a href="/admin" className="flex items-center gap-3 p-4 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
-                                <User className="w-5 h-5 text-red-500" />
+                                <User className="w-5 h-5 text-red-500 dark:text-red-400" />
                                 <span className="text-gray-700 dark:text-gray-300">แอดมิน</span>
                             </a>
                         )}

@@ -41,18 +41,18 @@ export async function GET(req: NextRequest) {
     const contentType = searchParams.get('content_type');
     const contentId = searchParams.get('content_id');
     if (!isContentType(contentType) || !contentId) {
-        return NextResponse.json({ error: 'Invalid content_type or content_id' }, { status: 400 });
+        return NextResponse.json({ error: 'ข้อมูลเรื่องไม่ถูกต้อง' }, { status: 400 });
     }
 
     try {
         const content = await getContentRow(contentType, contentId);
         if (!content || !canViewContent(session?.user, content)) {
-            return NextResponse.json({ error: 'Content not found' }, { status: 404 });
+            return NextResponse.json({ error: 'ไม่พบเรื่องนี้' }, { status: 404 });
         }
         return NextResponse.json(await summary(contentType, content, session?.user));
     } catch (error) {
         console.error('Error fetching ratings:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }
 
@@ -60,14 +60,14 @@ export async function GET(req: NextRequest) {
 export async function PUT(req: NextRequest) {
     const session = await auth();
     if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
     const userId = session.user.id;
 
     try {
         const { content_type, content_id, score } = await req.json();
         if (!isContentType(content_type) || typeof content_id !== 'string') {
-            return NextResponse.json({ error: 'Invalid content_type or content_id' }, { status: 400 });
+            return NextResponse.json({ error: 'ข้อมูลเรื่องไม่ถูกต้อง' }, { status: 400 });
         }
         if (!Number.isInteger(score) || score < 1 || score > 5) {
             return NextResponse.json({ error: 'คะแนนต้องเป็น 1-5' }, { status: 400 });
@@ -75,7 +75,7 @@ export async function PUT(req: NextRequest) {
 
         const content = await getContentRow(content_type, content_id);
         if (!content || !canViewContent(session.user, content)) {
-            return NextResponse.json({ error: 'Content not found' }, { status: 404 });
+            return NextResponse.json({ error: 'ไม่พบเรื่องนี้' }, { status: 404 });
         }
         if (content.author_id === userId) {
             return NextResponse.json({ error: 'ให้คะแนนผลงานของตัวเองไม่ได้' }, { status: 403 });
@@ -101,7 +101,7 @@ export async function PUT(req: NextRequest) {
         return NextResponse.json(await summary(content_type, content, session.user));
     } catch (error) {
         console.error('Error saving rating:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }
 
@@ -109,13 +109,13 @@ export async function PUT(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
     const session = await auth();
     if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
 
     try {
         const { content_type, content_id } = await req.json();
         if (!isContentType(content_type) || typeof content_id !== 'string') {
-            return NextResponse.json({ error: 'Invalid content_type or content_id' }, { status: 400 });
+            return NextResponse.json({ error: 'ข้อมูลเรื่องไม่ถูกต้อง' }, { status: 400 });
         }
 
         await pool.query(
@@ -130,6 +130,6 @@ export async function DELETE(req: NextRequest) {
         return NextResponse.json(await summary(content_type, content, session.user));
     } catch (error) {
         console.error('Error removing rating:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }

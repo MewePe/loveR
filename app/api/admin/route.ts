@@ -5,12 +5,12 @@ import { RowDataPacket } from 'mysql2';
 
 export async function GET() {
     const session = await auth();
-    if (!session?.user?.email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!session?.user?.email) return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
 
     // Check admin role
     const [users] = await pool.query<RowDataPacket[]>('SELECT role FROM users WHERE email = ?', [session.user.email]);
     if (users[0]?.role !== 'ADMIN') {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        return NextResponse.json({ error: 'ไม่มีสิทธิ์ทำรายการนี้' }, { status: 403 });
     }
 
     try {
@@ -29,6 +29,6 @@ export async function GET() {
         });
     } catch (error) {
         console.error('Failed to fetch admin stats:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }

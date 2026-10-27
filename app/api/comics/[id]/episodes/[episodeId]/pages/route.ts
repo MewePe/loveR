@@ -18,14 +18,14 @@ export async function GET(_req: Request, { params }: Params) {
             [episodeId, comicId]
         );
         if (!episodes[0]) {
-            return NextResponse.json({ error: 'Episode not found' }, { status: 404 });
+            return NextResponse.json({ error: 'ไม่พบตอนนี้' }, { status: 404 });
         }
         const session = await auth();
         if (!(await canAccess(session?.user, 'episode', episodes[0] as AccessItem))) {
             if (episodes[0].content_status !== 'PUBLISHED') {
-                return NextResponse.json({ error: 'Episode not found' }, { status: 404 });
+                return NextResponse.json({ error: 'ไม่พบตอนนี้' }, { status: 404 });
             }
-            return NextResponse.json({ error: 'Episode is locked', locked: true }, { status: 402 });
+            return NextResponse.json({ error: 'ตอนนี้ต้องซื้อก่อนอ่าน', locked: true }, { status: 402 });
         }
 
         const [pages] = await pool.query<RowDataPacket[]>(
@@ -35,7 +35,7 @@ export async function GET(_req: Request, { params }: Params) {
         return NextResponse.json(pages);
     } catch (error) {
         console.error('Database error:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }
 
@@ -45,14 +45,14 @@ export async function POST(req: Request, { params }: Params) {
     const session = await auth();
 
     if (!session?.user?.email) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
 
     const [users] = await pool.query<RowDataPacket[]>(
         'SELECT id FROM users WHERE email = ?',
         [session.user.email]
     );
-    if (!users[0]) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    if (!users[0]) return NextResponse.json({ error: 'ไม่พบผู้ใช้' }, { status: 404 });
     const userId = users[0].id;
 
     // Verify comic ownership
@@ -61,13 +61,13 @@ export async function POST(req: Request, { params }: Params) {
         'SELECT c.id FROM comics c JOIN comic_episodes e ON e.comic_id = c.id WHERE c.id = ? AND c.author_id = ? AND e.id = ?',
         [comicId, userId, episodeId]
     );
-    if (!comics[0]) return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+    if (!comics[0]) return NextResponse.json({ error: 'ไม่มีสิทธิ์ทำรายการนี้' }, { status: 403 });
 
     const body = await req.json();
     const { imageUrls }: { imageUrls: string[] } = body;
 
     if (!imageUrls || imageUrls.length === 0) {
-        return NextResponse.json({ error: 'No images provided' }, { status: 400 });
+        return NextResponse.json({ error: 'กรุณาเลือกรูป' }, { status: 400 });
     }
     const pageError = validatePageUrls(imageUrls, userId);
     if (pageError) {
@@ -95,7 +95,7 @@ export async function POST(req: Request, { params }: Params) {
         return NextResponse.json({ success: true, count: insertedIds.length });
     } catch (error) {
         console.error('Database error:', error);
-        return NextResponse.json({ error: 'Failed to add pages' }, { status: 500 });
+        return NextResponse.json({ error: 'เพิ่มหน้าไม่สำเร็จ' }, { status: 500 });
     }
 }
 
@@ -105,14 +105,14 @@ export async function PATCH(req: Request, { params }: Params) {
     const session = await auth();
 
     if (!session?.user?.email) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
 
     const [users] = await pool.query<RowDataPacket[]>(
         'SELECT id FROM users WHERE email = ?',
         [session.user.email]
     );
-    if (!users[0]) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    if (!users[0]) return NextResponse.json({ error: 'ไม่พบผู้ใช้' }, { status: 404 });
     const userId = users[0].id;
 
     const [comics] = await pool.query<RowDataPacket[]>(
@@ -120,7 +120,7 @@ export async function PATCH(req: Request, { params }: Params) {
         'SELECT c.id FROM comics c JOIN comic_episodes e ON e.comic_id = c.id WHERE c.id = ? AND c.author_id = ? AND e.id = ?',
         [comicId, userId, episodeId]
     );
-    if (!comics[0]) return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+    if (!comics[0]) return NextResponse.json({ error: 'ไม่มีสิทธิ์ทำรายการนี้' }, { status: 403 });
 
     const body = await req.json();
     const { pages }: { pages: { id: string; page_order: number }[] } = body;
@@ -135,7 +135,7 @@ export async function PATCH(req: Request, { params }: Params) {
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Database error:', error);
-        return NextResponse.json({ error: 'Failed to reorder pages' }, { status: 500 });
+        return NextResponse.json({ error: 'เรียงหน้าใหม่ไม่สำเร็จ' }, { status: 500 });
     }
 }
 
@@ -147,17 +147,17 @@ export async function DELETE(req: Request, { params }: Params) {
     const session = await auth();
 
     if (!session?.user?.email) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
     if (!pageId) {
-        return NextResponse.json({ error: 'pageId is required' }, { status: 400 });
+        return NextResponse.json({ error: 'ไม่ได้ระบุหน้าที่ต้องการ' }, { status: 400 });
     }
 
     const [users] = await pool.query<RowDataPacket[]>(
         'SELECT id FROM users WHERE email = ?',
         [session.user.email]
     );
-    if (!users[0]) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    if (!users[0]) return NextResponse.json({ error: 'ไม่พบผู้ใช้' }, { status: 404 });
     const userId = users[0].id;
 
     const [comics] = await pool.query<RowDataPacket[]>(
@@ -165,7 +165,7 @@ export async function DELETE(req: Request, { params }: Params) {
         'SELECT c.id FROM comics c JOIN comic_episodes e ON e.comic_id = c.id WHERE c.id = ? AND c.author_id = ? AND e.id = ?',
         [comicId, userId, episodeId]
     );
-    if (!comics[0]) return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+    if (!comics[0]) return NextResponse.json({ error: 'ไม่มีสิทธิ์ทำรายการนี้' }, { status: 403 });
 
     try {
         await pool.query(
@@ -188,6 +188,6 @@ export async function DELETE(req: Request, { params }: Params) {
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Database error:', error);
-        return NextResponse.json({ error: 'Failed to delete page' }, { status: 500 });
+        return NextResponse.json({ error: 'ลบหน้าไม่สำเร็จ' }, { status: 500 });
     }
 }

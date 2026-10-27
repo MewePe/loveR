@@ -16,14 +16,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             [episodeId, comicId]
         );
         if (!episodes[0]) {
-            return NextResponse.json({ error: 'Episode not found' }, { status: 404 });
+            return NextResponse.json({ error: 'ไม่พบตอนนี้' }, { status: 404 });
         }
 
         const session = await auth();
         if (!(await canAccess(session?.user, 'episode', episodes[0] as AccessItem))) {
             // Unpublished comics don't exist for other users; published paid episodes are just locked
             if (episodes[0].content_status !== 'PUBLISHED') {
-                return NextResponse.json({ error: 'Episode not found' }, { status: 404 });
+                return NextResponse.json({ error: 'ไม่พบตอนนี้' }, { status: 404 });
             }
             return NextResponse.json({ ...episodes[0], pages: [], locked: true });
         }
@@ -36,7 +36,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         return NextResponse.json({ ...episodes[0], pages });
     } catch (error) {
         console.error('Database error:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }
 
@@ -46,24 +46,24 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const session = await auth();
 
     if (!session?.user?.email) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
 
     const [users] = await pool.query<RowDataPacket[]>('SELECT id FROM users WHERE email = ?', [session.user.email]);
     if (!users[0]) {
-        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+        return NextResponse.json({ error: 'ไม่พบผู้ใช้' }, { status: 404 });
     }
     const userId = users[0].id;
 
     // Check comic ownership
     const [comics] = await pool.query<RowDataPacket[]>('SELECT * FROM comics WHERE id = ? AND author_id = ?', [comicId, userId]);
     if (!comics[0]) {
-        return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+        return NextResponse.json({ error: 'ไม่มีสิทธิ์ทำรายการนี้' }, { status: 403 });
     }
 
     const [owned] = await pool.query<RowDataPacket[]>('SELECT id FROM comic_episodes WHERE id = ? AND comic_id = ?', [episodeId, comicId]);
     if (!owned[0]) {
-        return NextResponse.json({ error: 'Episode not found' }, { status: 404 });
+        return NextResponse.json({ error: 'ไม่พบตอนนี้' }, { status: 404 });
     }
 
     const body = await req.json();
@@ -107,7 +107,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Database error:', error);
-        return NextResponse.json({ error: 'Failed to update episode' }, { status: 500 });
+        return NextResponse.json({ error: 'แก้ไขตอนไม่สำเร็จ' }, { status: 500 });
     }
 }
 
@@ -117,19 +117,19 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     const session = await auth();
 
     if (!session?.user?.email) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
 
     const [users] = await pool.query<RowDataPacket[]>('SELECT id FROM users WHERE email = ?', [session.user.email]);
     if (!users[0]) {
-        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+        return NextResponse.json({ error: 'ไม่พบผู้ใช้' }, { status: 404 });
     }
     const userId = users[0].id;
 
     // Check comic ownership
     const [comics] = await pool.query<RowDataPacket[]>('SELECT * FROM comics WHERE id = ? AND author_id = ?', [comicId, userId]);
     if (!comics[0]) {
-        return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+        return NextResponse.json({ error: 'ไม่มีสิทธิ์ทำรายการนี้' }, { status: 403 });
     }
 
     try {
@@ -138,6 +138,6 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Database error:', error);
-        return NextResponse.json({ error: 'Failed to delete episode' }, { status: 500 });
+        return NextResponse.json({ error: 'ลบตอนไม่สำเร็จ' }, { status: 500 });
     }
 }

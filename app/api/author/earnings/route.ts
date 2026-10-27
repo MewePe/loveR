@@ -8,7 +8,7 @@ import { getAuthorBalance, getAuthorSharePercent, MIN_WITHDRAWAL } from '@/lib/c
 export async function GET() {
     const session = await auth();
     if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
 
     try {
@@ -39,6 +39,6 @@ export async function GET() {
         });
     } catch (error) {
         console.error('Failed to fetch earnings:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }

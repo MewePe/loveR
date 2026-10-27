@@ -231,10 +231,10 @@ function AdminPanel() {
             <div className="space-y-6">
                 <div><h1 className="text-2xl font-bold text-gray-900 dark:text-white">ภาพรวมระบบ</h1><p className="text-gray-500 dark:text-gray-400">ยินดีต้อนรับกลับมา</p></div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border dark:border-gray-700"><div className="flex items-center justify-between mb-4"><h3 className="text-gray-500 dark:text-gray-400 font-medium">ผู้ใช้ทั้งหมด</h3><Users className="w-6 h-6 text-blue-500" /></div><p className="text-3xl font-bold text-gray-900 dark:text-white">{stats?.users}</p></div>
-                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border dark:border-gray-700"><div className="flex items-center justify-between mb-4"><h3 className="text-gray-500 dark:text-gray-400 font-medium">นิยายทั้งหมด</h3><BookOpen className="w-6 h-6 text-indigo-500" /></div><p className="text-3xl font-bold text-gray-900 dark:text-white">{stats?.novels}</p></div>
-                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border dark:border-gray-700"><div className="flex items-center justify-between mb-4"><h3 className="text-gray-500 dark:text-gray-400 font-medium">การ์ตูนทั้งหมด</h3><FileText className="w-6 h-6 text-pink-500" /></div><p className="text-3xl font-bold text-gray-900 dark:text-white">{stats?.comics}</p></div>
-                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border dark:border-gray-700"><div className="flex items-center justify-between mb-4"><h3 className="text-gray-500 dark:text-gray-400 font-medium">รายงานที่รอตรวจสอบ</h3><AlertTriangle className="w-6 h-6 text-red-500" /></div><p className="text-3xl font-bold text-gray-900 dark:text-white">{stats?.reports}</p></div>
+                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border dark:border-gray-700"><div className="flex items-center justify-between mb-4"><h3 className="text-gray-500 dark:text-gray-400 font-medium">ผู้ใช้ทั้งหมด</h3><Users className="w-6 h-6 text-blue-500 dark:text-blue-400" /></div><p className="text-3xl font-bold text-gray-900 dark:text-white">{stats?.users}</p></div>
+                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border dark:border-gray-700"><div className="flex items-center justify-between mb-4"><h3 className="text-gray-500 dark:text-gray-400 font-medium">นิยายทั้งหมด</h3><BookOpen className="w-6 h-6 text-indigo-500 dark:text-indigo-400" /></div><p className="text-3xl font-bold text-gray-900 dark:text-white">{stats?.novels}</p></div>
+                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border dark:border-gray-700"><div className="flex items-center justify-between mb-4"><h3 className="text-gray-500 dark:text-gray-400 font-medium">การ์ตูนทั้งหมด</h3><FileText className="w-6 h-6 text-pink-500 dark:text-pink-400" /></div><p className="text-3xl font-bold text-gray-900 dark:text-white">{stats?.comics}</p></div>
+                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border dark:border-gray-700"><div className="flex items-center justify-between mb-4"><h3 className="text-gray-500 dark:text-gray-400 font-medium">รายงานที่รอตรวจสอบ</h3><AlertTriangle className="w-6 h-6 text-red-500 dark:text-red-400" /></div><p className="text-3xl font-bold text-gray-900 dark:text-white">{stats?.reports}</p></div>
                 </div>
                 <AnalyticsPanel />
             </div>
@@ -246,7 +246,7 @@ function AdminPanel() {
             <div className="space-y-6">
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">จัดการผู้ใช้</h1>
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 overflow-hidden">
-                    <div className="p-4 border-b dark:border-gray-700"><div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" /><input type="text" placeholder="ค้นหาชื่อหรืออีเมล..." className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" value={userSearch} onChange={(e) => setUserSearch(e.target.value)} /></div></div>
+                    <div className="p-4 border-b dark:border-gray-700"><div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 w-5 h-5" /><input type="text" placeholder="ค้นหาชื่อหรืออีเมล..." className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" value={userSearch} onChange={(e) => setUserSearch(e.target.value)} /></div></div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left">
                             <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 text-xs uppercase"><tr><th className="px-6 py-3">ผู้ใช้</th><th className="px-6 py-3">สิทธิ์</th><th className="px-6 py-3">สมัครเมื่อ</th><th className="px-6 py-3 text-right">จัดการ</th></tr></thead>
@@ -257,7 +257,7 @@ function AdminPanel() {
                                         <td className="px-6 py-4"><span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.role === 'ADMIN' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' : user.role === 'BANNED' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'}`}>{ROLE_LABEL[user.role] ?? user.role}</span></td>
                                         <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{new Date(user.created_at).toLocaleDateString('th-TH')}</td>
                                         <td className="px-6 py-4 text-right space-x-2">
-                                            {user.role !== 'ADMIN' && (<><button onClick={() => updateUserRole(user.id, 'ADMIN')} className="text-gray-400 hover:text-purple-600" title="ตั้งเป็นแอดมิน"><Shield className="w-4 h-4" /></button>{user.role === 'BANNED' ? <button onClick={() => updateUserRole(user.id, 'READER')} className="text-gray-400 hover:text-green-600" title="ปลดแบน"><CheckCircle className="w-4 h-4" /></button> : <button onClick={() => updateUserRole(user.id, 'BANNED')} className="text-gray-400 hover:text-red-600" title="แบน"><Ban className="w-4 h-4" /></button>}</>)}
+                                            {user.role !== 'ADMIN' && (<><button onClick={() => updateUserRole(user.id, 'ADMIN')} className="text-gray-500 dark:text-gray-400 hover:text-purple-600" title="ตั้งเป็นแอดมิน"><Shield className="w-4 h-4" /></button>{user.role === 'BANNED' ? <button onClick={() => updateUserRole(user.id, 'READER')} className="text-gray-500 dark:text-gray-400 hover:text-green-600" title="ปลดแบน"><CheckCircle className="w-4 h-4" /></button> : <button onClick={() => updateUserRole(user.id, 'BANNED')} className="text-gray-500 dark:text-gray-400 hover:text-red-600" title="แบน"><Ban className="w-4 h-4" /></button>}</>)}
                                         </td>
                                     </tr>
                                 ))}
@@ -277,7 +277,7 @@ function AdminPanel() {
                     <button onClick={() => setContentTab('novels')} className={`px-4 py-2 rounded-lg font-medium transition ${contentTab === 'novels' ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300'}`}><BookOpen className="w-4 h-4 inline mr-2" />นิยาย</button>
                     <button onClick={() => setContentTab('comics')} className={`px-4 py-2 rounded-lg font-medium transition ${contentTab === 'comics' ? 'bg-pink-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300'}`}><FileText className="w-4 h-4 inline mr-2" />การ์ตูน</button>
                 </div>
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 overflow-hidden">
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 overflow-x-auto">
                     <table className="w-full text-left">
                         <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 text-xs uppercase"><tr><th className="px-6 py-3">ชื่อเรื่อง</th><th className="px-6 py-3">ผู้เขียน</th><th className="px-6 py-3">สถานะ</th><th className="px-6 py-3">สร้างเมื่อ</th><th className="px-6 py-3 text-right">จัดการ</th></tr></thead>
                         <tbody className="divide-y dark:divide-gray-700">
@@ -287,7 +287,7 @@ function AdminPanel() {
                                     <td className="px-6 py-4 text-gray-500 dark:text-gray-400">{item.author_name}</td>
                                     <td className="px-6 py-4"><span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${item.status === 'PUBLISHED' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : item.status === 'BANNED' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'}`}>{CONTENT_STATUS_LABEL[item.status] ?? item.status}</span></td>
                                     <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{new Date(item.created_at).toLocaleDateString('th-TH')}</td>
-                                    <td className="px-6 py-4 text-right space-x-2">{item.status !== 'PUBLISHED' && <button onClick={() => updateContentStatus(item.id, 'PUBLISHED')} className="text-gray-400 hover:text-green-600" title="เผยแพร่"><CheckCircle className="w-4 h-4" /></button>}{item.status !== 'BANNED' && <button onClick={() => updateContentStatus(item.id, 'BANNED')} className="text-gray-400 hover:text-red-600" title="ระงับ"><Ban className="w-4 h-4" /></button>}</td>
+                                    <td className="px-6 py-4 text-right space-x-2">{item.status !== 'PUBLISHED' && <button onClick={() => updateContentStatus(item.id, 'PUBLISHED')} className="text-gray-500 dark:text-gray-400 hover:text-green-600" title="เผยแพร่"><CheckCircle className="w-4 h-4" /></button>}{item.status !== 'BANNED' && <button onClick={() => updateContentStatus(item.id, 'BANNED')} className="text-gray-500 dark:text-gray-400 hover:text-red-600" title="ระงับ"><Ban className="w-4 h-4" /></button>}</td>
                                 </tr>
                             ))}
                             {contentItems.length === 0 && <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">ไม่พบเนื้อหา</td></tr>}
@@ -302,7 +302,7 @@ function AdminPanel() {
         return (
             <div className="space-y-6">
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">จัดการรายงาน</h1>
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 overflow-hidden">
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 overflow-x-auto">
                     <table className="w-full text-left">
                         <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 text-xs uppercase"><tr><th className="px-6 py-3">ผู้รายงาน</th><th className="px-6 py-3">สิ่งที่ถูกรายงาน</th><th className="px-6 py-3">เหตุผล</th><th className="px-6 py-3">สถานะ</th><th className="px-6 py-3">วันที่</th><th className="px-6 py-3 text-right">จัดการ</th></tr></thead>
                         <tbody className="divide-y dark:divide-gray-700">
@@ -311,9 +311,9 @@ function AdminPanel() {
                                     <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{report.reporter_name}</td>
                                     <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400"><span className="font-semibold text-indigo-600 dark:text-indigo-400">{REPORT_TARGET_LABEL[report.target_type] ?? report.target_type}</span>: {report.target_type === 'COMMENT' ? (report.target_title ? <a href={`/${report.parent_type === 'COMIC' ? 'comic' : 'novel'}/${report.parent_id}`} target="_blank" rel="noreferrer" className="hover:underline whitespace-pre-line line-clamp-3">{report.comment_author_name}: {report.target_title}</a> : <span className="italic">(ถูกลบแล้ว)</span>) : report.target_title ? <a href={`/${report.target_type === 'COMIC' ? 'comic' : 'novel'}/${report.target_id}`} target="_blank" rel="noreferrer" className="hover:underline">{report.target_title}</a> : report.target_id}</td>
                                     <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{report.reason}</td>
-                                    <td className="px-6 py-4"><span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${report.status === 'RESOLVED' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : report.status === 'IGNORED' ? 'bg-gray-100 text-gray-800 dark:bg-gray-700' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'}`}>{REPORT_STATUS_LABEL[report.status] ?? report.status}</span></td>
+                                    <td className="px-6 py-4"><span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${report.status === 'RESOLVED' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : report.status === 'IGNORED' ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'}`}>{REPORT_STATUS_LABEL[report.status] ?? report.status}</span></td>
                                     <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{new Date(report.created_at).toLocaleDateString('th-TH')}</td>
-                                    <td className="px-6 py-4 text-right space-x-2">{report.status === 'PENDING' && (<>{report.target_type === 'COMMENT' && report.target_title && <button onClick={() => deleteReportedComment(report)} title="ลบคอมเมนต์" className="text-gray-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>}<button onClick={() => updateReportStatus(report.id, 'RESOLVED')} className="text-gray-400 hover:text-green-600" title="จัดการแล้ว"><CheckCircle className="w-4 h-4" /></button><button onClick={() => updateReportStatus(report.id, 'IGNORED')} className="text-gray-400 hover:text-gray-600" title="ไม่ดำเนินการ"><XCircle className="w-4 h-4" /></button></>)}</td>
+                                    <td className="px-6 py-4 text-right space-x-2">{report.status === 'PENDING' && (<>{report.target_type === 'COMMENT' && report.target_title && <button onClick={() => deleteReportedComment(report)} title="ลบคอมเมนต์" className="text-gray-500 dark:text-gray-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>}<button onClick={() => updateReportStatus(report.id, 'RESOLVED')} className="text-gray-500 dark:text-gray-400 hover:text-green-600" title="จัดการแล้ว"><CheckCircle className="w-4 h-4" /></button><button onClick={() => updateReportStatus(report.id, 'IGNORED')} className="text-gray-500 dark:text-gray-400 hover:text-gray-600" title="ไม่ดำเนินการ"><XCircle className="w-4 h-4" /></button></>)}</td>
                                 </tr>
                             ))}
                             {reports.length === 0 && <tr><td colSpan={6} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">ไม่มีรายงาน</td></tr>}
@@ -335,7 +335,7 @@ function AdminPanel() {
         return (
             <div className="space-y-6">
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">คำขอสมัครนักเขียน</h1>
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 overflow-hidden">
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 overflow-x-auto">
                     <table className="w-full text-left">
                         <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 text-xs uppercase"><tr><th className="px-6 py-3">ชื่อ</th><th className="px-6 py-3">อีเมล</th><th className="px-6 py-3">เบอร์โทร</th><th className="px-6 py-3">จังหวัด</th><th className="px-6 py-3">สถานะ</th><th className="px-6 py-3">วันที่</th><th className="px-6 py-3 text-right">จัดการ</th></tr></thead>
                         <tbody className="divide-y dark:divide-gray-700">
@@ -348,10 +348,10 @@ function AdminPanel() {
                                     <td className="px-6 py-4"><span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[req.status]}`}>{statusText[req.status]}</span></td>
                                     <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{new Date(req.created_at).toLocaleDateString('th-TH')}</td>
                                     <td className="px-6 py-4 text-right space-x-2">
-                                        <button onClick={() => setSelectedWriter(req)} className="text-gray-400 hover:text-blue-600"><Eye className="w-4 h-4" /></button>
+                                        <button onClick={() => setSelectedWriter(req)} className="text-gray-500 dark:text-gray-400 hover:text-blue-600" title="ดูรายละเอียด"><Eye className="w-4 h-4" /></button>
                                         {req.status === 'PENDING' && (<>
-                                            <button onClick={() => handleWriterAction(req.user_id, 'APPROVED')} className="text-gray-400 hover:text-green-600" title="อนุมัติ"><CheckCircle className="w-4 h-4" /></button>
-                                            <button onClick={() => setRejecting({ userId: req.user_id, reason: '', submitting: false })} className="text-gray-400 hover:text-red-600" title="ปฏิเสธ"><XCircle className="w-4 h-4" /></button>
+                                            <button onClick={() => handleWriterAction(req.user_id, 'APPROVED')} className="text-gray-500 dark:text-gray-400 hover:text-green-600" title="อนุมัติ"><CheckCircle className="w-4 h-4" /></button>
+                                            <button onClick={() => setRejecting({ userId: req.user_id, reason: '', submitting: false })} className="text-gray-500 dark:text-gray-400 hover:text-red-600" title="ปฏิเสธ"><XCircle className="w-4 h-4" /></button>
                                         </>)}
                                     </td>
                                 </tr>
@@ -365,22 +365,22 @@ function AdminPanel() {
                         <div className="bg-white dark:bg-gray-800 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
                             <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">รายละเอียดคำขอ</h2>
                             <div className="grid grid-cols-2 gap-4 mb-6">
-                                <div><label className="text-sm text-gray-500">ชื่อ-นามสกุล</label><div className="font-medium dark:text-white">{selectedWriter.title}{selectedWriter.first_name} {selectedWriter.last_name}</div></div>
-                                <div><label className="text-sm text-gray-500">อีเมล</label><div className="font-medium dark:text-white">{selectedWriter.email}</div></div>
-                                <div><label className="text-sm text-gray-500">เลขบัตรประชาชน</label><div className="font-medium dark:text-white">{selectedWriter.id_card_number}</div></div>
-                                <div><label className="text-sm text-gray-500">เบอร์โทร</label><div className="font-medium dark:text-white">{selectedWriter.phone_number}</div></div>
-                                <div><label className="text-sm text-gray-500">จังหวัด</label><div className="font-medium dark:text-white">{selectedWriter.province}</div></div>
-                                <div><label className="text-sm text-gray-500">สถานะ</label><div className="font-medium dark:text-white">{statusText[selectedWriter.status] ?? selectedWriter.status}</div></div>
-                                <div><label className="text-sm text-gray-500">ธนาคาร</label><div className="font-medium dark:text-white">{selectedWriter.bank_name || '-'}</div></div>
-                                <div><label className="text-sm text-gray-500">เลขที่บัญชี / ชื่อบัญชี</label><div className="font-medium dark:text-white">{selectedWriter.bank_account_number || '-'} {selectedWriter.bank_account_name}</div></div>
-                                <div><label className="text-sm text-gray-500">สำเนาบัตรประชาชน</label><div className="font-medium">{selectedWriter.id_card_image ? <a href={selectedWriter.id_card_image} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline">ดูไฟล์</a> : <span className="dark:text-white">-</span>}</div></div>
-                                <div><label className="text-sm text-gray-500">สำเนาบัญชีธนาคาร</label><div className="font-medium">{selectedWriter.bank_book_image ? <a href={selectedWriter.bank_book_image} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline">ดูไฟล์</a> : <span className="dark:text-white">-</span>}</div></div>
-                                {selectedWriter.rejection_reason && <div className="col-span-2"><label className="text-sm text-gray-500">หมายเหตุ</label><div className="font-medium dark:text-white bg-gray-100 dark:bg-gray-700 p-2 rounded mt-1">{selectedWriter.rejection_reason}</div></div>}
+                                <div><label className="text-sm text-gray-500 dark:text-gray-400">ชื่อ-นามสกุล</label><div className="font-medium dark:text-white">{selectedWriter.title}{selectedWriter.first_name} {selectedWriter.last_name}</div></div>
+                                <div><label className="text-sm text-gray-500 dark:text-gray-400">อีเมล</label><div className="font-medium dark:text-white">{selectedWriter.email}</div></div>
+                                <div><label className="text-sm text-gray-500 dark:text-gray-400">เลขบัตรประชาชน</label><div className="font-medium dark:text-white">{selectedWriter.id_card_number}</div></div>
+                                <div><label className="text-sm text-gray-500 dark:text-gray-400">เบอร์โทร</label><div className="font-medium dark:text-white">{selectedWriter.phone_number}</div></div>
+                                <div><label className="text-sm text-gray-500 dark:text-gray-400">จังหวัด</label><div className="font-medium dark:text-white">{selectedWriter.province}</div></div>
+                                <div><label className="text-sm text-gray-500 dark:text-gray-400">สถานะ</label><div className="font-medium dark:text-white">{statusText[selectedWriter.status] ?? selectedWriter.status}</div></div>
+                                <div><label className="text-sm text-gray-500 dark:text-gray-400">ธนาคาร</label><div className="font-medium dark:text-white">{selectedWriter.bank_name || '-'}</div></div>
+                                <div><label className="text-sm text-gray-500 dark:text-gray-400">เลขที่บัญชี / ชื่อบัญชี</label><div className="font-medium dark:text-white">{selectedWriter.bank_account_number || '-'} {selectedWriter.bank_account_name}</div></div>
+                                <div><label className="text-sm text-gray-500 dark:text-gray-400">สำเนาบัตรประชาชน</label><div className="font-medium">{selectedWriter.id_card_image ? <a href={selectedWriter.id_card_image} target="_blank" rel="noreferrer" className="text-indigo-600 dark:text-indigo-400 hover:underline">ดูไฟล์</a> : <span className="dark:text-white">-</span>}</div></div>
+                                <div><label className="text-sm text-gray-500 dark:text-gray-400">สำเนาบัญชีธนาคาร</label><div className="font-medium">{selectedWriter.bank_book_image ? <a href={selectedWriter.bank_book_image} target="_blank" rel="noreferrer" className="text-indigo-600 dark:text-indigo-400 hover:underline">ดูไฟล์</a> : <span className="dark:text-white">-</span>}</div></div>
+                                {selectedWriter.rejection_reason && <div className="col-span-2"><label className="text-sm text-gray-500 dark:text-gray-400">หมายเหตุ</label><div className="font-medium dark:text-white bg-gray-100 dark:bg-gray-700 p-2 rounded mt-1">{selectedWriter.rejection_reason}</div></div>}
                             </div>
                             <div className="flex justify-end gap-3">
                                 <button onClick={() => setSelectedWriter(null)} className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">ปิด</button>
                                 {selectedWriter.status === 'PENDING' && <><button onClick={() => setRejecting({ userId: selectedWriter.user_id, reason: '', submitting: false })} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">ปฏิเสธ</button>
-                                    <button onClick={() => handleWriterAction(selectedWriter.user_id, 'APPROVED')} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">อนุมัติ</button></>}
+                                    <button onClick={() => handleWriterAction(selectedWriter.user_id, 'APPROVED')} className="px-4 py-2 bg-green-700 text-white rounded-lg hover:bg-green-800">อนุมัติ</button></>}
                             </div>
                         </div>
                     </div>
@@ -445,7 +445,7 @@ function AdminPanel() {
                                 {categories.map((category) => (
                                     <div key={category.id} className="p-4 flex justify-between items-center hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                         <div className="flex items-center gap-3"><div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg text-indigo-600 dark:text-indigo-400"><Tag className="w-5 h-5" /></div><div><div className="font-medium text-gray-900 dark:text-white">{category.name}</div><div className="text-sm text-gray-500 dark:text-gray-400">/{category.slug}</div></div></div>
-                                        <button onClick={() => deleteCategory(category.id)} className="text-gray-400 hover:text-red-600 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"><Trash2 className="w-5 h-5" /></button>
+                                        <button onClick={() => deleteCategory(category.id)} className="text-gray-500 dark:text-gray-400 hover:text-red-600 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"><Trash2 className="w-5 h-5" /></button>
                                     </div>
                                 ))}
                                 {categories.length === 0 && <div className="p-8 text-center text-gray-500 dark:text-gray-400">ยังไม่มีหมวดหมู่</div>}
@@ -478,8 +478,8 @@ function AdminPanel() {
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
-            {/* Sidebar */}
-            <div className="w-64 bg-white dark:bg-gray-800 h-screen shadow-md flex flex-col fixed left-0 top-0 z-40">
+            {/* Sidebar (md and up; phones get the tab strip below instead) */}
+            <div className="hidden md:flex w-64 bg-white dark:bg-gray-800 h-screen shadow-md flex-col fixed left-0 top-0 z-40">
                 <div className="p-6 flex items-center gap-3 border-b dark:border-gray-700">
                     <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">A</div>
                     <span className="text-xl font-bold text-gray-800 dark:text-white">ผู้ดูแลระบบ</span>
@@ -495,13 +495,23 @@ function AdminPanel() {
                     })}
                 </nav>
                 <div className="p-4 border-t dark:border-gray-700">
-                    <button onClick={() => signOut({ callbackUrl: '/' })} className="flex items-center gap-3 px-4 py-3 w-full text-left text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+                    <button onClick={() => signOut({ callbackUrl: '/' })} className="flex items-center gap-3 px-4 py-3 w-full text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
                         <LogOut className="w-5 h-5" /><span className="font-medium">ออกจากระบบ</span>
                     </button>
                 </div>
             </div>
             {/* Main Content */}
-            <div className="pl-64 flex-1"><main className="p-8">{renderContent()}</main></div>
+            <div className="md:pl-64 flex-1 min-w-0">
+                {/* Tab strip for phones; sign-out is in the Navbar's mobile menu */}
+                <nav className="md:hidden flex gap-2 overflow-x-auto [scrollbar-width:none] px-4 pt-4 pb-1">
+                    {menuItems.map((item) => (
+                        <button key={item.key} onClick={() => setActiveTab(item.key)} className={`flex items-center gap-2 px-3 py-2 rounded-full text-sm whitespace-nowrap flex-shrink-0 transition-colors ${activeTab === item.key ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700'}`}>
+                            <item.icon className="w-4 h-4" />{item.name}
+                        </button>
+                    ))}
+                </nav>
+                <main className="p-4 md:p-8">{renderContent()}</main>
+            </div>
         </div>
     );
 }

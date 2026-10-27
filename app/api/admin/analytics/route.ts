@@ -10,7 +10,7 @@ import { bucketExpr, bucketKeys, parseRange, rangeStart, seriesByBucket } from '
 export async function GET(req: NextRequest) {
     const session = await auth();
     if (session?.user?.role !== 'ADMIN') {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        return NextResponse.json({ error: 'ไม่มีสิทธิ์ทำรายการนี้' }, { status: 403 });
     }
 
     try {
@@ -56,6 +56,6 @@ export async function GET(req: NextRequest) {
         });
     } catch (error) {
         console.error('Failed to load admin analytics:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }

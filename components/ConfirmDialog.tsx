@@ -63,7 +63,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
                     >
                         <div className="flex items-start gap-3 mb-6">
                             <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${danger ? "bg-red-100 dark:bg-red-900/30" : "bg-indigo-100 dark:bg-indigo-900/30"}`}>
-                                {danger ? <AlertTriangle className="w-5 h-5 text-red-600" /> : <HelpCircle className="w-5 h-5 text-indigo-600" />}
+                                {danger ? <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" /> : <HelpCircle className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />}
                             </div>
                             <p id="confirm-message" className="text-gray-800 dark:text-gray-100 pt-2 whitespace-pre-line">{pending.message}</p>
                         </div>

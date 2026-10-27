@@ -10,20 +10,20 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const session = await auth();
 
     if (!session?.user?.email) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
 
     // Get user and verify ownership
     const [users] = await pool.query<RowDataPacket[]>('SELECT id FROM users WHERE email = ?', [session.user.email]);
     if (!users[0]) {
-        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+        return NextResponse.json({ error: 'ไม่พบผู้ใช้' }, { status: 404 });
     }
     const userId = users[0].id;
 
     // Check novel ownership
     const [novels] = await pool.query<RowDataPacket[]>('SELECT * FROM novels WHERE id = ? AND author_id = ?', [novelId, userId]);
     if (!novels[0]) {
-        return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+        return NextResponse.json({ error: 'ไม่มีสิทธิ์ทำรายการนี้' }, { status: 403 });
     }
 
     const body = await req.json();
@@ -42,7 +42,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Database error:', error);
-        return NextResponse.json({ error: 'Failed to update chapter' }, { status: 500 });
+        return NextResponse.json({ error: 'แก้ไขบทไม่สำเร็จ' }, { status: 500 });
     }
 }
 
@@ -52,20 +52,20 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     const session = await auth();
 
     if (!session?.user?.email) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
 
     // Get user and verify ownership
     const [users] = await pool.query<RowDataPacket[]>('SELECT id FROM users WHERE email = ?', [session.user.email]);
     if (!users[0]) {
-        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+        return NextResponse.json({ error: 'ไม่พบผู้ใช้' }, { status: 404 });
     }
     const userId = users[0].id;
 
     // Check novel ownership
     const [novels] = await pool.query<RowDataPacket[]>('SELECT * FROM novels WHERE id = ? AND author_id = ?', [novelId, userId]);
     if (!novels[0]) {
-        return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+        return NextResponse.json({ error: 'ไม่มีสิทธิ์ทำรายการนี้' }, { status: 403 });
     }
 
     try {
@@ -73,6 +73,6 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Database error:', error);
-        return NextResponse.json({ error: 'Failed to delete chapter' }, { status: 500 });
+        return NextResponse.json({ error: 'ลบบทไม่สำเร็จ' }, { status: 500 });
     }
 }

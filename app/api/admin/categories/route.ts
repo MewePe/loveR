@@ -10,21 +10,21 @@ export async function GET() {
         return NextResponse.json(categories);
     } catch (error) {
         console.error('Failed to fetch categories:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }
 
 export async function POST(req: Request) {
     const session = await auth();
     if (session?.user?.role !== 'ADMIN') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
 
     try {
         const { name, slug } = await req.json();
 
         if (!name || !slug) {
-            return NextResponse.json({ error: 'Name and Slug are required' }, { status: 400 });
+            return NextResponse.json({ error: 'กรุณากรอกชื่อและ slug' }, { status: 400 });
         }
 
         const id = uuidv4();
@@ -34,8 +34,8 @@ export async function POST(req: Request) {
     } catch (error) {
         console.error('Failed to create category:', error);
         if ((error as { code?: string }).code === 'ER_DUP_ENTRY') {
-            return NextResponse.json({ error: 'Category name or slug already exists' }, { status: 409 });
+            return NextResponse.json({ error: 'มีหมวดหมู่ชื่อหรือ slug นี้อยู่แล้ว' }, { status: 409 });
         }
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }

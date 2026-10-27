@@ -128,7 +128,7 @@ function SearchContent() {
                     <h1 className="text-3xl font-bold text-white text-center mb-6">ค้นหานิยายและการ์ตูน</h1>
                     <form onSubmit={handleSubmit} className="max-w-2xl mx-auto">
                         <div className="relative">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 dark:text-gray-400" />
                             <input
                                 type="text"
                                 value={query}
@@ -182,7 +182,7 @@ function SearchContent() {
                                     <option key={cat.id} value={cat.id}>{cat.name}</option>
                                 ))}
                             </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400 pointer-events-none" />
                         </div>
 
                         {/* Sort */}
@@ -197,11 +197,11 @@ function SearchContent() {
                                     <option key={o.value} value={o.value}>{o.label}</option>
                                 ))}
                             </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400 pointer-events-none" />
                         </div>
 
                         {categoryId && (
-                            <button onClick={() => setCategoryId('')} className="flex items-center gap-1 text-sm text-red-500 hover:text-red-600">
+                            <button onClick={() => setCategoryId('')} className="flex items-center gap-1 text-sm text-red-500 dark:text-red-400 hover:text-red-600">
                                 <X className="w-4 h-4" /> ล้างตัวกรอง
                             </button>
                         )}
@@ -222,7 +222,7 @@ function SearchContent() {
                         {novels.length > 0 && (type === 'all' || type === 'novels') && (
                             <div className="mb-12">
                                 <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-                                    <BookOpen className="w-5 h-5 text-indigo-600" /> นิยาย ({novels.length})
+                                    <BookOpen className="w-5 h-5 text-indigo-600 dark:text-indigo-400" /> นิยาย ({novels.length})
                                 </h2>
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
                                     {novels.map(novel => (
@@ -240,7 +240,7 @@ function SearchContent() {
                                                 <div className="p-3">
                                                     <h3 className="font-medium text-gray-900 dark:text-white line-clamp-2 text-sm group-hover:text-indigo-600 transition">{novel.title}</h3>
                                                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{novel.author_name}</p>
-                                                    <p className="text-xs text-gray-400 mt-1">👁 {novel.views?.toLocaleString() || 0}{novel.rating_avg != null && <span className="ml-2">⭐ {novel.rating_avg.toFixed(1)}</span>}</p>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">👁 {novel.views?.toLocaleString() || 0}{novel.rating_avg != null && <span className="ml-2">⭐ {novel.rating_avg.toFixed(1)}</span>}</p>
                                                 </div>
                                             </div>
                                         </Link>
@@ -253,7 +253,7 @@ function SearchContent() {
                         {comics.length > 0 && (type === 'all' || type === 'comics') && (
                             <div>
                                 <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-                                    <ImageIcon className="w-5 h-5 text-pink-600" /> การ์ตูน ({comics.length})
+                                    <ImageIcon className="w-5 h-5 text-pink-600 dark:text-pink-400" /> การ์ตูน ({comics.length})
                                 </h2>
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
                                     {comics.map(comic => (
@@ -271,7 +271,7 @@ function SearchContent() {
                                                 <div className="p-3">
                                                     <h3 className="font-medium text-gray-900 dark:text-white line-clamp-2 text-sm group-hover:text-pink-600 transition">{comic.title}</h3>
                                                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{comic.author_name}</p>
-                                                    <p className="text-xs text-gray-400 mt-1">👁 {comic.views?.toLocaleString() || 0}{comic.rating_avg != null && <span className="ml-2">⭐ {comic.rating_avg.toFixed(1)}</span>}</p>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">👁 {comic.views?.toLocaleString() || 0}{comic.rating_avg != null && <span className="ml-2">⭐ {comic.rating_avg.toFixed(1)}</span>}</p>
                                                 </div>
                                             </div>
                                         </Link>

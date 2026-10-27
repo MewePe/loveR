@@ -112,7 +112,7 @@ export default function Navbar() {
                                                     className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                                                     onClick={() => setIsDropdownOpen(false)}
                                                 >
-                                                    <Bookmark className="w-4 h-4 text-yellow-500" />
+                                                    <Bookmark className="w-4 h-4 text-yellow-500 dark:text-yellow-400" />
                                                     ชั้นหนังสือ
                                                 </Link>
                                                 <Link
@@ -120,7 +120,7 @@ export default function Navbar() {
                                                     className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                                                     onClick={() => setIsDropdownOpen(false)}
                                                 >
-                                                    <History className="w-4 h-4 text-blue-500" />
+                                                    <History className="w-4 h-4 text-blue-500 dark:text-blue-400" />
                                                     ประวัติการอ่าน
                                                 </Link>
                                                 <Link
@@ -128,7 +128,7 @@ export default function Navbar() {
                                                     className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                                                     onClick={() => setIsDropdownOpen(false)}
                                                 >
-                                                    <Coins className="w-4 h-4 text-amber-500" />
+                                                    <Coins className="w-4 h-4 text-amber-500 dark:text-amber-400" />
                                                     เหรียญ ({userProfile?.coins ?? 0})
                                                 </Link>
                                                 {(displayRole === 'AUTHOR' || displayRole === 'ADMIN') && (
@@ -203,16 +203,16 @@ export default function Navbar() {
                                     </div>
                                 </div>
                                 <Link href="/profile" className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 hover:bg-gray-50 dark:hover:bg-gray-800">โปรไฟล์</Link>
-                                <Link href="/bookmarks" className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 hover:bg-gray-50 dark:hover:bg-gray-800"><Bookmark className="w-4 h-4 text-yellow-500" />ชั้นหนังสือ</Link>
-                                <Link href="/history" className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 hover:bg-gray-50 dark:hover:bg-gray-800"><History className="w-4 h-4 text-blue-500" />ประวัติการอ่าน</Link>
-                                <Link href="/coins" className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 hover:bg-gray-50 dark:hover:bg-gray-800"><Coins className="w-4 h-4 text-amber-500" />เหรียญ ({userProfile?.coins ?? 0})</Link>
+                                <Link href="/bookmarks" className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 hover:bg-gray-50 dark:hover:bg-gray-800"><Bookmark className="w-4 h-4 text-yellow-500 dark:text-yellow-400" />ชั้นหนังสือ</Link>
+                                <Link href="/history" className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 hover:bg-gray-50 dark:hover:bg-gray-800"><History className="w-4 h-4 text-blue-500 dark:text-blue-400" />ประวัติการอ่าน</Link>
+                                <Link href="/coins" className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 hover:bg-gray-50 dark:hover:bg-gray-800"><Coins className="w-4 h-4 text-amber-500 dark:text-amber-400" />เหรียญ ({userProfile?.coins ?? 0})</Link>
                                 {(displayRole === 'AUTHOR' || displayRole === 'ADMIN') && (
                                     <Link href="/author" className="block px-3 py-2 rounded-md text-base font-medium text-indigo-600 dark:text-indigo-400 hover:bg-gray-50 dark:hover:bg-gray-800">หน้านักเขียน</Link>
                                 )}
                                 <button onClick={() => signOut()} className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 hover:bg-gray-50 dark:hover:bg-gray-800">ออกจากระบบ</button>
                             </>
                         ) : (
-                            <button onClick={() => signIn()} className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-indigo-600 hover:bg-gray-50 dark:hover:bg-gray-800">เข้าสู่ระบบ</button>
+                            <button onClick={() => signIn()} className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-indigo-600 dark:text-indigo-400 hover:bg-gray-50 dark:hover:bg-gray-800">เข้าสู่ระบบ</button>
                         )}
                     </div>
                 </div>

@@ -7,13 +7,13 @@ export async function GET() {
     try {
         const session = await auth();
         if (!session?.user?.email) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
         }
 
         // Get user ID
         const [users] = await pool.query<RowDataPacket[]>('SELECT id FROM users WHERE email = ?', [session.user.email]);
         if (!users[0]) {
-            return NextResponse.json({ error: 'User not found' }, { status: 404 });
+            return NextResponse.json({ error: 'ไม่พบผู้ใช้' }, { status: 404 });
         }
         const userId = users[0].id;
 
@@ -30,6 +30,6 @@ export async function GET() {
         return NextResponse.json(comics);
     } catch (error) {
         console.error('Error fetching comics:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }

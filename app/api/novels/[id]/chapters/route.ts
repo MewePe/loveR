@@ -15,7 +15,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         const session = await auth();
         const [novels] = await pool.query<RowDataPacket[]>('SELECT status, author_id FROM novels WHERE id = ?', [novelId]);
         if (!novels[0] || !canViewContent(session?.user, novels[0])) {
-            return NextResponse.json({ error: 'Novel not found' }, { status: 404 });
+            return NextResponse.json({ error: 'ไม่พบนิยายเรื่องนี้' }, { status: 404 });
         }
         const isOwner = isOwnerOrAdmin(session?.user, novels[0].author_id);
 
@@ -27,7 +27,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         return NextResponse.json(chapters);
     } catch (error) {
         console.error('Database error:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }
 
@@ -37,20 +37,20 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const session = await auth();
 
     if (!session?.user?.email) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
 
     // Get user and verify ownership
     const [users] = await pool.query<RowDataPacket[]>('SELECT id FROM users WHERE email = ?', [session.user.email]);
     if (!users[0]) {
-        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+        return NextResponse.json({ error: 'ไม่พบผู้ใช้' }, { status: 404 });
     }
     const userId = users[0].id;
 
     // Check novel ownership
     const [novels] = await pool.query<RowDataPacket[]>('SELECT * FROM novels WHERE id = ? AND author_id = ?', [novelId, userId]);
     if (!novels[0]) {
-        return NextResponse.json({ error: 'Novel not found or not authorized' }, { status: 404 });
+        return NextResponse.json({ error: 'ไม่พบนิยายเรื่องนี้หรือไม่มีสิทธิ์แก้ไข' }, { status: 404 });
     }
 
     const body = await req.json();
@@ -78,6 +78,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         return NextResponse.json({ id, title, chapter_order: nextOrder });
     } catch (error) {
         console.error('Database error:', error);
-        return NextResponse.json({ error: 'Failed to create chapter' }, { status: 500 });
+        return NextResponse.json({ error: 'สร้างบทไม่สำเร็จ' }, { status: 500 });
     }
 }

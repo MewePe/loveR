@@ -196,10 +196,10 @@ export default function EpisodeManagement() {
                         <div className="divide-y dark:divide-gray-700">
                             {episodes.map((episode, index) => (
                                 <div key={episode.id} className="p-4 flex items-center gap-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
-                                    <div className="text-gray-400 dark:text-gray-500">
+                                    <div className="text-gray-500 dark:text-gray-400">
                                         <GripVertical className="w-5 h-5" />
                                     </div>
-                                    <div className="w-10 h-10 bg-pink-100 dark:bg-pink-900/30 rounded-lg flex items-center justify-center text-pink-600 dark:text-pink-400 font-bold">
+                                    <div className="w-10 h-10 bg-pink-100 dark:bg-pink-900/30 rounded-lg flex items-center justify-center text-pink-700 dark:text-pink-400 font-bold">
                                         {index + 1}
                                     </div>
                                     <div className="flex-1">
@@ -213,20 +213,20 @@ export default function EpisodeManagement() {
                                                 <ImageIcon className="w-4 h-4" />
                                                 {episode.page_count || 0} หน้า
                                             </span>
-                                            <span className={episode.price > 0 ? 'text-amber-600 dark:text-amber-400' : ''}>
+                                            <span className={episode.price > 0 ? 'text-amber-700 dark:text-amber-400' : ''}>
                                                 {episode.price > 0 ? `🔒 ${episode.price} เหรียญ` : 'ฟรี'}
                                             </span>
                                             <span>{new Date(episode.created_at).toLocaleDateString('th-TH')}</span>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <button onClick={() => router.push(`/author/comic/${comicId}/episodes/${episode.id}/pages`)} className="p-2 text-gray-400 hover:text-pink-600 hover:bg-pink-50 dark:hover:bg-pink-900/20 rounded-lg transition">
+                                        <button onClick={() => router.push(`/author/comic/${comicId}/episodes/${episode.id}/pages`)} className="p-2 text-gray-500 dark:text-gray-400 hover:text-pink-600 hover:bg-pink-50 dark:hover:bg-pink-900/20 rounded-lg transition">
                                             <ImageIcon className="w-5 h-5" />
                                         </button>
-                                        <button onClick={() => openEditModal(episode)} className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition">
+                                        <button onClick={() => openEditModal(episode)} className="p-2 text-gray-500 dark:text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition">
                                             <Edit className="w-5 h-5" />
                                         </button>
-                                        <button onClick={() => handleDelete(episode.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition">
+                                        <button onClick={() => handleDelete(episode.id)} className="p-2 text-gray-500 dark:text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition">
                                             <Trash2 className="w-5 h-5" />
                                         </button>
                                     </div>
@@ -236,7 +236,7 @@ export default function EpisodeManagement() {
                     ) : (
                         <div className="p-12 text-center">
                             <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <Plus className="w-8 h-8 text-gray-400" />
+                                <Plus className="w-8 h-8 text-gray-500 dark:text-gray-400" />
                             </div>
                             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">ยังไม่มีตอน</h3>
                             <p className="text-gray-500 dark:text-gray-400 mb-4">เริ่มเพิ่มตอนแรกของการ์ตูนกันเลย!</p>
@@ -257,7 +257,7 @@ export default function EpisodeManagement() {
                                 {editingEpisode ? 'แก้ไขตอน' : 'เพิ่มตอนใหม่'}
                             </h2>
                             <button onClick={() => setShowModal(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-                                <X className="w-5 h-5 text-gray-500" />
+                                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                             </button>
                         </div>
                         <form onSubmit={handleSubmit} className="p-6 space-y-4">
@@ -289,9 +289,9 @@ export default function EpisodeManagement() {
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">อัพโหลดรูปภาพ</label>
                                 <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4">
                                     <label className="flex flex-col items-center cursor-pointer py-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition">
-                                        <Upload className="w-10 h-10 text-gray-400 mb-2" />
+                                        <Upload className="w-10 h-10 text-gray-500 dark:text-gray-400 mb-2" />
                                         <span className="text-sm text-gray-500 dark:text-gray-400">คลิกเพื่อเลือกรูปภาพ</span>
-                                        <span className="text-xs text-gray-400">รองรับหลายรูปภาพ</span>
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">รองรับหลายรูปภาพ</span>
                                         <input type="file" accept="image/*" multiple onChange={handleFileChange} className="hidden" />
                                     </label>
 

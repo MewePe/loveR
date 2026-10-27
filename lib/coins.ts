@@ -91,7 +91,7 @@ export async function purchaseItem(userId: string, kind: ItemKind, itemId: strin
         const [users] = await conn.query<RowDataPacket[]>('SELECT coins FROM users WHERE id = ? FOR UPDATE', [userId]);
         if (!users[0]) {
             await conn.rollback();
-            return { ok: false, status: 404, error: 'User not found' };
+            return { ok: false, status: 404, error: 'ไม่พบผู้ใช้' };
         }
 
         const [owned] = await conn.query<RowDataPacket[]>(

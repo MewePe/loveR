@@ -116,17 +116,17 @@ export default async function ComicDetail({ params }: { params: Promise<{ id: st
                                 className="flex items-center justify-between p-5 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition group"
                             >
                                 <div className="flex items-center gap-6">
-                                    <span className="text-gray-400 font-mono w-8 text-lg">#{episode.episode_order}</span>
+                                    <span className="text-gray-500 dark:text-gray-400 font-mono w-8 text-lg">#{episode.episode_order}</span>
                                     <div>
                                         <span className="font-medium text-gray-700 dark:text-gray-200 text-lg group-hover:text-pink-600 transition">
                                             {episode.title}
                                         </span>
-                                        <p className="text-sm text-gray-400">{episode.page_count || 0} หน้า</p>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">{episode.page_count || 0} หน้า</p>
                                     </div>
                                 </div>
                                 <span className="flex items-center gap-4 text-sm">
                                     <PriceBadge price={episode.price} unlocked={isOwner || purchased.has(episode.id)} />
-                                    <span className="text-gray-400">{new Date(episode.created_at).toLocaleDateString('th-TH')}</span>
+                                    <span className="text-gray-500 dark:text-gray-400">{new Date(episode.created_at).toLocaleDateString('th-TH')}</span>
                                 </span>
                             </Link>
                         ))}

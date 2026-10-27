@@ -35,14 +35,14 @@ export async function GET(req: NextRequest) {
     const contentType = searchParams.get('content_type');
     const contentId = searchParams.get('content_id');
     if (!isContentType(contentType) || !contentId) {
-        return NextResponse.json({ error: 'Invalid content_type or content_id' }, { status: 400 });
+        return NextResponse.json({ error: 'ข้อมูลเรื่องไม่ถูกต้อง' }, { status: 400 });
     }
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1);
 
     try {
         const content = await getContentRow(contentType, contentId);
         if (!content || !canViewContent(session?.user, content)) {
-            return NextResponse.json({ error: 'Content not found' }, { status: 404 });
+            return NextResponse.json({ error: 'ไม่พบเรื่องนี้' }, { status: 404 });
         }
 
         const column = CONTENT_COLUMN[contentType];
@@ -81,7 +81,7 @@ export async function GET(req: NextRequest) {
         });
     } catch (error) {
         console.error('Error fetching comments:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }
 
@@ -90,17 +90,17 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
     const session = await auth();
     if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
     const userId = session.user.id;
 
     try {
         const { content_type, content_id, body, parent_id } = await req.json();
         if (!isContentType(content_type) || typeof content_id !== 'string') {
-            return NextResponse.json({ error: 'Invalid content_type or content_id' }, { status: 400 });
+            return NextResponse.json({ error: 'ข้อมูลเรื่องไม่ถูกต้อง' }, { status: 400 });
         }
         if (parent_id !== undefined && parent_id !== null && typeof parent_id !== 'string') {
-            return NextResponse.json({ error: 'Invalid parent_id' }, { status: 400 });
+            return NextResponse.json({ error: 'คอมเมนต์ที่ตอบกลับไม่ถูกต้อง' }, { status: 400 });
         }
         const text = typeof body === 'string' ? body.trim() : '';
         if (!text || text.length > MAX_COMMENT_LENGTH) {
@@ -109,7 +109,7 @@ export async function POST(req: NextRequest) {
 
         const content = await getContentRow(content_type, content_id);
         if (!content || !canViewContent(session.user, content)) {
-            return NextResponse.json({ error: 'Content not found' }, { status: 404 });
+            return NextResponse.json({ error: 'ไม่พบเรื่องนี้' }, { status: 404 });
         }
 
         const column = CONTENT_COLUMN[content_type];
@@ -157,6 +157,6 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: true, id, comment: { ...present(created[0], session.user, content.author_id), replies: [] } });
     } catch (error) {
         console.error('Error creating comment:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }

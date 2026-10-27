@@ -10,14 +10,14 @@ export async function PATCH(
 ) {
     const session = await auth();
     if (session?.user?.role !== 'ADMIN') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
 
     const { id } = await params;
     const { status, reason } = await req.json();
 
     if (!['APPROVED', 'REJECTED'].includes(status)) {
-        return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+        return NextResponse.json({ error: 'สถานะไม่ถูกต้อง' }, { status: 400 });
     }
 
     const connection = await pool.getConnection();
@@ -31,7 +31,7 @@ export async function PATCH(
         );
         if (result.affectedRows === 0) {
             await connection.rollback();
-            return NextResponse.json({ error: 'Writer profile not found' }, { status: 404 });
+            return NextResponse.json({ error: 'ไม่พบข้อมูลนักเขียน' }, { status: 404 });
         }
 
         // If approved, promote readers to AUTHOR (never touch ADMIN or un-ban BANNED users)
@@ -50,7 +50,7 @@ export async function PATCH(
     } catch (error) {
         await connection.rollback();
         console.error('Failed to update writer request:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     } finally {
         connection.release();
     }

@@ -12,8 +12,8 @@ interface Purchase { id: string; item_title: string; price: number; created_at: 
 const PRESET_AMOUNTS = [50, 100, 300, 500, 1000];
 const statusText: Record<string, string> = { PENDING: 'รอตรวจสอบ', APPROVED: 'สำเร็จ', REJECTED: 'ไม่อนุมัติ' };
 const statusColors: Record<string, string> = {
-    PENDING: 'text-yellow-600 dark:text-yellow-400',
-    APPROVED: 'text-green-600 dark:text-green-400',
+    PENDING: 'text-yellow-700 dark:text-yellow-400',
+    APPROVED: 'text-green-700 dark:text-green-400',
     REJECTED: 'text-red-600 dark:text-red-400',
 };
 
@@ -112,12 +112,12 @@ export default function CoinsPage() {
                         <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">1. เลือกจำนวน</p>
                         <div className="flex flex-wrap gap-2 mb-2">
                             {PRESET_AMOUNTS.map((a) => (
-                                <button type="button" key={a} onClick={() => setAmount(a)} className={`px-4 py-2 rounded-lg border font-medium ${amount === a ? 'bg-amber-500 border-amber-500 text-white' : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300'}`}>
+                                <button type="button" key={a} onClick={() => setAmount(a)} className={`px-4 py-2 rounded-lg border font-medium ${amount === a ? 'bg-amber-400 border-amber-400 text-amber-950' : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300'}`}>
                                     {a} บาท
                                 </button>
                             ))}
                         </div>
-                        <input type="number" min={20} max={50000} step={1} value={amount} onChange={(e) => setAmount(Number(e.target.value))} className="w-40 px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" /> <span className="text-sm text-gray-500">บาท = {amount || 0} เหรียญ</span>
+                        <input type="number" min={20} max={50000} step={1} value={amount} onChange={(e) => setAmount(Number(e.target.value))} className="w-40 px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" /> <span className="text-sm text-gray-500 dark:text-gray-400">บาท = {amount || 0} เหรียญ</span>
                     </div>
 
                     <div>
@@ -133,13 +133,13 @@ export default function CoinsPage() {
                             {slipPreview ? (
                                 <img src={slipPreview} alt="สลิป" className="max-h-60 rounded-lg" />
                             ) : (
-                                <><Upload className="w-10 h-10 text-gray-400 mb-2" /><span className="text-gray-600 dark:text-gray-300">คลิกเพื่อเลือกรูปสลิป</span></>
+                                <><Upload className="w-10 h-10 text-gray-500 dark:text-gray-400 mb-2" /><span className="text-gray-600 dark:text-gray-300">คลิกเพื่อเลือกรูปสลิป</span></>
                             )}
                             <input type="file" accept="image/*" onChange={handleSlipChange} className="hidden" />
                         </label>
                     </div>
 
-                    <button type="submit" disabled={submitting || !paymentInfo} className="w-full bg-amber-500 text-white py-3 rounded-lg font-medium hover:bg-amber-600 transition flex items-center justify-center gap-2 disabled:opacity-50">
+                    <button type="submit" disabled={submitting || !paymentInfo} className="w-full bg-amber-400 text-amber-950 py-3 rounded-lg font-medium hover:bg-amber-500 transition flex items-center justify-center gap-2 disabled:opacity-50">
                         <Send className="w-5 h-5" />
                         {submitting ? 'กำลังส่ง...' : 'ส่งคำขอเติมเหรียญ'}
                     </button>
@@ -155,7 +155,7 @@ export default function CoinsPage() {
                                     <span className="text-right">
                                         <span className="font-semibold text-gray-900 dark:text-white">+{t.amount}</span>{' '}
                                         <span className={statusColors[t.status]}>{statusText[t.status]}</span>
-                                        {t.rejection_reason && <span className="block text-xs text-gray-500">{t.rejection_reason}</span>}
+                                        {t.rejection_reason && <span className="block text-xs text-gray-500 dark:text-gray-400">{t.rejection_reason}</span>}
                                     </span>
                                 </li>
                             ))}
@@ -172,8 +172,8 @@ export default function CoinsPage() {
                                 return (
                                     <li key={p.id} className="py-3 flex justify-between text-sm">
                                         <span className="text-gray-700 dark:text-gray-200">
-                                            {href ? <Link href={href} className="hover:text-indigo-600">{p.item_title}</Link> : <span className="text-gray-400">{p.item_title} (ถูกลบแล้ว)</span>}
-                                            <span className="block text-xs text-gray-500">{new Date(p.created_at).toLocaleString('th-TH')}</span>
+                                            {href ? <Link href={href} className="hover:text-indigo-600">{p.item_title}</Link> : <span className="text-gray-500 dark:text-gray-400">{p.item_title} (ถูกลบแล้ว)</span>}
+                                            <span className="block text-xs text-gray-500 dark:text-gray-400">{new Date(p.created_at).toLocaleString('th-TH')}</span>
                                         </span>
                                         <span className="font-semibold text-gray-900 dark:text-white">-{p.price}</span>
                                     </li>

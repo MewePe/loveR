@@ -10,7 +10,7 @@ import { baht, notifyAdmins, short } from '@/lib/notifications';
 export async function GET() {
     const session = await auth();
     if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
 
     try {
@@ -22,7 +22,7 @@ export async function GET() {
         return NextResponse.json(rows);
     } catch (error) {
         console.error('Failed to fetch withdrawals:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }
 
@@ -30,7 +30,7 @@ export async function GET() {
 export async function POST(req: Request) {
     const session = await auth();
     if (!session?.user?.id || (session.user.role !== 'AUTHOR' && session.user.role !== 'ADMIN')) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
     const userId = session.user.id;
 
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
     } catch (error) {
         await connection.rollback();
         console.error('Withdrawal request failed:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     } finally {
         connection.release();
     }

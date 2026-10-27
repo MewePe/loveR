@@ -9,14 +9,14 @@ export async function GET() {
         return NextResponse.json(settings[0] || {});
     } catch (error) {
         console.error('Failed to fetch settings:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }
 
 export async function POST(req: Request) {
     const session = await auth();
     if (session?.user?.role !== 'ADMIN') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
 
     try {
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
         const fields = ['site_name', 'site_description', 'contact_email', 'maintenance_mode', 'author_share_percent', 'payment_info']
             .filter(key => body[key] !== undefined);
         if (fields.length === 0) {
-            return NextResponse.json({ error: 'No settings provided' }, { status: 400 });
+            return NextResponse.json({ error: 'ไม่มีการตั้งค่าที่ต้องบันทึก' }, { status: 400 });
         }
 
         await pool.query(
@@ -44,6 +44,6 @@ export async function POST(req: Request) {
         return NextResponse.json({ message: 'Settings updated successfully' });
     } catch (error) {
         console.error('Failed to update settings:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }

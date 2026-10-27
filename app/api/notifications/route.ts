@@ -10,7 +10,7 @@ const PAGE_SIZE = 20;
 export async function GET(req: NextRequest) {
     const session = await auth();
     if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
     const { searchParams } = new URL(req.url);
     const limit = Math.min(PAGE_SIZE, Math.max(1, parseInt(searchParams.get('limit') || String(PAGE_SIZE), 10) || PAGE_SIZE));
@@ -35,6 +35,6 @@ export async function GET(req: NextRequest) {
         });
     } catch (error) {
         console.error('Error fetching notifications:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }

@@ -21,7 +21,7 @@ export async function GET(req: Request) {
         return NextResponse.json(rows);
     } catch (error) {
         console.error('Database error:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }
 
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     const session = await auth();
 
     if (!session?.user?.email) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
 
     // Get user ID from DB
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     const user = users[0];
 
     if (!user) {
-        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+        return NextResponse.json({ error: 'ไม่พบผู้ใช้' }, { status: 404 });
     }
 
     // Check if user has AUTHOR or ADMIN role
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { title, description, coverImage, categoryId } = body;
     if (coverImage && !isPublicUploadUrl(coverImage)) {
-        return NextResponse.json({ error: 'Invalid cover image' }, { status: 400 });
+        return NextResponse.json({ error: 'รูปปกไม่ถูกต้อง' }, { status: 400 });
     }
     const id = uuidv4();
 
@@ -64,6 +64,6 @@ export async function POST(req: Request) {
         return NextResponse.json({ id, title, status: 'DRAFT' });
     } catch (error) {
         console.error('Database error:', error);
-        return NextResponse.json({ error: 'Failed to create comic' }, { status: 500 });
+        return NextResponse.json({ error: 'สร้างการ์ตูนไม่สำเร็จ' }, { status: 500 });
     }
 }

@@ -7,7 +7,7 @@ import { saveImageUpload, savePrivateComicPage } from '@/lib/upload';
 export async function POST(req: Request) {
     const session = await auth();
     if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
 
     try {
@@ -15,13 +15,13 @@ export async function POST(req: Request) {
         const file = formData.get('file');
 
         if (!file || !(file instanceof File)) {
-            return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
+            return NextResponse.json({ error: 'กรุณาเลือกไฟล์' }, { status: 400 });
         }
 
         let result;
         if (formData.get('purpose') === 'comic-page') {
             if (session.user.role !== 'AUTHOR' && session.user.role !== 'ADMIN') {
-                return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+                return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
             }
             result = await savePrivateComicPage(file, session.user.id);
         } else {
@@ -38,6 +38,6 @@ export async function POST(req: Request) {
         });
     } catch (error) {
         console.error('Upload error:', error);
-        return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
+        return NextResponse.json({ error: 'อัปโหลดไม่สำเร็จ' }, { status: 500 });
     }
 }

@@ -102,7 +102,7 @@ export default function WriterProfilePanel() {
             <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-8 flex items-center gap-3">
                 <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-500" />
                 <span className="text-yellow-800 dark:text-yellow-200 font-medium">
-                    สถานะการลงทะเบียนนักเขียน : {profile.status === 'APPROVED' ? <span className="text-green-600">อนุมัติแล้ว</span> : profile.status === 'REJECTED' ? <span className="text-red-600">ถูกปฏิเสธ ({profile.rejection_reason})</span> : <span className="text-yellow-600">ยังไม่ได้ลงทะเบียน / รอการตรวจสอบ</span>}
+                    สถานะการลงทะเบียนนักเขียน : {profile.status === 'APPROVED' ? <span className="text-green-700 dark:text-green-400">อนุมัติแล้ว</span> : profile.status === 'REJECTED' ? <span className="text-red-700 dark:text-red-400">ถูกปฏิเสธ ({profile.rejection_reason})</span> : <span className="text-yellow-700 dark:text-yellow-400">ยังไม่ได้ลงทะเบียน / รอการตรวจสอบ</span>}
                 </span>
             </div>
 
@@ -210,10 +210,10 @@ export default function WriterProfilePanel() {
                                     <Image src={previews.id_card} alt="สำเนาบัตรประชาชน" fill unoptimized className="object-contain rounded-lg" />
                                 </div>
                             ) : (
-                                <Upload className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                                <Upload className="w-10 h-10 text-gray-500 dark:text-gray-400 mx-auto mb-2" />
                             )}
                             <p className="font-medium text-gray-700 dark:text-gray-300">สำเนาบัตรประชาชน*</p>
-                            <p className="text-xs text-gray-500 mt-1">.jpg .png .webp .gif ขนาดไม่เกิน 10MB</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">.jpg .png .webp .gif ขนาดไม่เกิน 10MB</p>
                         </div>
 
                         {/* Bank Book */}
@@ -229,10 +229,10 @@ export default function WriterProfilePanel() {
                                     <Image src={previews.bank_book} alt="สำเนาบัญชีธนาคาร" fill unoptimized className="object-contain rounded-lg" />
                                 </div>
                             ) : (
-                                <Upload className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                                <Upload className="w-10 h-10 text-gray-500 dark:text-gray-400 mx-auto mb-2" />
                             )}
                             <p className="font-medium text-gray-700 dark:text-gray-300">สำเนาบัญชีธนาคาร*</p>
-                            <p className="text-xs text-gray-500 mt-1">.jpg .png .webp .gif ขนาดไม่เกิน 10MB</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">.jpg .png .webp .gif ขนาดไม่เกิน 10MB</p>
                         </div>
                     </div>
                 </section>

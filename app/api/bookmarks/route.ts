@@ -13,7 +13,7 @@ const COLUMN = CONTENT_COLUMN;
 export async function GET(req: NextRequest) {
     const session = await auth();
     if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
     const userId = session.user.id;
 
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
 
         if (contentType && contentId) {
             if (!isContentType(contentType)) {
-                return NextResponse.json({ error: 'Invalid content_type' }, { status: 400 });
+                return NextResponse.json({ error: 'ประเภทเรื่องไม่ถูกต้อง' }, { status: 400 });
             }
             const [rows] = await pool.query<RowDataPacket[]>(
                 `SELECT id FROM bookmarks WHERE user_id = ? AND ${COLUMN[contentType]} = ?`,
@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ bookmarks });
     } catch (error) {
         console.error('Error fetching bookmarks:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }
 
@@ -62,19 +62,19 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
     const session = await auth();
     if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
     const userId = session.user.id;
 
     try {
         const { content_type, content_id } = await req.json();
         if (!isContentType(content_type) || typeof content_id !== 'string') {
-            return NextResponse.json({ error: 'Invalid content_type or content_id' }, { status: 400 });
+            return NextResponse.json({ error: 'ข้อมูลเรื่องไม่ถูกต้อง' }, { status: 400 });
         }
 
         const content = await getContentRow(content_type, content_id);
         if (!content || !canViewContent(session.user, content)) {
-            return NextResponse.json({ error: 'Content not found' }, { status: 404 });
+            return NextResponse.json({ error: 'ไม่พบเรื่องนี้' }, { status: 404 });
         }
 
         const column = COLUMN[content_type];
@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: true, bookmarked: true });
     } catch (error) {
         console.error('Error adding bookmark:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }
 
@@ -100,13 +100,13 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
     const session = await auth();
     if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
 
     try {
         const { content_type, content_id } = await req.json();
         if (!isContentType(content_type) || typeof content_id !== 'string') {
-            return NextResponse.json({ error: 'Invalid content_type or content_id' }, { status: 400 });
+            return NextResponse.json({ error: 'ข้อมูลเรื่องไม่ถูกต้อง' }, { status: 400 });
         }
 
         await pool.query(
@@ -117,6 +117,6 @@ export async function DELETE(req: NextRequest) {
         return NextResponse.json({ success: true, bookmarked: false });
     } catch (error) {
         console.error('Error removing bookmark:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }

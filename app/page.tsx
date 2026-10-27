@@ -46,7 +46,7 @@ export default async function Home() {
       <section className="py-16 container mx-auto px-4">
         <div className="flex justify-between items-end mb-8">
           <h2 className="text-3xl font-bold text-gray-800 dark:text-white">📚 นิยายยอดนิยม</h2>
-          <Link href="/ranking?type=novel" className="text-indigo-600 font-medium hover:underline">ดูอันดับทั้งหมด</Link>
+          <Link href="/ranking?type=novel" className="text-indigo-600 dark:text-indigo-400 font-medium hover:underline">ดูอันดับทั้งหมด</Link>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -60,7 +60,7 @@ export default async function Home() {
       <section className="py-16 container mx-auto px-4 bg-gray-100 dark:bg-gray-800/50 rounded-3xl">
         <div className="flex justify-between items-end mb-8">
           <h2 className="text-3xl font-bold text-gray-800 dark:text-white">🎨 การ์ตูนยอดนิยม</h2>
-          <Link href="/ranking?type=comic" className="text-pink-600 font-medium hover:underline">ดูอันดับทั้งหมด</Link>
+          <Link href="/ranking?type=comic" className="text-pink-700 dark:text-pink-400 font-medium hover:underline">ดูอันดับทั้งหมด</Link>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">

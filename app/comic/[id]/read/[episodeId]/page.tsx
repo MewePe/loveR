@@ -117,7 +117,7 @@ export default async function ReadEpisode({ params }: { params: Promise<{ id: st
                         ))}
                     </div>
                 ) : (
-                    <div className="text-center py-20 text-gray-400 dark:text-gray-500">
+                    <div className="text-center py-20 text-gray-500 dark:text-gray-400">
                         <p className="text-6xl mb-4">🎨</p>
                         <p>ยังไม่มีหน้าในตอนนี้</p>
                     </div>

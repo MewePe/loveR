@@ -80,7 +80,7 @@ export default function BookmarksPage() {
             <div className="container mx-auto px-4 max-w-5xl">
                 {/* Header */}
                 <div className="flex items-center gap-3 mb-8">
-                    <Bookmark className="w-8 h-8 text-yellow-500" />
+                    <Bookmark className="w-8 h-8 text-yellow-500 dark:text-yellow-400" />
                     <h1 className="text-3xl font-bold text-gray-900 dark:text-white">ชั้นหนังสือของฉัน</h1>
                 </div>
 
@@ -157,7 +157,7 @@ export default function BookmarksPage() {
                                     {/* Remove Button */}
                                     <button
                                         onClick={() => removeBookmark(bookmark.content_type, bookmark.content_id, bookmark.id)}
-                                        className="mt-2 w-full flex items-center justify-center gap-1 text-xs text-gray-400 hover:text-red-500 dark:hover:text-red-400 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+                                        className="mt-2 w-full flex items-center justify-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition"
                                     >
                                         <Trash2 className="w-3 h-3" />
                                         นำออก
@@ -172,7 +172,7 @@ export default function BookmarksPage() {
                         <h3 className="text-xl font-bold text-gray-500 dark:text-gray-400 mb-2">
                             {filter === "all" ? "ชั้นหนังสือว่างเปล่า" : filter === "novel" ? "ยังไม่มีนิยายที่บันทึกไว้" : "ยังไม่มีการ์ตูนที่บันทึกไว้"}
                         </h3>
-                        <p className="text-gray-400 dark:text-gray-500 mb-6">ลองเพิ่มนิยายหรือการ์ตูนที่ชอบลงในชั้นหนังสือ</p>
+                        <p className="text-gray-500 dark:text-gray-400 mb-6">ลองเพิ่มนิยายหรือการ์ตูนที่ชอบลงในชั้นหนังสือ</p>
                         <Link href="/" className="inline-block bg-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-indigo-700 transition">
                             สำรวจเนื้อหา
                         </Link>

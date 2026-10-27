@@ -250,7 +250,7 @@ export default function PageManagement() {
                         <button
                             onClick={handleSaveOrder}
                             disabled={saving}
-                            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition disabled:opacity-50"
+                            className="flex items-center gap-2 bg-green-700 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-800 transition disabled:opacity-50"
                         >
                             {saving
                                 ? <Loader2 className="w-4 h-4 animate-spin" />
@@ -265,17 +265,17 @@ export default function PageManagement() {
                     <div className="lg:col-span-1">
                         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-5 sticky top-6">
                             <h2 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
-                                <Plus className="w-5 h-5 text-pink-500" />
+                                <Plus className="w-5 h-5 text-pink-500 dark:text-pink-400" />
                                 อัปโหลดหน้าใหม่
                             </h2>
 
                             {/* Drop zone */}
                             <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 cursor-pointer hover:border-pink-400 dark:hover:border-pink-500 transition group">
-                                <Upload className="w-8 h-8 text-gray-400 group-hover:text-pink-500 transition mb-2" />
+                                <Upload className="w-8 h-8 text-gray-500 dark:text-gray-400 group-hover:text-pink-500 transition mb-2" />
                                 <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
                                     คลิกเพื่อเลือกรูปภาพ
                                 </span>
-                                <span className="text-xs text-gray-400 mt-1">
+                                <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                     รองรับหลายรูปพร้อมกัน
                                 </span>
                                 <input
@@ -346,7 +346,7 @@ export default function PageManagement() {
                                 </div>
                                 <div className="flex justify-between">
                                     <span>รออัปโหลด</span>
-                                    <span className="font-semibold text-pink-600">
+                                    <span className="font-semibold text-pink-600 dark:text-pink-400">
                                         {queuedFiles.length} รูป
                                     </span>
                                 </div>
@@ -359,7 +359,7 @@ export default function PageManagement() {
                         {pages.length === 0 ? (
                             <div className="bg-white dark:bg-gray-800 rounded-xl border dark:border-gray-700 p-16 text-center">
                                 <div className="w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <ImageIcon className="w-10 h-10 text-gray-400" />
+                                    <ImageIcon className="w-10 h-10 text-gray-500 dark:text-gray-400" />
                                 </div>
                                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                                     ยังไม่มีหน้าการ์ตูน
@@ -409,7 +409,7 @@ export default function PageManagement() {
                                             <p className="font-medium text-gray-900 dark:text-white text-sm">
                                                 หน้าที่ {index + 1}
                                             </p>
-                                            <p className="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5">
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
                                                 {page.image_url.split('/').pop()}
                                             </p>
                                         </div>
@@ -420,7 +420,7 @@ export default function PageManagement() {
                                                 onClick={() => movePage(index, 'up')}
                                                 disabled={index === 0}
                                                 title="เลื่อนขึ้น"
-                                                className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed"
+                                                className="p-2 text-gray-500 dark:text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed"
                                             >
                                                 <MoveUp className="w-4 h-4" />
                                             </button>
@@ -428,14 +428,14 @@ export default function PageManagement() {
                                                 onClick={() => movePage(index, 'down')}
                                                 disabled={index === pages.length - 1}
                                                 title="เลื่อนลง"
-                                                className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed"
+                                                className="p-2 text-gray-500 dark:text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed"
                                             >
                                                 <MoveDown className="w-4 h-4" />
                                             </button>
                                             <button
                                                 onClick={() => handleDeletePage(page.id)}
                                                 title="ลบหน้านี้"
-                                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
+                                                className="p-2 text-gray-500 dark:text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
                                             >
                                                 <Trash2 className="w-4 h-4" />
                                             </button>

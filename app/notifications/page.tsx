@@ -73,7 +73,7 @@ export default function NotificationsPage() {
             <div className="container mx-auto px-4 max-w-3xl">
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-8">
                     <div className="flex items-center gap-3">
-                        <Bell className="w-8 h-8 text-indigo-500" />
+                        <Bell className="w-8 h-8 text-indigo-500 dark:text-indigo-400" />
                         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">การแจ้งเตือน</h1>
                     </div>
                     {unread > 0 && (
@@ -94,7 +94,7 @@ export default function NotificationsPage() {
                                 <NotificationIcon type={n.type} />
                                 <span className="flex-1 min-w-0">
                                     <span className={`block break-words ${n.is_read ? "text-gray-600 dark:text-gray-300" : "text-gray-900 dark:text-white font-medium"}`}>{n.message}</span>
-                                    <span className="block text-xs text-gray-400 mt-1">{timeAgo(n.created_at)}</span>
+                                    <span className="block text-xs text-gray-500 dark:text-gray-400 mt-1">{timeAgo(n.created_at)}</span>
                                 </span>
                                 {!n.is_read && <span className="w-2.5 h-2.5 mt-1.5 rounded-full bg-indigo-600 flex-shrink-0" aria-label="ยังไม่อ่าน" />}
                             </button>

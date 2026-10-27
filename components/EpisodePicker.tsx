@@ -95,7 +95,7 @@ export default function EpisodePicker({ items, currentId, hrefPrefix, accentColo
                             <h2 className="text-lg font-bold text-gray-900 dark:text-white">
                                 เลือกตอน <span className="text-sm font-normal text-gray-500 dark:text-gray-400">({items.length} ตอน)</span>
                             </h2>
-                            <button type="button" onClick={() => setOpen(false)} className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" aria-label="ปิด">
+                            <button type="button" onClick={() => setOpen(false)} className="p-1 text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" aria-label="ปิด">
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
@@ -103,7 +103,7 @@ export default function EpisodePicker({ items, currentId, hrefPrefix, accentColo
                         {items.length > SEARCH_THRESHOLD && (
                             <div className="px-5 py-3 border-b dark:border-gray-700">
                                 <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400" />
                                     <input
                                         type="text"
                                         inputMode="numeric"
@@ -130,15 +130,15 @@ export default function EpisodePicker({ items, currentId, hrefPrefix, accentColo
                                         aria-current={isCurrent ? "page" : undefined}
                                         className={`flex items-center gap-3 px-5 py-3 border-l-4 transition ${isCurrent ? colorSet.current : "border-l-transparent hover:bg-gray-50 dark:hover:bg-gray-700/50"}`}
                                     >
-                                        <span className={`font-mono text-sm w-10 shrink-0 ${isCurrent ? colorSet.currentText : dimmed ? "text-gray-300 dark:text-gray-600" : "text-gray-400"}`}>#{item.number}</span>
-                                        <span className={`flex-1 min-w-0 truncate ${isCurrent ? `font-bold ${colorSet.currentText}` : dimmed ? "text-gray-400 dark:text-gray-500" : "text-gray-800 dark:text-gray-100"}`}>
+                                        <span className={`font-mono text-sm w-10 shrink-0 ${isCurrent ? colorSet.currentText : dimmed ? "text-gray-500 dark:text-gray-400" : "text-gray-600 dark:text-gray-300"}`}>#{item.number}</span>
+                                        <span className={`flex-1 min-w-0 truncate ${isCurrent ? `font-bold ${colorSet.currentText}` : dimmed ? "text-gray-500 dark:text-gray-400" : "text-gray-800 dark:text-gray-100"}`}>
                                             {item.title}
                                         </span>
                                         <span className="shrink-0 flex items-center gap-2 text-xs">
                                             {isCurrent ? (
                                                 <span className={`font-medium ${colorSet.currentText}`}>กำลังอ่าน</span>
                                             ) : dimmed && (
-                                                <span className="flex items-center gap-0.5 text-gray-400 dark:text-gray-500"><Check className="w-3.5 h-3.5" /> อ่านแล้ว</span>
+                                                <span className="flex items-center gap-0.5 text-gray-500 dark:text-gray-400"><Check className="w-3.5 h-3.5" /> อ่านแล้ว</span>
                                             )}
                                             {item.locked && <PriceBadge price={item.price} unlocked={false} />}
                                         </span>

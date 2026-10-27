@@ -9,12 +9,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ categor
     const session = await auth();
 
     if (!isOwnerOrAdmin(session?.user, ownerId)) {
-        return NextResponse.json({ error: 'Not found' }, { status: 404 });
+        return NextResponse.json({ error: 'ไม่พบข้อมูล' }, { status: 404 });
     }
 
     const doc = await readPrivateDocument(category, ownerId, file);
     if (!doc) {
-        return NextResponse.json({ error: 'Not found' }, { status: 404 });
+        return NextResponse.json({ error: 'ไม่พบข้อมูล' }, { status: 404 });
     }
 
     return new NextResponse(new Uint8Array(doc.data), {

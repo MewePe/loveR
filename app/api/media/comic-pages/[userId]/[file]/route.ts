@@ -28,12 +28,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ userId:
         allowed = await canAccess(session?.user, 'episode', episode as AccessItem);
     }
     if (!allowed) {
-        return NextResponse.json({ error: 'Not found' }, { status: 404 });
+        return NextResponse.json({ error: 'ไม่พบข้อมูล' }, { status: 404 });
     }
 
     const image = await readPrivateComicPage(userId, file);
     if (!image) {
-        return NextResponse.json({ error: 'Not found' }, { status: 404 });
+        return NextResponse.json({ error: 'ไม่พบข้อมูล' }, { status: 404 });
     }
 
     return new NextResponse(new Uint8Array(image.data), {

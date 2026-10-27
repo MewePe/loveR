@@ -13,7 +13,7 @@ const PAGE_SIZE = 20;
 export async function GET(req: NextRequest) {
     const session = await auth();
     if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
     const userId = session.user.id;
     const page = Math.max(1, Math.floor(Number(new URL(req.url).searchParams.get('page'))) || 1);
@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ items, total: Number(count[0].total), page, page_size: PAGE_SIZE });
     } catch (error) {
         console.error('Error fetching reading history:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }
 
@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
     const session = await auth();
     if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
 
     try {
@@ -73,7 +73,7 @@ export async function DELETE(req: NextRequest) {
 
         const { content_type, content_id } = body;
         if (!isContentType(content_type) || typeof content_id !== 'string') {
-            return NextResponse.json({ error: 'Invalid content_type or content_id' }, { status: 400 });
+            return NextResponse.json({ error: 'ข้อมูลเรื่องไม่ถูกต้อง' }, { status: 400 });
         }
         await pool.query(
             `DELETE FROM reading_history WHERE user_id = ? AND ${CONTENT_COLUMN[content_type]} = ?`,
@@ -83,6 +83,6 @@ export async function DELETE(req: NextRequest) {
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Error deleting reading history:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
     }
 }

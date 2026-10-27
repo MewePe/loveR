@@ -54,12 +54,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                             }`}
                     >
                         {toast.kind === "error"
-                            ? <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                            : <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />}
+                            ? <XCircle className="w-5 h-5 text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                            : <CheckCircle className="w-5 h-5 text-green-500 dark:text-green-400 flex-shrink-0 mt-0.5" />}
                         <p className="flex-1 text-sm text-gray-800 dark:text-gray-100 whitespace-pre-line">{toast.message}</p>
                         <button
                             onClick={() => dismiss(toast.id)}
-                            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                            className="text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
                             aria-label="ปิด"
                         >
                             <X className="w-4 h-4" />

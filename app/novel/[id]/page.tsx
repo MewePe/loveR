@@ -116,14 +116,14 @@ export default async function NovelDetail({ params }: { params: Promise<{ id: st
                                 className="flex items-center justify-between p-5 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition group"
                             >
                                 <div className="flex items-center gap-6">
-                                    <span className="text-gray-400 font-mono w-8 text-lg">#{chapter.chapter_order}</span>
+                                    <span className="text-gray-500 dark:text-gray-400 font-mono w-8 text-lg">#{chapter.chapter_order}</span>
                                     <span className="font-medium text-gray-700 dark:text-gray-200 text-lg group-hover:text-indigo-600 transition">
                                         {chapter.title}
                                     </span>
                                 </div>
                                 <span className="flex items-center gap-4 text-sm">
                                     <PriceBadge price={chapter.price} unlocked={isOwner || purchased.has(chapter.id)} />
-                                    <span className="text-gray-400">{new Date(chapter.created_at).toLocaleDateString('th-TH')}</span>
+                                    <span className="text-gray-500 dark:text-gray-400">{new Date(chapter.created_at).toLocaleDateString('th-TH')}</span>
                                 </span>
                             </Link>
                         ))}

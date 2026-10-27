@@ -112,7 +112,7 @@ export default function HistoryPage() {
                 {/* Header */}
                 <div className="flex items-center justify-between gap-3 mb-8">
                     <div className="flex items-center gap-3">
-                        <History className="w-8 h-8 text-blue-500" />
+                        <History className="w-8 h-8 text-blue-500 dark:text-blue-400" />
                         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">ประวัติการอ่าน</h1>
                     </div>
                     {items.length > 0 && (
@@ -178,7 +178,7 @@ export default function HistoryPage() {
                                         </Link>
                                         <button
                                             onClick={() => removeItem(item)}
-                                            className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-500 dark:hover:text-red-400 px-2 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+                                            className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 px-2 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition"
                                         >
                                             <Trash2 className="w-3 h-3" />
                                             นำออก
@@ -202,7 +202,7 @@ export default function HistoryPage() {
                     <div className="text-center py-20">
                         <History className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
                         <h3 className="text-xl font-bold text-gray-500 dark:text-gray-400 mb-2">ยังไม่มีประวัติการอ่าน</h3>
-                        <p className="text-gray-400 dark:text-gray-500 mb-6">เรื่องที่คุณเปิดอ่านจะแสดงที่นี่ พร้อมปุ่มอ่านต่อจากตอนล่าสุด</p>
+                        <p className="text-gray-500 dark:text-gray-400 mb-6">เรื่องที่คุณเปิดอ่านจะแสดงที่นี่ พร้อมปุ่มอ่านต่อจากตอนล่าสุด</p>
                         <Link href="/" className="inline-block bg-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-indigo-700 transition">
                             สำรวจเนื้อหา
                         </Link>

@@ -118,7 +118,7 @@ export default function BecomeAuthorPage() {
             <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
                 <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 max-w-md text-center">
                     <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <CheckCircle className="w-10 h-10 text-green-600" />
+                        <CheckCircle className="w-10 h-10 text-green-600 dark:text-green-400" />
                     </div>
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">คุณเป็นนักเขียนแล้ว!</h1>
                     <p className="text-gray-600 dark:text-gray-400 mb-6">คุณสามารถเริ่มสร้างนิยายและการ์ตูนได้เลย</p>
@@ -148,11 +148,11 @@ export default function BecomeAuthorPage() {
                 <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 max-w-md text-center">
                     <div className={`w-20 h-20 ${existingRequest.status === 'PENDING' ? 'bg-yellow-100 dark:bg-yellow-900/30' : existingRequest.status === 'APPROVED' ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'} rounded-full flex items-center justify-center mx-auto mb-6`}>
                         {existingRequest.status === 'PENDING' ? (
-                            <AlertCircle className="w-10 h-10 text-yellow-600" />
+                            <AlertCircle className="w-10 h-10 text-yellow-600 dark:text-yellow-400" />
                         ) : existingRequest.status === 'APPROVED' ? (
-                            <CheckCircle className="w-10 h-10 text-green-600" />
+                            <CheckCircle className="w-10 h-10 text-green-600 dark:text-green-400" />
                         ) : (
-                            <AlertCircle className="w-10 h-10 text-red-600" />
+                            <AlertCircle className="w-10 h-10 text-red-600 dark:text-red-400" />
                         )}
                     </div>
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">สถานะคำขอ</h1>
@@ -200,7 +200,7 @@ export default function BecomeAuthorPage() {
                 {/* Form */}
                 <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border dark:border-gray-700 p-6">
                     <div className="flex items-center gap-3 mb-6 pb-4 border-b dark:border-gray-700">
-                        <FileText className="w-6 h-6 text-indigo-600" />
+                        <FileText className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
                         <h2 className="text-lg font-bold text-gray-900 dark:text-white">ข้อมูลส่วนตัว</h2>
                     </div>
 
