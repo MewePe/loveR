@@ -55,6 +55,7 @@ npx tsx scripts/add_item_reads.ts # ตาราง item_reads (บท/ตอน
 npx tsx scripts/add_story_categories.ts # ตาราง novel_categories/comic_categories (หลายหมวดต่อเรื่อง) คัดลอกหมวดเดิมจาก category_id มาให้ (รันซ้ำได้)
 npx tsx scripts/add_author_profiles.ts # คอลัมน์โปรไฟล์ใน users (username/bio/cover_image/social_links), is_completed, ตาราง follows/supports และตั้ง username ให้ทุกคน (รันซ้ำได้)
 npx tsx scripts/add_admin_tools.ts # คอลัมน์แบนใน users (ban_reason/banned_at/role_before_ban), ตาราง coin_adjustments และ admin_logs (รันซ้ำได้)
+npx tsx scripts/add_mature_flag.ts # คอลัมน์ is_mature (18+) ใน novels/comics (รันซ้ำได้)
 ```
 
 `reset_db.ts` และ `drop_old_db.ts` ลบข้อมูล
@@ -141,6 +142,19 @@ npx tsx scripts/add_admin_tools.ts # คอลัมน์แบนใน users 
 - `GET/PUT/DELETE /api/ratings` คืน `{ average, count, mine, can_rate }` คะแนน 1-5 หนึ่งแถวต่อคนต่อเรื่อง (`PUT` = upsert) ให้คะแนนได้เฉพาะเรื่อง `PUBLISHED` และห้ามให้คะแนนเรื่องของตัวเอง UI อยู่ใน `components/RatingStars.tsx` (กดดาวเดิมซ้ำ = ยกเลิก)
 - ทั้งสองอย่างเช็ก `canViewContent()` (เรื่องที่ไม่ได้เผยแพร่ได้ 404 ยกเว้นเจ้าของ/แอดมิน) และซ่อนคอมเมนต์/ไม่นับคะแนนของผู้ใช้ที่เป็น `BANNED`
 - คะแนนเฉลี่ยในหน้ารายการ/ค้นหา/อันดับมาจาก `lib/ranking.ts` (ดูหัวข้อ "จัดอันดับและแนะนำ")
+
+**หน้าแรก** (`app/page.tsx` server component, ข้อมูลจาก `lib/home.ts` + `lib/ranking.ts` โหลดพร้อมกันด้วย `Promise.all`):
+- เรียงลำดับ: แบนเนอร์สไลด์ (`components/home/HeroCarousel.tsx`), แถบหมวดหมู่, อ่านต่อ, อัปเดตล่าสุด, นิยายยอดนิยม, การ์ตูนยอดนิยม, 10 อันดับ (เลขตัวใหญ่), แนะนำสำหรับคุณ, เรื่องที่จบแล้ว, นักเขียนยอดนิยม ส่วนไหนไม่มีข้อมูลจะไม่แสดงเลย (ไม่ปล่อยกล่องว่าง)
+- แบนเนอร์: `getFeatured()` 5 เรื่องที่วิวสูงสุดและมีตอนแล้ว (ที่มีปกก่อน) **ไม่เอาเรื่อง 18+** ปุ่ม "อ่านเลย" ไปตอนแรก เลื่อนเองทุก 6 วินาที หยุดเมื่อชี้/โฟกัส/แท็บซ่อน/กดหยุด และไม่เลื่อนเองถ้าผู้ใช้ตั้ง `prefers-reduced-motion`
+- อ่านต่อ (`getContinueReading()`, เฉพาะคนล็อกอินที่มี `reading_history`) กฎการซ่อนเหมือน `/api/history`; อัปเดตล่าสุด (`getLatestUpdates()`) ใช้ sort `updated` (`last_item_at` = เวลาบท/ตอนล่าสุด) แล้วดึงบท/ตอนล่าสุดของแต่ละเรื่อง; นักเขียนยอดนิยม (`getTopAuthors()`) = ผลรวมวิวของเรื่อง PUBLISHED ไม่นับ `BANNED`
+- ทุกแถวเลื่อนซ้ายขวาด้วย `components/home/ScrollRow.tsx` (+ `RowItem`) ปัดนิ้วบนมือถือ มีปุ่มลูกศรตั้งแต่ `md` **ตัว list ต้องเป็น `relative`** และการ์ดข้างในต้องมี positioned ancestor (StoryCard เป็น `relative`) ไม่งั้นสิ่งที่เป็น `absolute` เช่น `sr-only` จะหลุดออกนอก scroller ทำให้ทั้งหน้าเลื่อนซ้ายขวาได้ (เคยเกิดแล้ว)
+- **ทุกแถวจาก `lib/ranking.ts`** มี `item_count`, `last_item_at`, `is_completed`, `is_mature` (เป็น boolean แล้ว) และ `listStories()` รับ `completed`/`hasItems` เพิ่ม sort `updated` อยู่ใน `SORTS` แต่ไม่อยู่ใน `SEARCH_SORTS`/`RANKING_SORTS` จึงรับจาก input ไม่ได้
+- **การ์ดเรื่อง** `components/StoryCard.tsx`: ป้ายนิยาย/การ์ตูน, 18+, จบแล้ว, วิวแบบย่อ (`compactNumber()`), คะแนน, จำนวนบท/ตอน, ยกขึ้นตอนชี้ (`motion-reduce` ปิด) `maxTags` จำกัดป้ายหมวด ปกใช้ `components/StoryCover.tsx`: รูปโหลดแบบ `loading="lazy"` (ยกเว้นสไลด์แรก) ไม่มีรูปจะสร้างปกจากชื่อเรื่องบน gradient ที่สีมาจาก `hueOf(id)` (FNV-1a, **ห้ามกลับไปใช้ `h*31+c`** เพราะ UUID ได้สีเกือบเดียวกันหมด) ความสว่าง 30%/17% ให้ตัวอักษรขาวอ่านได้ทุกสี
+- **18+** (`novels.is_mature`/`comics.is_mature`): นักเขียนติ๊กใน `WorkFormModal` API รับ `isMature: boolean` (POST/PATCH ไม่ใช่ boolean = 400) การ์ดเบลอปกและมีป้าย ยังไม่มีการยืนยันอายุก่อนอ่าน
+- `timeAgo()` อยู่ที่ `lib/timeAgo.ts` (ใช้ได้ทั้ง server/client, `NotificationBell` re-export)
+- **Footer** `components/Footer.tsx` อยู่ใน `app/layout.tsx` ซ่อนในหน้า `/admin`, `/author`, หน้าอ่าน และ `/maintenance` (`HIDDEN`)
+- เทสต์อยู่ใน `tests/e2e/home.test.mjs` (ใช้ยอดวิวหลักพันล้านให้เรื่องทดสอบอยู่บนสุด)
+- **ตรวจหน้าตาโดยไม่มี Chrome extension**: ใช้ Chrome headless ผ่าน DevTools Protocol (`--remote-debugging-port`, `Emulation.setDeviceMetricsOverride` + `setEmulatedMedia prefers-color-scheme`, `Page.captureScreenshot captureBeyondViewport`) ห้ามตั้งความสูงหน้าต่างเท่าทั้งหน้า เพราะ `min-h-screen` จะดัน footer ออกนอกภาพ
 
 **โปรไฟล์นักเขียนสาธารณะ** (`/profile/[username]`, `lib/authors.ts`, `lib/username.ts`):
 - มีเฉพาะ AUTHOR/ADMIN หรือคนที่มีเรื่อง PUBLISHED ส่วน READER และ `BANNED` ได้ 404 (`getPublicAuthor()`) รับได้ทั้ง username และ user id (id หรือตัวพิมพ์ใหญ่จะ redirect ไป URL ที่ถูกต้อง)
@@ -247,9 +261,10 @@ npx tsx scripts/add_admin_tools.ts # คอลัมน์แบนใน users 
    npx tsx scripts/add_story_categories.ts    # หลายหมวดต่อเรื่อง (คัดลอกหมวดเดิมมาให้)
    npx tsx scripts/add_author_profiles.ts     # โปรไฟล์นักเขียน ติดตาม สนับสนุน ป้ายจบแล้ว
    npx tsx scripts/add_admin_tools.ts         # แบนพร้อมเหตุผล ปรับเหรียญ ประวัติการทำงานของแอดมิน
+   npx tsx scripts/add_mature_flag.ts         # ป้าย 18+ (หน้าแรกใหม่)
    ```
    DB ที่เก่ากว่านั้นให้รันสคริปต์ก่อนหน้าตามลำดับใน README ก่อน ส่วน DB ใหม่ใช้ `schema.sql` ได้เลยไม่ต้องรันพวกนี้
-3. ลบ `.next` แล้วเปิด `npm run dev` ใหม่ จากนั้นรัน `npm run test:e2e` เพื่อเช็ก (ต้องผ่านทั้งหมด 138 เทสต์)
+3. ลบ `.next` แล้วเปิด `npm run dev` ใหม่ จากนั้นรัน `npm run test:e2e` เพื่อเช็ก (ต้องผ่านทั้งหมด 145 เทสต์)
 
 **ผู้ดูแลต้องทำเอง**:
 - กรอก "ข้อมูลการชำระเงิน" ที่ `/admin` → ตั้งค่า (เครื่องนี้ยังเป็นข้อความตัวอย่างอยู่) ถ้ายังไม่กรอก ผู้อ่านจะเติมเหรียญไม่ได้
@@ -281,7 +296,7 @@ npx tsx scripts/add_admin_tools.ts # คอลัมน์แบนใน users 
 | 11 | จัดอันดับและแนะนำ | ✅ (อันดับรวมตลอดกาล) | `/ranking`, `/` (แนะนำสำหรับคุณ + ยอดนิยม), ล่างหน้า `/novel/[id]` (เรื่องที่คล้ายกัน), `/search` (เรียงตาม) | `lib/ranking.ts`, `app/ranking/page.tsx`, `components/StoryCard.tsx` |
 | 12 | ตรวจสอบเนื้อหาเบื้องต้นด้วย API | ❌ | — | — |
 | 13 | รักษาความปลอดภัย | ✅ | `/login` (ล็อกอินผิดเกิน 5 ครั้ง), เปิดตอนที่ยังไม่ซื้อ | `lib/auth.ts`, `lib/loginThrottle.ts`, `lib/upload.ts`, `lib/visibility.ts`, `tests/e2e/security.test.mjs` |
-| 14 | ทดสอบระบบและปรับ UX/UI | ⚠️ | `npm run test:e2e` (138 เทสต์) | `tests/e2e/` |
+| 14 | ทดสอบระบบและปรับ UX/UI | ⚠️ | `npm run test:e2e` (145 เทสต์) | `tests/e2e/` |
 
 **สิ่งที่ขาด**:
 - ~~ยอดวิวไม่เคยเพิ่ม~~ **แก้แล้ว 2026-10-23** (ดูหัวข้อ "ยอดวิว" ในสถาปัตยกรรม) ยอดวิวเก่าก่อนวันนั้นของนิยาย/บท/การ์ตูนยังเป็น 0 เพราะไม่มีข้อมูลย้อนหลัง

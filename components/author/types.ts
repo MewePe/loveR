@@ -8,6 +8,7 @@ export interface Work {
     cover_image: string | null;
     status: string;
     is_completed: number | boolean; // "จบแล้ว"
+    is_mature?: number | boolean; // 18+
     categories: { id: string; name: string; slug: string }[]; // in the order the author picked them
     views: number;
 }

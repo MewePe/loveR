@@ -26,6 +26,7 @@ export default function WorkFormModal({ kind, work, categories, onClose, onSaved
         description: work?.description || '',
         categoryIds: work?.categories.map((c) => c.id) ?? [],
         isCompleted: !!work?.is_completed,
+        isMature: !!work?.is_mature,
     });
     const [coverFile, setCoverFile] = useState<File | null>(null);
     const [coverPreview, setCoverPreview] = useState<string | null>(work?.cover_image || null);
@@ -57,7 +58,7 @@ export default function WorkFormModal({ kind, work, categories, onClose, onSaved
             const res = await fetch(work ? `${k.api}/${work.id}` : k.api, {
                 method: work ? 'PATCH' : 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title: form.title, description: form.description, categoryIds: form.categoryIds, isCompleted: form.isCompleted, coverImage: coverImageUrl }),
+                body: JSON.stringify({ title: form.title, description: form.description, categoryIds: form.categoryIds, isCompleted: form.isCompleted, isMature: form.isMature, coverImage: coverImageUrl }),
                 credentials: 'include',
             });
 
@@ -152,6 +153,18 @@ export default function WorkFormModal({ kind, work, categories, onClose, onSaved
                         <span>
                             <span className="block text-sm font-medium text-gray-700 dark:text-gray-300">เรื่องนี้จบแล้ว</span>
                             <span className="block text-xs text-gray-500 dark:text-gray-400">แสดงป้าย &quot;จบแล้ว&quot; บนการ์ดเรื่องและหน้าโปรไฟล์ของคุณ</span>
+                        </span>
+                    </label>
+                    <label className="flex items-start gap-3 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={form.isMature}
+                            onChange={(e) => setForm({ ...form, isMature: e.target.checked })}
+                            className="mt-1 w-4 h-4 accent-red-700"
+                        />
+                        <span>
+                            <span className="block text-sm font-medium text-gray-700 dark:text-gray-300">เนื้อหาสำหรับผู้ใหญ่ (18+)</span>
+                            <span className="block text-xs text-gray-500 dark:text-gray-400">แสดงป้าย 18+ และเบลอปกในหน้ารายการเรื่อง</span>
                         </span>
                     </label>
                     <div className="flex gap-3 pt-4">

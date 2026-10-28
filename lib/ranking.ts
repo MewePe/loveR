@@ -19,6 +19,8 @@ export const SORTS = {
     rating: { label: 'คะแนน', order: 'r.rating_avg IS NULL, r.rating_avg DESC, rating_count DESC, s.views DESC' },
     sales: { label: 'ยอดขาย', order: 'sales DESC, s.views DESC' },
     bookmarks: { label: 'บุ๊กมาร์ก', order: 'bookmarks DESC, s.views DESC' },
+    // Latest chapter/episode first (stories without one go last); used by "อัปเดตล่าสุด" on the home page
+    updated: { label: 'อัปเดตล่าสุด', order: 'last_item_at IS NULL, last_item_at DESC' },
 } as const;
 export type SortKey = keyof typeof SORTS;
 export const RANKING_SORTS = ['views', 'rating', 'sales', 'bookmarks'] as const satisfies readonly SortKey[];
@@ -29,18 +31,21 @@ export function isSortKey<T extends readonly SortKey[]>(allowed: T, value: unkno
 }
 
 export type StoryRow = RowDataPacket & {
-    id: string; title: string; cover_image: string | null; views: number;
+    id: string; title: string; description: string | null; cover_image: string | null; views: number;
     author_id: string | null; author_name: string | null; author_username: string | null; categories: CategoryTag[];
     rating_avg: number | null; rating_count: number; sales: number; bookmarks: number;
+    item_count: number; last_item_at: Date | null; is_completed: boolean; is_mature: boolean;
 };
 
-// s.* plus the author's name/username and the aggregated stats. Ratings by BANNED users don't count (same as /api/ratings).
+// s.* plus the author's name/username and the aggregated stats (item_count / last_item_at = number of chapters or
+// episodes and when the newest was added). Ratings by BANNED users don't count (same as /api/ratings).
 function baseSql(type: ContentType) {
     const t = TABLES[type];
     return `
     SELECT s.*, u.name AS author_name, u.username AS author_username,
            r.rating_avg, COALESCE(r.rating_count, 0) AS rating_count,
-           COALESCE(p.sales, 0) AS sales, COALESCE(b.bookmarks, 0) AS bookmarks
+           COALESCE(p.sales, 0) AS sales, COALESCE(b.bookmarks, 0) AS bookmarks,
+           COALESCE(ic.item_count, 0) AS item_count, ic.last_item_at
     FROM ${t.table} s
     LEFT JOIN users u ON u.id = s.author_id
     LEFT JOIN (SELECT r.${t.ref} AS cid, AVG(r.score) AS rating_avg, COUNT(*) AS rating_count
@@ -50,6 +55,8 @@ function baseSql(type: ContentType) {
                FROM purchases p JOIN ${t.items} i ON i.id = p.${t.purchaseCol} GROUP BY i.${t.itemFk}) p ON p.cid = s.id
     LEFT JOIN (SELECT ${t.ref} AS cid, COUNT(*) AS bookmarks
                FROM bookmarks WHERE ${t.ref} IS NOT NULL GROUP BY ${t.ref}) b ON b.cid = s.id
+    LEFT JOIN (SELECT ${t.itemFk} AS cid, COUNT(*) AS item_count, MAX(created_at) AS last_item_at
+               FROM ${t.items} GROUP BY ${t.itemFk}) ic ON ic.cid = s.id
     WHERE s.status = 'PUBLISHED'`;
 }
 
@@ -63,13 +70,16 @@ async function normalise(type: ContentType, rows: RowDataPacket[]) {
         rating_count: Number(row.rating_count),
         sales: Number(row.sales),
         bookmarks: Number(row.bookmarks),
+        item_count: Number(row.item_count),
+        is_completed: !!row.is_completed,
+        is_mature: !!row.is_mature,
     })));
     return stories as StoryRow[];
 }
 
 // Public list for /api/novels, /api/comics, /ranking and /category/[slug]
 export async function listStories(type: ContentType, options: {
-    sort?: SortKey; categoryIds?: string[]; search?: string | null; limit?: number;
+    sort?: SortKey; categoryIds?: string[]; search?: string | null; limit?: number; completed?: boolean; hasItems?: boolean;
 } = {}) {
     let sql = baseSql(type);
     const params: (string | number | string[])[] = [];
@@ -79,6 +89,8 @@ export async function listStories(type: ContentType, options: {
         sql += ` AND s.id IN (SELECT ${c.fk} FROM ${c.table} WHERE category_id IN (?) GROUP BY ${c.fk} HAVING COUNT(*) = ?)`;
         params.push(options.categoryIds, options.categoryIds.length);
     }
+    if (options.completed) sql += ' AND s.is_completed = 1';
+    if (options.hasItems) sql += ' AND ic.item_count > 0';
     if (options.search) {
         sql += ' AND (s.title LIKE ? OR s.description LIKE ?)';
         params.push(`%${options.search}%`, `%${options.search}%`);

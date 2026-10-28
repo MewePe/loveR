@@ -4,6 +4,14 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { connectDb, ensureServer, createUsers, cleanupUsers, Client, uuid } from './helpers.mjs';
 
+// The "แนะนำสำหรับคุณ" section of the home page HTML ('' when it isn't shown)
+function recoSection(html) {
+    const start = html.indexOf('id="sec-reco"');
+    if (start < 0) return '';
+    const end = html.indexOf('id="sec-', start + 1);
+    return html.slice(start, end < 0 ? undefined : end);
+}
+
 let db, ids, users;
 const anon = new Client();
 const c = {};
@@ -90,13 +98,13 @@ test('home page recommends unread stories from the categories the user follows',
     assert.equal((await users.reader.post('/api/bookmarks', { content_type: 'novel', content_id: c.a })).status, 200);
     const html = (await users.reader.get('/')).text;
     assert.ok(html.includes('แนะนำสำหรับคุณ'));
-    const section = html.slice(html.indexOf('แนะนำสำหรับคุณ'), html.indexOf('นิยายยอดนิยม'));
+    const section = recoSection(html);
     assert.ok(section.includes(`/novel/${c.b}`), 'same category as the bookmark');
     assert.ok(section.includes(`/comic/${c.comic}`), 'comics in that category too');
     assert.ok(!section.includes(`/novel/${c.a}`), 'not what they already bookmarked');
     assert.ok(!section.includes(`/novel/${c.draft}`), 'no drafts');
 
     const authorHome = (await users.author.get('/')).text;
-    const authorSection = authorHome.includes('แนะนำสำหรับคุณ') ? authorHome.slice(authorHome.indexOf('แนะนำสำหรับคุณ'), authorHome.indexOf('นิยายยอดนิยม')) : '';
+    const authorSection = recoSection(authorHome);
     assert.ok(!authorSection.includes(`/novel/${c.b}`), 'never their own work');
 });

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { timeAgo } from "@/lib/timeAgo";
 import { Bell, BookOpen, CheckCircle, Coins, Flag, HeartHandshake, ShieldAlert, MessageCircle, ShoppingCart, Sparkles, Star, UserCheck, Wallet, XCircle } from "lucide-react";
 
 export interface NotificationItem {
@@ -45,14 +46,7 @@ export function NotificationIcon({ type }: { type: string }) {
     return <Icon className={`w-5 h-5 flex-shrink-0 ${color}`} />;
 }
 
-export function timeAgo(iso: string) {
-    const seconds = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
-    if (seconds < 60) return "เมื่อสักครู่";
-    if (seconds < 3600) return `${Math.floor(seconds / 60)} นาทีที่แล้ว`;
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)} ชั่วโมงที่แล้ว`;
-    if (seconds < 7 * 86400) return `${Math.floor(seconds / 86400)} วันที่แล้ว`;
-    return new Date(iso).toLocaleDateString("th-TH");
-}
+export { timeAgo };
 
 const CHANGED_EVENT = "notifications:changed";
 

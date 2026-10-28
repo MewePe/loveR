@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS novels (
     cover_image VARCHAR(255),
     status ENUM('DRAFT', 'PUBLISHED', 'ARCHIVED', 'BANNED') DEFAULT 'DRAFT',
     is_completed TINYINT(1) NOT NULL DEFAULT 0, -- author marked the story as finished ("จบแล้ว")
+    is_mature TINYINT(1) NOT NULL DEFAULT 0, -- 18+ content: badge, and the cover is blurred on cards
     author_id VARCHAR(36),
     category_id VARCHAR(36),
     views INT DEFAULT 0,
@@ -69,6 +70,7 @@ CREATE TABLE IF NOT EXISTS comics (
     cover_image VARCHAR(255),
     status ENUM('DRAFT', 'PUBLISHED', 'ARCHIVED', 'BANNED') DEFAULT 'DRAFT',
     is_completed TINYINT(1) NOT NULL DEFAULT 0, -- author marked the story as finished ("จบแล้ว")
+    is_mature TINYINT(1) NOT NULL DEFAULT 0, -- 18+ content: badge, and the cover is blurred on cards
     author_id VARCHAR(36),
     category_id VARCHAR(36),
     views INT DEFAULT 0,

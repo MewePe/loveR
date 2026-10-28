@@ -55,8 +55,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
 
     const body = await req.json();
-    const { title, description, status, coverImage, isCompleted } = body;
-    if (isCompleted !== undefined && typeof isCompleted !== 'boolean') {
+    const { title, description, status, coverImage, isCompleted, isMature } = body;
+    if ((isCompleted !== undefined && typeof isCompleted !== 'boolean') || (isMature !== undefined && typeof isMature !== 'boolean')) {
         return NextResponse.json({ error: 'ข้อมูลไม่ถูกต้อง' }, { status: 400 });
     }
     if (coverImage && !isPublicUploadUrl(coverImage)) {
@@ -92,6 +92,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         if (status !== undefined) { updates.push('status = ?'); values.push(status); }
         if (coverImage !== undefined) { updates.push('cover_image = ?'); values.push(coverImage); }
         if (isCompleted !== undefined) { updates.push('is_completed = ?'); values.push(isCompleted ? 1 : 0); }
+        if (isMature !== undefined) { updates.push('is_mature = ?'); values.push(isMature ? 1 : 0); }
 
         if (updates.length === 0 && categoryIds === null) {
             return NextResponse.json({ error: 'ไม่มีข้อมูลที่ต้องแก้ไข' }, { status: 400 });

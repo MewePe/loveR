@@ -6,6 +6,14 @@ import assert from 'node:assert/strict';
 import { execSync } from 'node:child_process';
 import { connectDb, ensureServer, createUsers, cleanupUsers, Client, uuid } from './helpers.mjs';
 
+// The "แนะนำสำหรับคุณ" section of the home page HTML ('' when it isn't shown)
+function recoSection(html) {
+    const start = html.indexOf('id="sec-reco"');
+    if (start < 0) return '';
+    const end = html.indexOf('id="sec-', start + 1);
+    return html.slice(start, end < 0 ? undefined : end);
+}
+
 let db, ids, users;
 const anon = new Client();
 const TAG = uuid().slice(0, 8);
@@ -143,7 +151,7 @@ test('similar stories rank by how many categories they share', async () => {
 test('recommendations score every category of what the user bookmarked', async () => {
     assert.equal((await users.reader.post('/api/bookmarks', { content_type: 'novel', content_id: s.x })).status, 200);
     const html = (await users.reader.get('/')).text;
-    const section = html.slice(html.indexOf('แนะนำสำหรับคุณ'), html.indexOf('นิยายยอดนิยม'));
+    const section = recoSection(html);
     const y = section.indexOf(`/novel/${s.y}`), z = section.indexOf(`/novel/${s.z}`);
     assert.ok(y >= 0, 'Y matches all three categories');
     assert.ok(z >= 0, 'Z matches one');

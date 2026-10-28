@@ -85,6 +85,8 @@ model comics {
   cover_image    String?          @db.VarChar(255)
   status         comics_status?   @default(DRAFT)
   is_completed Boolean @default(false)
+  /// 18+ content: badge, and the cover is blurred on cards
+  is_mature    Boolean @default(false)
   author_id      String?          @db.VarChar(36)
   category_id    String?          @db.VarChar(36)
   views          Int?             @default(0)
@@ -130,6 +132,8 @@ model novels {
   cover_image String?        @db.VarChar(255)
   status      novels_status? @default(DRAFT)
   is_completed Boolean @default(false)
+  /// 18+ content: badge, and the cover is blurred on cards
+  is_mature    Boolean @default(false)
   author_id   String?        @db.VarChar(36)
   category_id String?        @db.VarChar(36)
   views       Int?           @default(0)

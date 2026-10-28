@@ -48,7 +48,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { title, description, coverImage, isCompleted } = body;
+    const { title, description, coverImage, isCompleted, isMature } = body;
     if (coverImage && !isPublicUploadUrl(coverImage)) {
         return NextResponse.json({ error: 'รูปปกไม่ถูกต้อง' }, { status: 400 });
     }
@@ -62,9 +62,9 @@ export async function POST(req: Request) {
     try {
         await conn.beginTransaction();
         await conn.query(
-            `INSERT INTO novels (id, title, description, cover_image, is_completed, author_id, status)
-             VALUES (?, ?, ?, ?, ?, ?, 'DRAFT')`,
-            [id, title, description, coverImage || null, isCompleted === true ? 1 : 0, user.id]
+            `INSERT INTO novels (id, title, description, cover_image, is_completed, is_mature, author_id, status)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 'DRAFT')`,
+            [id, title, description, coverImage || null, isCompleted === true ? 1 : 0, isMature === true ? 1 : 0, user.id]
         );
         await setStoryCategories(conn, 'novel', id, parsed.ids);
         await conn.commit();

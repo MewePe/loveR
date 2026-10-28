@@ -63,6 +63,7 @@ npx tsx scripts/add_item_reads.ts            # บท/ตอนที่อ่�
 npx tsx scripts/add_story_categories.ts      # หลายหมวดต่อเรื่อง (คัดลอกหมวดเดิมของทุกเรื่องมาให้)
 npx tsx scripts/add_author_profiles.ts       # โปรไฟล์นักเขียนสาธารณะ ระบบติดตาม การสนับสนุน และป้าย "จบแล้ว"
 npx tsx scripts/add_admin_tools.ts           # แบนพร้อมเหตุผล ปรับยอดเหรียญ และประวัติการทำงานของแอดมิน
+npx tsx scripts/add_mature_flag.ts           # ป้าย 18+ ของนิยาย/การ์ตูน
 ```
 
 ### รัน
