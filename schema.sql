@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS users (
     ban_reason TEXT, -- why an admin banned the user (role = 'BANNED')
     banned_at TIMESTAMP NULL,
     role_before_ban ENUM('VISITOR', 'READER', 'AUTHOR', 'ADMIN'), -- restored on unban
+    reader_settings TEXT, -- JSON novel reader display settings (lib/readerSettings.ts)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );

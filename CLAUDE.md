@@ -56,6 +56,7 @@ npx tsx scripts/add_story_categories.ts # ตาราง novel_categories/comic
 npx tsx scripts/add_author_profiles.ts # คอลัมน์โปรไฟล์ใน users (username/bio/cover_image/social_links), is_completed, ตาราง follows/supports และตั้ง username ให้ทุกคน (รันซ้ำได้)
 npx tsx scripts/add_admin_tools.ts # คอลัมน์แบนใน users (ban_reason/banned_at/role_before_ban), ตาราง coin_adjustments และ admin_logs (รันซ้ำได้)
 npx tsx scripts/add_mature_flag.ts # คอลัมน์ is_mature (18+) ใน novels/comics (รันซ้ำได้)
+npx tsx scripts/add_reader_settings.ts # คอลัมน์ users.reader_settings (ตั้งค่าการอ่าน Aa) (รันซ้ำได้)
 ```
 
 `reset_db.ts` และ `drop_old_db.ts` ลบข้อมูล
@@ -202,6 +203,13 @@ npx tsx scripts/add_mature_flag.ts # คอลัมน์ is_mature (18+) ใ�
 - ถ้าบทถูกลบ แถวยังอยู่แต่ `chapter_id` เป็น NULL (ปุ่มอ่านต่อจะพาไปหน้าเรื่องแทน) `novelsRead`/`comicsRead` ใน `/api/profile` นับจากตารางนี้
 - `recordRead()` บันทึกลงตาราง `item_reads` ด้วย (1 แถวต่อคนต่อบท/ตอน ไว้ทำเครื่องหมาย "อ่านแล้ว") ทั้งสองตารางแยก try/catch กัน การลบประวัติ (`DELETE /api/history`) ลบ `item_reads` ของเรื่องนั้น/ทั้งหมดด้วย ผ่าน `clearReadItems()`
 
+**ตั้งค่าการอ่าน (ปุ่ม Aa)** เฉพาะหน้าอ่านนิยาย `/read/[chapterId]` (ไม่มีในหน้าอ่านการ์ตูน):
+- ค่าที่ตั้งได้และการตรวจอยู่ใน `lib/readerSettings.ts` (ไม่มี import ใช้ได้ทั้ง client/server): ขนาดตัวอักษร 7 ระดับ (`FONT_SIZES` 16-28px แผงแสดงเลข px), ระยะบรรทัด แคบ/ปกติ/กว้าง, แบบอักษร มีหัว (Sarabun) / ไม่มีหัว (Noto Sans Thai) โหลดด้วย `next/font` ใน `components/reader/fonts.ts`, สีพื้น ขาว/ซีเปีย/มืด, ความกว้างคอลัมน์ แคบ/ปกติ/กว้าง (ซ่อนบนมือถือ) ค่าผิดหรือขาดจะใช้ค่าเริ่มต้น (`parseReaderSettings()`)
+- UI คือ `components/reader/ReaderSettings.tsx`: `ReaderSettingsProvider` ครอบทั้งหน้าและตั้ง CSS variables (`--reader-size`, `--reader-leading`, `--reader-width`) + `data-reader-font`/`data-reader-theme` ที่ `.reader-root` ซึ่งกฎ `.reader-text`/`.reader-column`/`.reader-bar`/`.reader-divider` ใน `globals.css` อ่านไปใช้ `ReaderSettingsButton` เปิดแผงผ่าน portal (เหตุผลเดียวกับปุ่มเลือกตอน) จอคอมเป็นการ์ดใต้แถบบน มือถือเป็นแผงจากล่าง ไม่มีฉากหลังมืดบนจอคอมเพื่อให้เห็นผลทันที
+- **"มืด" คือ dark mode ของทั้งเว็บ** (next-themes): เลือกมืด = `setTheme('dark')` เลือกขาว/ซีเปีย = `setTheme('light')` และกดปุ่ม 🌙 ข้างๆ ก็อัปเดตค่าตาม ซีเปียใช้ได้เฉพาะตอนธีมสว่าง (`html:not(.dark)` ใน CSS) ตอนเปิดหน้า ถ้าผู้ใช้เคยบันทึกค่าไว้ ธีมของเว็บจะถูกตั้งตามค่านั้น
+- **ที่เก็บ**: ล็อกอินอยู่ → `users.reader_settings` (JSON) ผ่าน `GET/PUT/DELETE /api/reader-settings` (PUT ต้องครบทั้ง 5 ค่าและถูกต้อง ไม่งั้น 400, ส่งหลังหยุดปรับ 600ms) server ส่งค่าที่บันทึกมากับหน้าเลย ไม่ล็อกอิน → localStorage `loveread:reader-settings` และมี inline script ใน provider ตั้งค่าก่อน paint แรก (ตัวหนังสือไม่กระโดดจากขนาดเริ่มต้น) script นี้ใส่ด้วย `dangerouslySetInnerHTML` ได้เพราะสร้างจากค่าคงที่ใน `lib/readerSettings.ts` เท่านั้น **ห้ามใส่ข้อมูลจากผู้ใช้หรือ DB ลงไป** รีเซ็ตจะลบทั้งสองที่แต่ไม่เปลี่ยนธีมของเว็บ
+- เทสต์อยู่ใน `tests/e2e/reader-settings.test.mjs`
+
 **ปุ่มเลือกตอน** (`components/EpisodePicker.tsx`, `lib/episodeList.ts`): อยู่ในแถบบนและระหว่างปุ่มก่อนหน้า/ถัดไปของหน้าอ่านทั้งสองหน้า (การ์ตูนแทนลิงก์ "รายการตอน" เดิม และบนมือถือปุ่มก่อนหน้า/ถัดไปของแถบบนจะซ่อน เหลือแถบล่าง)
 - server ส่งรายการผ่าน `getEpisodeList()` เท่านั้น ซึ่งมีแค่ id/เลข/ชื่อ/ราคา/`locked`/`read` **ห้ามใส่ `content`** เพราะ props ถูก serialize ลงในหน้า ส่วน `locked` ใช้กฎเดียวกับ `canAccess()` (เจ้าของ/แอดมินไม่ล็อก) ถ้าเรื่องไม่ใช่ `PUBLISHED` (คือ `ARCHIVED` ที่คนซื้อเปิดได้) คนอื่นจะเห็นเฉพาะตอนที่ซื้อแล้ว ตอนอื่นจะเป็น 404
 - กดตอนที่ล็อกจะไปหน้าอ่านตอนนั้นซึ่งแสดง paywall ตามเดิม ต้อง render ด้วย `key={currentId}` เพื่อให้ปิดและล้างช่องค้นหาเมื่อเปลี่ยนตอน
@@ -265,9 +273,10 @@ npx tsx scripts/add_mature_flag.ts # คอลัมน์ is_mature (18+) ใ�
    npx tsx scripts/add_author_profiles.ts     # โปรไฟล์นักเขียน ติดตาม สนับสนุน ป้ายจบแล้ว
    npx tsx scripts/add_admin_tools.ts         # แบนพร้อมเหตุผล ปรับเหรียญ ประวัติการทำงานของแอดมิน
    npx tsx scripts/add_mature_flag.ts         # ป้าย 18+ (หน้าแรกใหม่)
+   npx tsx scripts/add_reader_settings.ts     # ตั้งค่าการอ่าน (ปุ่ม Aa)
    ```
    DB ที่เก่ากว่านั้นให้รันสคริปต์ก่อนหน้าตามลำดับใน README ก่อน ส่วน DB ใหม่ใช้ `schema.sql` ได้เลยไม่ต้องรันพวกนี้
-3. ลบ `.next` แล้วเปิด `npm run dev` ใหม่ จากนั้นรัน `npm run test:e2e` เพื่อเช็ก (ต้องผ่านทั้งหมด 145 เทสต์)
+3. ลบ `.next` แล้วเปิด `npm run dev` ใหม่ จากนั้นรัน `npm run test:e2e` เพื่อเช็ก (ต้องผ่านทั้งหมด 152 เทสต์)
 
 **ผู้ดูแลต้องทำเอง**:
 - กรอก "ข้อมูลการชำระเงิน" ที่ `/admin` → ตั้งค่า (เครื่องนี้ยังเป็นข้อความตัวอย่างอยู่) ถ้ายังไม่กรอก ผู้อ่านจะเติมเหรียญไม่ได้
@@ -299,7 +308,7 @@ npx tsx scripts/add_mature_flag.ts # คอลัมน์ is_mature (18+) ใ�
 | 11 | จัดอันดับและแนะนำ | ✅ (อันดับรวมตลอดกาล) | `/ranking`, `/` (แนะนำสำหรับคุณ + ยอดนิยม), ล่างหน้า `/novel/[id]` (เรื่องที่คล้ายกัน), `/search` (เรียงตาม) | `lib/ranking.ts`, `app/ranking/page.tsx`, `components/StoryCard.tsx` |
 | 12 | ตรวจสอบเนื้อหาเบื้องต้นด้วย API | ❌ | — | — |
 | 13 | รักษาความปลอดภัย | ✅ | `/login` (ล็อกอินผิดเกิน 5 ครั้ง), เปิดตอนที่ยังไม่ซื้อ | `lib/auth.ts`, `lib/loginThrottle.ts`, `lib/upload.ts`, `lib/visibility.ts`, `tests/e2e/security.test.mjs` |
-| 14 | ทดสอบระบบและปรับ UX/UI | ⚠️ | `npm run test:e2e` (145 เทสต์) | `tests/e2e/` |
+| 14 | ทดสอบระบบและปรับ UX/UI | ⚠️ | `npm run test:e2e` (152 เทสต์) | `tests/e2e/` |
 
 **สิ่งที่ขาด**:
 - ~~ยอดวิวไม่เคยเพิ่ม~~ **แก้แล้ว 2026-10-23** (ดูหัวข้อ "ยอดวิว" ในสถาปัตยกรรม) ยอดวิวเก่าก่อนวันนั้นของนิยาย/บท/การ์ตูนยังเป็น 0 เพราะไม่มีข้อมูลย้อนหลัง

@@ -5,6 +5,8 @@ import { RowDataPacket } from 'mysql2';
 import ThemeToggle from '@/components/ThemeToggle';
 import Paywall from '@/components/Paywall';
 import EpisodePicker from '@/components/EpisodePicker';
+import { ReaderSettingsButton, ReaderSettingsProvider } from '@/components/reader/ReaderSettings';
+import { ReaderSettings, parseReaderSettings } from '@/lib/readerSettings';
 import { auth } from '@/lib/auth';
 import { canAccess, AccessItem } from '@/lib/coins';
 import { recordRead } from '@/lib/readingHistory';
@@ -26,6 +28,18 @@ async function getChapter(id: string) {
 async function getChapterContent(id: string) {
     const [rows] = await pool.query<RowDataPacket[]>('SELECT content FROM chapters WHERE id = ?', [id]);
     return rows[0]?.content as string | null;
+}
+
+// The logged-in reader's saved "Aa" settings, or null (then the browser's are used). Never breaks the page.
+async function getSavedReaderSettings(userId: string | undefined): Promise<ReaderSettings | null> {
+    if (!userId) return null;
+    try {
+        const [rows] = await pool.query<RowDataPacket[]>('SELECT reader_settings FROM users WHERE id = ?', [userId]);
+        return rows[0]?.reader_settings ? parseReaderSettings(rows[0].reader_settings) : null;
+    } catch (error) {
+        console.error('Failed to load reader settings (run scripts/add_reader_settings.ts?):', error);
+        return null;
+    }
 }
 
 async function getAdjacentChapters(novelId: string, currentOrder: number) {
@@ -58,28 +72,29 @@ export default async function ReadChapter({ params }: { params: Promise<{ chapte
         if (session?.user?.id) await recordRead(session.user.id, 'novel', chapter.novel_id, chapter.id);
     }
     const episodes = await getEpisodeList('novel', chapter.novel_id, session?.user, { author_id: chapter.author_id, status: chapter.content_status });
+    const readerSettings = await getSavedReaderSettings(session?.user?.id);
 
     return (
-        <div className="min-h-screen bg-[#f9f9f9] dark:bg-gray-900 text-gray-800 dark:text-gray-100 font-serif transition-colors duration-200">
+        <ReaderSettingsProvider initial={readerSettings} loggedIn={!!session?.user} className="min-h-screen bg-[#f9f9f9] dark:bg-gray-900 text-gray-800 dark:text-gray-100 transition-colors duration-200">
             {/* Top Navigation */}
-            <div className="sticky top-16 z-40 bg-white/90 dark:bg-gray-900/95 backdrop-blur-md border-b dark:border-gray-800 shadow-sm px-4 py-3 flex items-center justify-between transition-colors duration-200">
+            <div className="reader-bar sticky top-16 z-40 bg-white/90 dark:bg-gray-900/95 backdrop-blur-md border-b dark:border-gray-800 shadow-sm px-4 py-3 flex items-center justify-between transition-colors duration-200">
                 <Link href={`/novel/${chapter.novel_id}`} className="text-sm font-medium text-gray-500 hover:text-indigo-600 dark:text-gray-300 dark:hover:text-indigo-400 truncate max-w-[200px] flex items-center gap-1 transition-colors">
                     &larr; <span className="hidden sm:inline">{chapter.novel_title}</span>
                 </Link>
                 <h1 className="text-sm md:text-base font-bold text-center truncate px-2 dark:text-white">{chapter.title}</h1>
                 <div className="shrink-0 flex justify-end items-center gap-2 text-sm">
                     <EpisodePicker key={chapter.id} items={episodes} currentId={chapter.id} hrefPrefix="/read/" variant="compact" />
-                    <button className="text-gray-500 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200 transition-colors p-1" aria-label="ตั้งค่าตัวอักษร">Aa</button>
+                    <ReaderSettingsButton />
                     <ThemeToggle />
                 </div>
             </div>
 
             {/* Content */}
-            <div className="max-w-3xl mx-auto px-6 py-12 md:py-20">
+            <div className="reader-column mx-auto px-6 py-12 md:py-20">
                 {unlocked ? (
                     // Rendered as plain text (never as HTML): chapter content is author input, and HTML here
                     // would let an author run scripts in readers' browsers
-                    <div className="reading-content whitespace-pre-line text-lg md:text-xl leading-relaxed text-gray-800 dark:text-gray-100">
+                    <div className="reading-content reader-text whitespace-pre-line text-gray-800 dark:text-gray-100">
                         {content || ''}
                     </div>
                 ) : (
@@ -88,8 +103,8 @@ export default async function ReadChapter({ params }: { params: Promise<{ chapte
             </div>
 
             {/* Bottom Navigation */}
-            <div className="max-w-3xl mx-auto px-6 pb-20">
-                <div className="flex items-center justify-between gap-2 sm:gap-4 border-t dark:border-gray-800 pt-8 transition-colors duration-200">
+            <div className="reader-column mx-auto px-6 pb-20">
+                <div className="flex items-center justify-between gap-2 sm:gap-4 reader-divider border-t dark:border-gray-800 pt-8 transition-colors duration-200">
                     {prev ? (
                         <Link
                             href={`/read/${prev.id}`}
@@ -119,6 +134,6 @@ export default async function ReadChapter({ params }: { params: Promise<{ chapte
                     )}
                 </div>
             </div>
-        </div>
+        </ReaderSettingsProvider>
     );
 }

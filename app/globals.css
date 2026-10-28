@@ -77,3 +77,30 @@ body {
 .dark .reading-content b {
   color: #f3f4f6;
 }
+/* Novel reader display settings (components/reader/ReaderSettings.tsx, lib/readerSettings.ts).
+   The values arrive as CSS variables on .reader-root; the defaults below match DEFAULT_READER_SETTINGS. */
+.reader-text {
+  font-size: var(--reader-size, 20px);
+  line-height: var(--reader-leading, 1.9);
+  font-family: var(--font-reader-looped), "Sarabun", serif;
+}
+.reader-root[data-reader-font="loopless"] .reader-text {
+  font-family: var(--font-reader-loopless), "Noto Sans Thai", sans-serif;
+}
+.reader-column {
+  max-width: var(--reader-width, 48rem);
+}
+/* Sepia only applies in the light site theme ("มืด" is the site's dark mode) */
+html:not(.dark) .reader-root[data-reader-theme="sepia"] {
+  background-color: #f4ecd8;
+}
+html:not(.dark) .reader-root[data-reader-theme="sepia"] .reader-text {
+  color: #3b2f1e;
+}
+html:not(.dark) .reader-root[data-reader-theme="sepia"] .reader-bar {
+  background-color: rgb(239 228 202 / 0.92);
+  border-color: #dccaa2;
+}
+html:not(.dark) .reader-root[data-reader-theme="sepia"] .reader-divider {
+  border-color: #dccaa2;
+}

@@ -194,6 +194,8 @@ model users {
   ban_reason      String?           @db.Text
   banned_at       DateTime?         @db.Timestamp(0)
   role_before_ban users_role_before_ban?
+  /// JSON novel reader display settings (lib/readerSettings.ts)
+  reader_settings String?           @db.Text
   created_at      DateTime          @default(now()) @db.Timestamp(0)
   updated_at      DateTime          @default(now()) @db.Timestamp(0)
   following       follows[]         @relation("follows_follower")
