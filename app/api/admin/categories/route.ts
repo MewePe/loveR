@@ -3,6 +3,7 @@ import pool from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
 import { RowDataPacket } from 'mysql2';
+import { logAdminAction } from '@/lib/adminLog';
 
 export async function GET() {
     try {
@@ -29,6 +30,7 @@ export async function POST(req: Request) {
 
         const id = uuidv4();
         await pool.query('INSERT INTO categories (id, name, slug) VALUES (?, ?, ?)', [id, name, slug]);
+        await logAdminAction(session.user.id, { action: 'CATEGORY_CREATE', targetType: 'CATEGORY', targetId: id, targetLabel: name, detail: `/${slug}` });
 
         return NextResponse.json({ message: 'Category created successfully', id });
     } catch (error) {

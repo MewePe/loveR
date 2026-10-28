@@ -186,6 +186,10 @@ model users {
   cover_image     String?           @db.VarChar(255)
   /// JSON { facebook, x, instagram, tiktok, youtube, website }
   social_links    String?           @db.Text
+  /// Set while role = BANNED; role_before_ban is restored on unban
+  ban_reason      String?           @db.Text
+  banned_at       DateTime?         @db.Timestamp(0)
+  role_before_ban users_role_before_ban?
   created_at      DateTime          @default(now()) @db.Timestamp(0)
   updated_at      DateTime          @default(now()) @db.Timestamp(0)
   following       follows[]         @relation("follows_follower")
@@ -207,6 +211,9 @@ model users {
   reports         reports[]
   withdrawals     withdrawals[]
   writer_profiles writer_profiles?
+  coin_adjustments coin_adjustments[] @relation("coin_adjustments_user")
+  coin_adjustments_made coin_adjustments[] @relation("coin_adjustments_admin")
+  admin_logs      admin_logs[]
 }
 
 model withdrawals {
@@ -482,4 +489,46 @@ model supports {
 
   @@index([author_id, created_at], map: "idx_author_time")
   @@index([user_id, created_at], map: "idx_user_time")
+}
+
+enum users_role_before_ban {
+  VISITOR
+  READER
+  AUTHOR
+  ADMIN
+}
+
+/// Coins an admin added to or removed from a user's balance (negative amount = deduction)
+model coin_adjustments {
+  id            String   @id @db.VarChar(36)
+  user_id       String   @db.VarChar(36)
+  admin_id      String?  @db.VarChar(36)
+  amount        Int
+  balance_after Int
+  reason        String   @db.VarChar(500)
+  created_at    DateTime @default(now()) @db.Timestamp(3)
+  user          users    @relation("coin_adjustments_user", fields: [user_id], references: [id], onDelete: Cascade)
+  admin         users?   @relation("coin_adjustments_admin", fields: [admin_id], references: [id], onDelete: SetNull)
+
+  @@index([user_id, created_at], map: "idx_user_time")
+  @@index([created_at], map: "idx_time")
+}
+
+/// Every admin action (lib/adminLog.ts); admin_name is a snapshot
+model admin_logs {
+  id           String   @id @db.VarChar(36)
+  admin_id     String?  @db.VarChar(36)
+  admin_name   String?  @db.VarChar(255)
+  action       String   @db.VarChar(40)
+  target_type  String?  @db.VarChar(20)
+  target_id    String?  @db.VarChar(36)
+  target_label String?  @db.VarChar(255)
+  detail       String?  @db.VarChar(500)
+  reason       String?  @db.Text
+  created_at   DateTime @default(now()) @db.Timestamp(3)
+  admin        users?   @relation(fields: [admin_id], references: [id], onDelete: SetNull)
+
+  @@index([created_at], map: "idx_time")
+  @@index([action, created_at], map: "idx_action_time")
+  @@index([target_id], map: "idx_target")
 }

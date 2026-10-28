@@ -2,6 +2,12 @@ import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
+import { logAdminAction } from '@/lib/adminLog';
+
+const SETTING_LABELS: Record<string, string> = {
+    site_name: 'ชื่อเว็บไซต์', site_description: 'คำอธิบายเว็บไซต์', contact_email: 'อีเมลติดต่อ',
+    maintenance_mode: 'โหมดปิดปรับปรุง', author_share_percent: 'ส่วนแบ่งนักเขียน', payment_info: 'ข้อมูลการชำระเงิน',
+};
 
 export async function GET() {
     try {
@@ -40,6 +46,12 @@ export async function POST(req: Request) {
             `UPDATE system_settings SET ${fields.map(key => `${key} = ?`).join(', ')} WHERE id = "1"`,
             fields.map(key => body[key])
         );
+        await logAdminAction(session.user.id, {
+            action: 'SETTINGS_UPDATE', targetType: 'SETTINGS',
+            detail: fields.map((key) => SETTING_LABELS[key]).join(', ')
+                + (body.maintenance_mode !== undefined ? ` (ปิดปรับปรุง: ${body.maintenance_mode ? 'เปิด' : 'ปิด'})` : '')
+                + (body.author_share_percent !== undefined ? ` (ส่วนแบ่งนักเขียน ${Number(body.author_share_percent)}%)` : ''),
+        });
 
         return NextResponse.json({ message: 'Settings updated successfully' });
     } catch (error) {

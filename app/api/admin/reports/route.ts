@@ -3,13 +3,16 @@ import pool from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
 
-export async function GET() {
+// GET /api/admin/reports?status=PENDING|RESOLVED|IGNORED (no status = all, pending first)
+export async function GET(req: Request) {
     const session = await auth();
     if (session?.user?.role !== 'ADMIN') {
         return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
     }
 
     try {
+        const status = new URL(req.url).searchParams.get('status');
+        const valid = !!status && ['PENDING', 'RESOLVED', 'IGNORED'].includes(status);
         const [reports] = await pool.query<RowDataPacket[]>(`
             SELECT r.id, r.reason, r.status, r.created_at, r.target_type, r.target_id,
                    u.name as reporter_name,
@@ -24,8 +27,10 @@ export async function GET() {
             LEFT JOIN comics c ON r.target_type = 'COMIC' AND r.target_id = c.id
             LEFT JOIN comments cm ON r.target_type = 'COMMENT' AND r.target_id = cm.id
             LEFT JOIN users cu ON cm.user_id = cu.id
-            ORDER BY r.created_at DESC
-        `);
+            ${valid ? 'WHERE r.status = ?' : ''}
+            ORDER BY CASE r.status WHEN 'PENDING' THEN 1 ELSE 2 END, r.created_at DESC
+            LIMIT 200
+        `, valid ? [status] : []);
 
         return NextResponse.json(reports);
     } catch (error) {

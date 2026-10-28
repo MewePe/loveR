@@ -2,13 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
-import { bucketExpr, bucketKeys, parseRange, rangeStart, seriesByBucket } from '@/lib/analytics';
+import { SPENT_SQL, bucketExpr, bucketKeys, parseRange, rangeStart, seriesByBucket } from '@/lib/analytics';
 
 // GET /api/admin/analytics?range=30d|12m — money totals and the time series for the admin dashboard charts.
 // Top-ups count only APPROVED ones (by when they were approved); sales are coins spent on chapters/episodes
 // plus supports sent to authors, and the platform share is what's left after author_earning.
-const SPENT_SQL = `(SELECT price AS amount, author_earning, created_at FROM purchases
-                    UNION ALL SELECT amount, author_earning, created_at FROM supports)`;
 export async function GET(req: NextRequest) {
     const session = await auth();
     if (session?.user?.role !== 'ADMIN') {

@@ -5,9 +5,10 @@ import { v4 as uuidv4 } from 'uuid';
 // Every notification type the app creates. Stored as VARCHAR, so this list is the whitelist.
 export const NOTIFICATION_TYPES = [
     // readers
-    'NEW_CHAPTER', 'NEW_STORY', 'TOPUP_APPROVED', 'TOPUP_REJECTED', 'COMMENT_REPLY',
+    'NEW_CHAPTER', 'NEW_STORY', 'TOPUP_APPROVED', 'TOPUP_REJECTED', 'COMMENT_REPLY', 'COINS_ADJUSTED',
     // authors
     'NEW_COMMENT', 'NEW_RATING', 'PURCHASE', 'SUPPORT', 'WRITER_APPROVED', 'WRITER_REJECTED', 'WITHDRAWAL_APPROVED', 'WITHDRAWAL_REJECTED',
+    'CONTENT_MODERATED',
     // admins
     'ADMIN_TOPUP', 'ADMIN_WRITER_REQUEST', 'ADMIN_WITHDRAWAL', 'ADMIN_REPORT',
 ] as const;

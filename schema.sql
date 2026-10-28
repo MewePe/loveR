@@ -16,6 +16,9 @@ CREATE TABLE IF NOT EXISTS users (
     bio TEXT, -- public profile intro, plain text
     cover_image VARCHAR(255), -- public profile banner, /uploads/... only
     social_links TEXT, -- JSON { facebook, x, instagram, tiktok, youtube, website }, http(s) URLs only
+    ban_reason TEXT, -- why an admin banned the user (role = 'BANNED')
+    banned_at TIMESTAMP NULL,
+    role_before_ban ENUM('VISITOR', 'READER', 'AUTHOR', 'ADMIN'), -- restored on unban
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -362,4 +365,37 @@ CREATE TABLE IF NOT EXISTS supports (
     INDEX idx_user_time (user_id, created_at),
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (author_id) REFERENCES users(id)
+);
+
+-- Coins an admin added to or removed from a user's balance (amount is negative for a deduction)
+CREATE TABLE IF NOT EXISTS coin_adjustments (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    admin_id VARCHAR(36),
+    amount INT NOT NULL,
+    balance_after INT NOT NULL,
+    reason VARCHAR(500) NOT NULL,
+    created_at TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP(3),
+    INDEX idx_user_time (user_id, created_at),
+    INDEX idx_time (created_at),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Every admin action (lib/adminLog.ts). admin_name is a snapshot so the log still reads after the admin is deleted.
+CREATE TABLE IF NOT EXISTS admin_logs (
+    id VARCHAR(36) PRIMARY KEY,
+    admin_id VARCHAR(36),
+    admin_name VARCHAR(255),
+    action VARCHAR(40) NOT NULL, -- ADMIN_ACTIONS in lib/adminActions.ts
+    target_type VARCHAR(20), -- USER, NOVEL, COMIC, COMMENT, REPORT, TOPUP, WITHDRAWAL, CATEGORY, SETTINGS
+    target_id VARCHAR(36),
+    target_label VARCHAR(255), -- name/title at the time, plain text
+    detail VARCHAR(500), -- plain text written by the server
+    reason TEXT, -- reason the admin typed, plain text
+    created_at TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP(3),
+    INDEX idx_time (created_at),
+    INDEX idx_action_time (action, created_at),
+    INDEX idx_target (target_id),
+    FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE SET NULL
 );

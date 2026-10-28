@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import { savePrivateDocument } from '@/lib/upload';
 import { baht, notify, short } from '@/lib/notifications';
+import { logAdminAction } from '@/lib/adminLog';
 
 // PATCH - Mark a pending withdrawal as paid or reject it.
 // Approve: multipart { status: 'APPROVED', slip: <transfer slip image> } (stored privately, visible to the author + admins)
@@ -26,7 +27,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
 
     try {
-        const [rows] = await pool.query<RowDataPacket[]>('SELECT user_id, status, amount FROM withdrawals WHERE id = ?', [id]);
+        const [rows] = await pool.query<RowDataPacket[]>('SELECT w.user_id, w.status, w.amount, u.name, u.email FROM withdrawals w JOIN users u ON u.id = w.user_id WHERE w.id = ?', [id]);
         if (!rows[0] || rows[0].status !== 'PENDING') {
             return NextResponse.json({ error: 'ไม่พบรายการ หรือรายการนี้ถูกดำเนินการไปแล้ว' }, { status: 409 });
         }
@@ -51,6 +52,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         if (result.affectedRows === 0) {
             return NextResponse.json({ error: 'ไม่พบรายการ หรือรายการนี้ถูกดำเนินการไปแล้ว' }, { status: 409 });
         }
+        await logAdminAction(session.user.id, {
+            action: status === 'APPROVED' ? 'WITHDRAWAL_APPROVE' : 'WITHDRAWAL_REJECT', targetType: 'WITHDRAWAL', targetId: id,
+            targetLabel: rows[0].name || rows[0].email, detail: `฿${baht(rows[0].amount)}`, reason: body?.reason,
+        });
         await notify([rows[0].user_id], status === 'APPROVED'
             ? { type: 'WITHDRAWAL_APPROVED', message: `โอนเงินถอน ฿${baht(rows[0].amount)} แล้ว ดูสลิปได้ในกระเป๋าเงิน`, link: '/author?tab=wallet' }
             : { type: 'WITHDRAWAL_REJECTED', message: `คำขอถอน ฿${baht(rows[0].amount)} ถูกปฏิเสธ ยอดเงินคืนเข้ายอดคงเหลือแล้ว${body?.reason ? `: ${short(body.reason, 100)}` : ''}`, link: '/author?tab=wallet' }, session.user.id);

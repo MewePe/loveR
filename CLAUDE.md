@@ -54,6 +54,7 @@ npx tsx scripts/add_notifications.ts # ตาราง notifications และ�
 npx tsx scripts/add_item_reads.ts # ตาราง item_reads (บท/ตอนที่อ่านแล้ว) คัดลอกบทล่าสุดจาก reading_history มาให้ (รันซ้ำได้)
 npx tsx scripts/add_story_categories.ts # ตาราง novel_categories/comic_categories (หลายหมวดต่อเรื่อง) คัดลอกหมวดเดิมจาก category_id มาให้ (รันซ้ำได้)
 npx tsx scripts/add_author_profiles.ts # คอลัมน์โปรไฟล์ใน users (username/bio/cover_image/social_links), is_completed, ตาราง follows/supports และตั้ง username ให้ทุกคน (รันซ้ำได้)
+npx tsx scripts/add_admin_tools.ts # คอลัมน์แบนใน users (ban_reason/banned_at/role_before_ban), ตาราง coin_adjustments และ admin_logs (รันซ้ำได้)
 ```
 
 `reset_db.ts` และ `drop_old_db.ts` ลบข้อมูล
@@ -91,7 +92,18 @@ npx tsx scripts/add_author_profiles.ts # คอลัมน์โปรไฟล
 
 **การแจ้งเตือน**: ห้ามใช้ `alert()`/`confirm()`/`prompt()` ของเบราว์เซอร์ (ถ้าต้องถามข้อความ เช่น เหตุผลที่ปฏิเสธ ให้ทำ dialog ในหน้าแบบใน `PaymentsPanel.tsx`) ให้ใช้ `const toast = useToast()` จาก `components/Toast.tsx` (`toast.success(msg)` / `toast.error(msg)` หายเองใน 3.5/6 วินาที ไม่บล็อกหน้า) และ `useConfirm()` จาก `components/ConfirmDialog.tsx` สำหรับการยืนยัน
 
-**แอดมิน**: ทุกอย่างอยู่ที่ `app/admin/page.tsx` ซึ่งเป็นแดชบอร์ดแบบแท็บ (แท็บการเงินแยกไว้ใน `components/admin/PaymentsPanel.tsx` กราฟในแท็บภาพรวมอยู่ใน `components/admin/AnalyticsPanel.tsx`) หน้าเก่าอย่าง `/admin/users`, `/admin/content` ฯลฯ แค่ redirect ไป `/admin`
+**แอดมิน** (`app/admin/page.tsx` + `components/admin/`): page.tsx มีแค่ sidebar, การเช็กสิทธิ์ และสลับแท็บ แต่ละแท็บเป็น component แยก (`DashboardPanel`, `UsersPanel` + `UserDetail`, `ContentPanel`, `ReportsPanel`, `ModerationPanel`, `WritersPanel`, `PaymentsPanel`, `AuditLogPanel`, `CategoriesPanel`, `SettingsPanel` ซึ่งได้ props แบบ `PanelProps` ใน `components/admin/types.ts`) ส่วนที่ใช้ร่วมกัน (Badge, ปุ่มที่มีข้อความ, Modal, `ReasonDialog`, `ImageLightbox`, Pagination, `fetchJson`/`sendJson`) อยู่ใน `components/admin/ui.tsx` หน้าเก่าอย่าง `/admin/users`, `/admin/content` ฯลฯ แค่ redirect ไป `/admin`
+- **state อยู่ใน URL**: `?tab=` และ `?user=<id>` (หน้ารายละเอียดผู้ใช้), `?view=topups|withdrawals|history` (การเงิน), `?type=novels|comics` (เนื้อหา), `?target=<id>` (ประวัติแอดมินของรายการเดียว) ใช้ `navigate(tab, params)` ที่ page ส่งให้ panel จะถูก remount เมื่อ view/type/target เปลี่ยน
+- **ตัวเลขแดงบนเมนู**: `GET /api/admin/counts` (`writers`, `topups`, `withdrawals`, `reports`, `moderation`) โหลดตอนเปิด ตอนเปลี่ยนแท็บ ทุก 60 วินาที และเมื่อ panel เรียก `refreshCounts()` หลังทำรายการ `moderation` เป็น 0 เสมอจนกว่าจะทำข้อ 12 (เมนู "คิวตรวจเนื้อหา" เป็น placeholder)
+- **ภาพรวม** `GET /api/admin`: การ์ด 6 ใบ (ผู้ใช้ทั้งหมด/ใหม่วันนี้/นักเขียน/เรื่องทั้งหมด/เติมเหรียญเดือนนี้เฉพาะ APPROVED/รายได้แพลตฟอร์ม = `SPENT_SQL` − author_earning) กล่องงานรอดำเนินการ กราฟ (`AnalyticsPanel`) เรื่องยอดนิยม 5 อันดับ (นิยาย+การ์ตูนรวมกันตามวิว จาก `listStories`) และกิจกรรมล่าสุด 10 รายการ
+- **ผู้ใช้**: `GET /api/admin/users?search=&role=READER|AUTHOR|ADMIN&status=active|banned&page=` → `{ users, total, page, pageSize }` (role กรองจากสิทธิ์ก่อนแบนด้วย) `GET /api/admin/users/[id]` คืนข้อมูลบัญชี, เติมเหรียญ, ซื้อตอน, สนับสนุน, การปรับเหรียญ, ผลงาน, รายงานที่โดน (บัญชี/เรื่อง/คอมเมนต์ของเขา) และ log ที่เกี่ยวกับเขา
+- **แบน**: `PATCH /api/admin/users/[id]` `{ action: 'ban', reason }` (ต้องมีเหตุผล) เก็บ role เดิมใน `users.role_before_ban` พร้อม `ban_reason`/`banned_at` ส่วน `{ action: 'unban' }` คืน role เดิม `{ role }` แบบเก่ายังใช้ได้ (`role: 'BANNED'` = แบนโดยไม่บังคับเหตุผล, role อื่น = เปลี่ยนสิทธิ์และปลดแบน) แบน/เปลี่ยนสิทธิ์ตัวเองไม่ได้
+- **ปรับเหรียญ**: `POST /api/admin/users/[id]/coins` `{ amount, reason }` (จำนวนเต็ม ≠ 0, |amount| ≤ 1,000,000, ต้องมีเหตุผล, ยอดห้ามติดลบ) lock แถว `FOR UPDATE` บันทึกลงตาราง `coin_adjustments` และแจ้งเตือน `COINS_ADJUSTED`
+- **เนื้อหา**: `GET /api/admin/content?type=&search=&categoryId=&status=published|hidden|banned&page=` (hidden = DRAFT/ARCHIVED) ทุกแถวมีสถิติ (ตอน วิว ขาย รายได้ คะแนน คอมเมนต์ บุ๊กมาร์ก รายงานค้าง) `PATCH /api/admin/content/[id]` ซ่อน (`ARCHIVED`) และแบนต้องมี `reason` แล้วแจ้งเตือน `CONTENT_MODERATED` ถึงนักเขียน
+- **การเงิน**: `/api/admin/topups` และ `/api/admin/withdrawals` รับ `?status=&from=&to=` (YYYY-MM-DD, `to` นับรวมวันนั้น ผ่าน `listFilters()`) `GET /api/admin/transactions?type=TOPUP|PURCHASE|SUPPORT|WITHDRAWAL|ADJUSTMENT&status=&from=&to=&search=&page=` รวมทุกการเคลื่อนไหวของเงินด้วย UNION (ทุก SELECT ใน `KINDS` ต้องตั้งชื่อคอลัมน์เอง เพราะตัวไหนก็เป็นตัวแรกได้) ดูสลิปผ่าน `ImageLightbox` (ใช้ `<img>` เพราะเป็นไฟล์ private)
+- **ประวัติการทำงานของแอดมิน** (`lib/adminLog.ts`, ตาราง `admin_logs`): ทุก route ที่แอดมินเปลี่ยนข้อมูลต้องเรียก `logAdminAction(adminId, { action, targetType, targetId, targetLabel, detail, reason }, conn?)` (ถ้ามี transaction ให้ส่ง connection) `action` ต้องอยู่ใน `ADMIN_ACTIONS` (`lib/adminActions.ts` ซึ่งไม่ import อะไรฝั่ง server จึงใช้ใน client ได้ และมี `ROLE_LABEL`/`CONTENT_STATUS_LABEL`) error จะถูก log แล้วกลืนเหมือน `notify()` เก็บ `admin_name` เป็นสำเนาไว้ (admin_id `ON DELETE SET NULL`) แอดมินลบคอมเมนต์ของคนอื่นผ่าน `DELETE /api/comments/[id]` ก็ถูกบันทึก `GET /api/admin/logs?action=&adminId=&targetId=&from=&to=&page=`
+- **ทุกการกระทำต้องยืนยันก่อน**: การกระทำที่ต้องมีเหตุผล (แบน ซ่อน/แบนเรื่อง ปฏิเสธ) ใช้ `ReasonDialog` ซึ่งปุ่มในกล่องคือการยืนยัน ที่เหลือใช้ `useConfirm()` (ปรับเหรียญใช้ทั้งกล่องกรอกและ confirm) ปุ่มจัดการทุกปุ่มมีข้อความกำกับ (`ActionButton`)
+- เทสต์อยู่ใน `tests/e2e/admin.test.mjs`
 
 **ส่วนนักเขียน**: `app/author/page.tsx` มีแค่ sidebar, การสลับแท็บ และโหลดข้อมูลที่แท็บภาพรวม/นิยาย/การ์ตูนใช้ร่วมกัน แต่ละแท็บอยู่ใน `components/author/` (`DashboardPanel`, `WorksPanel` ใช้ร่วมกันทั้งนิยายและการ์ตูน, `EarningsPanel`, `WalletPanel`, `WriterProfilePanel` ซึ่งโหลดข้อมูลเอง) ฟอร์มสร้าง/แก้ไขนิยายและการ์ตูนคือ `WorkFormModal` ข้อความ/สี/route ที่ต่างกันระหว่างนิยายกับการ์ตูนอยู่ใน `WORK_KINDS` (`components/author/types.ts`) บนจอเล็กกว่า `md` sidebar จะซ่อนและใช้แถบแท็บเลื่อนแนวนอนด้านบนแทน (ปุ่มออกจากระบบอยู่ในเมนูมือถือของ Navbar) ส่วน `/author/dashboard` และ `/author/profile` แค่ redirect ไป `/author` หน้าแก้ไขบท/ตอน/หน้าการ์ตูนอยู่ใน route ย่อยใต้ `app/author/novel/[id]/...` และ `app/author/comic/[id]/...`
 
@@ -185,7 +197,7 @@ npx tsx scripts/add_author_profiles.ts # คอลัมน์โปรไฟล
 - สร้างผ่าน `notify(recipients, { type, message, link }, actorId)` / `notifyAdmins()` / `notifyNewItem()` เท่านั้น `type` ต้องอยู่ใน `NOTIFICATION_TYPES` (เก็บเป็น VARCHAR) `message` เป็น plain text ที่ server เขียน (ตัดข้อความจากผู้ใช้ด้วย `short()`) `link` เป็น path ภายในเว็บ
 - เรียกหลังงานหลักสำเร็จ (หลัง commit) และ error จะถูก log แล้วกลืน แจ้งเตือนต้องไม่ทำให้งานหลักล้ม
 - `actorId` = คนที่ทำให้เกิด: ไม่แจ้งเตือนตัวเอง และ `actor_id ON DELETE CASCADE` ทำให้ลบผู้ใช้แล้วแจ้งเตือนที่เขาก่อหายด้วย (เทสต์อาศัยข้อนี้ ไม่ให้แอดมินจริงได้แจ้งเตือนขยะ) ฝั่งแอดมินส่งให้ ADMIN ทุกคน
-- จุดที่สร้าง: บท/ตอนใหม่ของเรื่อง PUBLISHED → คนที่บุ๊กมาร์กและผู้ติดตามนักเขียน, เรื่องใหม่ (DRAFT → PUBLISHED ครั้งแรก) → ผู้ติดตาม, สนับสนุน → นักเขียน (มีชื่อผู้ส่ง), คอมเมนต์ → เจ้าของเรื่อง, ตอบกลับ → เจ้าของคอมเมนต์หลัก, ให้คะแนนครั้งแรก → เจ้าของเรื่อง (ไม่ระบุชื่อผู้ให้), ขายตอน → นักเขียน (ไม่ระบุชื่อผู้ซื้อ), ผลเติมเหรียญ / คำขอนักเขียน / การถอน → เจ้าของ, สลิปเติมเหรียญ / คำขอนักเขียน / คำขอถอน / รายงาน → แอดมิน
+- จุดที่สร้าง: บท/ตอนใหม่ของเรื่อง PUBLISHED → คนที่บุ๊กมาร์กและผู้ติดตามนักเขียน, เรื่องใหม่ (DRAFT → PUBLISHED ครั้งแรก) → ผู้ติดตาม, สนับสนุน → นักเขียน (มีชื่อผู้ส่ง), คอมเมนต์ → เจ้าของเรื่อง, ตอบกลับ → เจ้าของคอมเมนต์หลัก, ให้คะแนนครั้งแรก → เจ้าของเรื่อง (ไม่ระบุชื่อผู้ให้), ขายตอน → นักเขียน (ไม่ระบุชื่อผู้ซื้อ), ผลเติมเหรียญ / คำขอนักเขียน / การถอน / แอดมินปรับเหรียญ → เจ้าของ, แอดมินซ่อน/แบนเรื่อง → นักเขียน, สลิปเติมเหรียญ / คำขอนักเขียน / คำขอถอน / รายงาน → แอดมิน
 - API: `GET /api/notifications` (`?page=` หรือ `?limit=`), `GET /api/notifications/count`, `PATCH /api/notifications/[id]` (อ่านแล้ว เฉพาะของตัวเอง), `POST /api/notifications/read-all` UI คือ `components/NotificationBell.tsx` ใน Navbar (poll ทุก 30 วินาทีเฉพาะตอนแท็บเปิดอยู่) และหน้า `/notifications`
 - `/admin` และ `/author` รับ `?tab=` เพื่อเปิดแท็บตรงจากลิงก์แจ้งเตือน
 
@@ -207,9 +219,11 @@ npx tsx scripts/add_author_profiles.ts # คอลัมน์โปรไฟล
 - ข้อความทั้งหมดใน UI (รวม toast, confirm, title, placeholder และข้อความ error จาก API ที่แสดงให้ผู้ใช้เห็น) เป็นภาษาไทย ค่า enum ที่แสดงในตารางให้แปลงผ่าน label map (เช่น `ROLE_LABEL` ใน `app/admin/page.tsx`) ไม่แสดงค่าดิบ
 - **อย่ารัน `npm run build` ขณะที่ `npm run dev` เปิดอยู่** เพราะทั้งคู่เขียนลง `.next/` ให้ปิด dev ก่อน แล้วลบ `.next` ก่อนเปิด dev ใหม่
 
-## งานที่เหลือ (อัปเดตล่าสุด 2026-10-27)
+## งานที่เหลือ (อัปเดตล่าสุด 2026-10-28)
 
 **สถานะ branch**: ทุกอย่างอยู่บน `main` และ push ขึ้น `origin/main` แล้ว ไม่มีงานค้างในเครื่อง
+
+**หน้า `/admin` ที่ปรับใหม่ 2026-10-28 ยังไม่ได้ตรวจในเบราว์เซอร์** (ตอนทำ Chrome extension ไม่ได้เชื่อมต่อ) ผ่าน lint/tsc/e2e แล้ว แต่ควรเปิดดูทุกแท็บทั้งโหมดสว่าง/มืด จอคอม/มือถือ ตามกฎข้างล่าง
 
 **ตรวจการแสดงผลในเบราว์เซอร์แล้ว 2026-10-27** (Chrome, ทุกหน้า × สว่าง/มืด × จอคอม 1280px/มือถือ 390px × ยังไม่ล็อกอิน/ผู้อ่าน/ผู้สมัครนักเขียน/นักเขียน/แอดมิน รวม popup, dropdown, modal, หน้า error และหน้าที่ไม่มีข้อมูล) ไม่มีข้อความที่ contrast ต่ำกว่า WCAG AA และไม่มีหน้าไหนต้องเลื่อนซ้ายขวา กฎที่ได้จากการตรวจ:
 - **ห้ามใส่ `@media (prefers-color-scheme)` ใน `globals.css`** ธีมมืดต้องมาจากคลาส `.dark` ของ next-themes เท่านั้น (เคยทำให้เลือกธีมสว่างบน OS ที่เป็นธีมมืด แล้วพื้น body เป็นสีดำ ตัวอักษรที่ไม่ได้กำหนดสีจึงกลืนกับการ์ดสีขาว)
@@ -232,9 +246,10 @@ npx tsx scripts/add_author_profiles.ts # คอลัมน์โปรไฟล
    npx tsx scripts/add_item_reads.ts          # บท/ตอนที่อ่านแล้ว (ปุ่มเลือกตอน)
    npx tsx scripts/add_story_categories.ts    # หลายหมวดต่อเรื่อง (คัดลอกหมวดเดิมมาให้)
    npx tsx scripts/add_author_profiles.ts     # โปรไฟล์นักเขียน ติดตาม สนับสนุน ป้ายจบแล้ว
+   npx tsx scripts/add_admin_tools.ts         # แบนพร้อมเหตุผล ปรับเหรียญ ประวัติการทำงานของแอดมิน
    ```
    DB ที่เก่ากว่านั้นให้รันสคริปต์ก่อนหน้าตามลำดับใน README ก่อน ส่วน DB ใหม่ใช้ `schema.sql` ได้เลยไม่ต้องรันพวกนี้
-3. ลบ `.next` แล้วเปิด `npm run dev` ใหม่ จากนั้นรัน `npm run test:e2e` เพื่อเช็ก (ต้องผ่านทั้งหมด 124 เทสต์)
+3. ลบ `.next` แล้วเปิด `npm run dev` ใหม่ จากนั้นรัน `npm run test:e2e` เพื่อเช็ก (ต้องผ่านทั้งหมด 138 เทสต์)
 
 **ผู้ดูแลต้องทำเอง**:
 - กรอก "ข้อมูลการชำระเงิน" ที่ `/admin` → ตั้งค่า (เครื่องนี้ยังเป็นข้อความตัวอย่างอยู่) ถ้ายังไม่กรอก ผู้อ่านจะเติมเหรียญไม่ได้
@@ -266,7 +281,7 @@ npx tsx scripts/add_author_profiles.ts # คอลัมน์โปรไฟล
 | 11 | จัดอันดับและแนะนำ | ✅ (อันดับรวมตลอดกาล) | `/ranking`, `/` (แนะนำสำหรับคุณ + ยอดนิยม), ล่างหน้า `/novel/[id]` (เรื่องที่คล้ายกัน), `/search` (เรียงตาม) | `lib/ranking.ts`, `app/ranking/page.tsx`, `components/StoryCard.tsx` |
 | 12 | ตรวจสอบเนื้อหาเบื้องต้นด้วย API | ❌ | — | — |
 | 13 | รักษาความปลอดภัย | ✅ | `/login` (ล็อกอินผิดเกิน 5 ครั้ง), เปิดตอนที่ยังไม่ซื้อ | `lib/auth.ts`, `lib/loginThrottle.ts`, `lib/upload.ts`, `lib/visibility.ts`, `tests/e2e/security.test.mjs` |
-| 14 | ทดสอบระบบและปรับ UX/UI | ⚠️ | `npm run test:e2e` (124 เทสต์) | `tests/e2e/` |
+| 14 | ทดสอบระบบและปรับ UX/UI | ⚠️ | `npm run test:e2e` (138 เทสต์) | `tests/e2e/` |
 
 **สิ่งที่ขาด**:
 - ~~ยอดวิวไม่เคยเพิ่ม~~ **แก้แล้ว 2026-10-23** (ดูหัวข้อ "ยอดวิว" ในสถาปัตยกรรม) ยอดวิวเก่าก่อนวันนั้นของนิยาย/บท/การ์ตูนยังเป็น 0 เพราะไม่มีข้อมูลย้อนหลัง

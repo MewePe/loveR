@@ -3,6 +3,7 @@ import pool from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import { notify, short } from '@/lib/notifications';
+import { logAdminAction } from '@/lib/adminLog';
 
 // PATCH - Approve (credit coins) or reject a pending top-up. Body: { status, reason? }
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -21,7 +22,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     try {
         await connection.beginTransaction();
 
-        const [rows] = await connection.query<RowDataPacket[]>('SELECT user_id, amount FROM coin_topups WHERE id = ? FOR UPDATE', [id]);
+        const [rows] = await connection.query<RowDataPacket[]>(`SELECT t.user_id, t.amount, u.name, u.email FROM coin_topups t JOIN users u ON u.id = t.user_id
+             WHERE t.id = ? FOR UPDATE`, [id]);
         if (!rows[0]) {
             await connection.rollback();
             return NextResponse.json({ error: 'ไม่พบรายการเติมเหรียญ' }, { status: 404 });
@@ -41,6 +43,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
             await connection.query('UPDATE users SET coins = coins + ? WHERE id = ?', [rows[0].amount, rows[0].user_id]);
         }
 
+        await logAdminAction(session.user.id, {
+            action: status === 'APPROVED' ? 'TOPUP_APPROVE' : 'TOPUP_REJECT', targetType: 'TOPUP', targetId: id,
+            targetLabel: rows[0].name || rows[0].email, detail: `${rows[0].amount} บาท`, reason,
+        }, connection);
         await connection.commit();
         await notify([rows[0].user_id], status === 'APPROVED'
             ? { type: 'TOPUP_APPROVED', message: `เติมเหรียญสำเร็จ ได้รับ ${rows[0].amount} เหรียญ`, link: '/coins' }

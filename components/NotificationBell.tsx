@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, BookOpen, CheckCircle, Coins, Flag, HeartHandshake, MessageCircle, ShoppingCart, Sparkles, Star, UserCheck, Wallet, XCircle } from "lucide-react";
+import { Bell, BookOpen, CheckCircle, Coins, Flag, HeartHandshake, ShieldAlert, MessageCircle, ShoppingCart, Sparkles, Star, UserCheck, Wallet, XCircle } from "lucide-react";
 
 export interface NotificationItem {
     id: string;
@@ -24,6 +24,7 @@ const ICONS: Record<string, { icon: typeof Bell; color: string }> = {
     TOPUP_APPROVED: { icon: Coins, color: "text-green-500 dark:text-green-400" },
     TOPUP_REJECTED: { icon: XCircle, color: "text-red-500 dark:text-red-400" },
     COMMENT_REPLY: { icon: MessageCircle, color: "text-blue-500 dark:text-blue-400" },
+    COINS_ADJUSTED: { icon: Coins, color: "text-amber-500 dark:text-amber-400" },
     NEW_COMMENT: { icon: MessageCircle, color: "text-blue-500 dark:text-blue-400" },
     NEW_RATING: { icon: Star, color: "text-yellow-500 dark:text-yellow-400" },
     PURCHASE: { icon: ShoppingCart, color: "text-green-500 dark:text-green-400" },
@@ -32,6 +33,7 @@ const ICONS: Record<string, { icon: typeof Bell; color: string }> = {
     WRITER_REJECTED: { icon: XCircle, color: "text-red-500 dark:text-red-400" },
     WITHDRAWAL_APPROVED: { icon: Wallet, color: "text-green-500 dark:text-green-400" },
     WITHDRAWAL_REJECTED: { icon: Wallet, color: "text-red-500 dark:text-red-400" },
+    CONTENT_MODERATED: { icon: ShieldAlert, color: "text-red-500 dark:text-red-400" },
     ADMIN_TOPUP: { icon: Coins, color: "text-amber-500 dark:text-amber-400" },
     ADMIN_WRITER_REQUEST: { icon: UserCheck, color: "text-purple-500 dark:text-purple-400" },
     ADMIN_WITHDRAWAL: { icon: Wallet, color: "text-amber-500 dark:text-amber-400" },

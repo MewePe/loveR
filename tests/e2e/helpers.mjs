@@ -124,6 +124,8 @@ export async function createUsers(db, spec, { coins = 0 } = {}) {
 // Delete everything the given test users created, including their private files
 export async function cleanupUsers(db, userIds) {
     if (userIds.length === 0) return;
+    // Admin log entries by test admins or about test users (admin_id is ON DELETE SET NULL, so they'd stay otherwise)
+    await db.query('DELETE FROM admin_logs WHERE admin_id IN (?) OR target_id IN (?)', [userIds, userIds]);
     await db.query('DELETE FROM reports WHERE reporter_id IN (?)', [userIds]);
     await db.query('DELETE FROM purchases WHERE user_id IN (?) OR author_id IN (?)', [userIds, userIds]);
     await db.query('DELETE FROM supports WHERE user_id IN (?) OR author_id IN (?)', [userIds, userIds]);

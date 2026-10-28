@@ -53,3 +53,8 @@ export function bucketExpr(range: RangeKey, column: string) {
 export function rangeStart(range: RangeKey) {
     return RANGES[range].start;
 }
+
+// Every coin spent: chapter/episode purchases plus supports sent to authors (amount, author_earning, created_at).
+// The platform's share of each row is amount - author_earning.
+export const SPENT_SQL = `(SELECT price AS amount, author_earning, created_at FROM purchases
+                    UNION ALL SELECT amount, author_earning, created_at FROM supports)`;

@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { auth } from '@/lib/auth';
-import { ResultSetHeader } from 'mysql2';
+import { ResultSetHeader, RowDataPacket } from 'mysql2';
+import { logAdminAction } from '@/lib/adminLog';
 import { notify, short } from '@/lib/notifications';
 
 export async function PATCH(
@@ -42,6 +43,11 @@ export async function PATCH(
             );
         }
 
+        const [names] = await connection.query<RowDataPacket[]>('SELECT name, email FROM users WHERE id = ?', [id]);
+        await logAdminAction(session.user.id, {
+            action: status === 'APPROVED' ? 'WRITER_APPROVE' : 'WRITER_REJECT', targetType: 'USER', targetId: id,
+            targetLabel: names[0]?.name || names[0]?.email, reason,
+        }, connection);
         await connection.commit();
         await notify([id], status === 'APPROVED'
             ? { type: 'WRITER_APPROVED', message: 'คำขอเป็นนักเขียนของคุณได้รับการอนุมัติแล้ว เริ่มเขียนได้เลย!', link: '/author' }
