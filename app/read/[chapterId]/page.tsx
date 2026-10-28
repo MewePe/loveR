@@ -62,7 +62,7 @@ export default async function ReadChapter({ params }: { params: Promise<{ chapte
     return (
         <div className="min-h-screen bg-[#f9f9f9] dark:bg-gray-900 text-gray-800 dark:text-gray-100 font-serif transition-colors duration-200">
             {/* Top Navigation */}
-            <div className="sticky top-0 z-10 bg-white/90 dark:bg-gray-900/95 backdrop-blur-md border-b dark:border-gray-800 shadow-sm px-4 py-3 flex items-center justify-between transition-colors duration-200">
+            <div className="sticky top-16 z-40 bg-white/90 dark:bg-gray-900/95 backdrop-blur-md border-b dark:border-gray-800 shadow-sm px-4 py-3 flex items-center justify-between transition-colors duration-200">
                 <Link href={`/novel/${chapter.novel_id}`} className="text-sm font-medium text-gray-500 hover:text-indigo-600 dark:text-gray-300 dark:hover:text-indigo-400 truncate max-w-[200px] flex items-center gap-1 transition-colors">
                     &larr; <span className="hidden sm:inline">{chapter.novel_title}</span>
                 </Link>

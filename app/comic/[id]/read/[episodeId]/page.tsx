@@ -72,7 +72,7 @@ export default async function ReadEpisode({ params }: { params: Promise<{ id: st
     return (
         <div className="min-h-screen bg-[#f9f9f9] dark:bg-gray-900 transition-colors duration-200">
             {/* Header */}
-            <div className="sticky top-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-b border-gray-200 dark:border-gray-800 transition-colors duration-200">
+            <div className="sticky top-16 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-b border-gray-200 dark:border-gray-800 transition-colors duration-200">
                 <div className="container mx-auto px-4 py-4 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-4 min-w-0">
                         <Link href={`/comic/${comicId}`} className="text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-white transition">
