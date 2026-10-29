@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
 import { canAccess, AccessItem } from '@/lib/coins';
 import { isOwnerOrAdmin } from '@/lib/visibility';
+import { needsAgeGate } from '@/lib/ageGate';
 import { PRIVATE_COMIC_URL_PREFIX, readPrivateComicPage } from '@/lib/upload';
 
 // GET - Serve a private comic page image if the viewer may read an episode that uses it
@@ -13,7 +14,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ userId:
 
     const url = `${PRIVATE_COMIC_URL_PREFIX}${userId}/${file}`;
     const [episodes] = await pool.query<RowDataPacket[]>(
-        `SELECT DISTINCT e.id, e.price, c.author_id, c.status AS content_status
+        `SELECT DISTINCT e.id, e.price, e.moderation_status, c.author_id, c.status AS content_status, c.is_mature
          FROM comic_pages p
          JOIN comic_episodes e ON p.episode_id = e.id
          JOIN comics c ON e.comic_id = c.id
@@ -21,11 +22,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ userId:
         [url]
     );
 
-    // The uploader can always see their own files (e.g. just uploaded, not yet attached to an episode)
+    // The uploader can always see their own files (e.g. just uploaded, not yet attached to an episode).
+    // Pages of 18+ comics also need the age check (lib/ageGate.ts).
     let allowed = isOwnerOrAdmin(session?.user, userId);
     for (const episode of episodes) {
         if (allowed) break;
-        allowed = await canAccess(session?.user, 'episode', episode as AccessItem);
+        allowed = await canAccess(session?.user, 'episode', episode as AccessItem)
+            && !(await needsAgeGate(session?.user, episode));
     }
     if (!allowed) {
         return NextResponse.json({ error: 'ไม่พบข้อมูล' }, { status: 404 });

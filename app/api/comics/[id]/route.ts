@@ -71,6 +71,19 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         categoryIds = parsed.ids;
     }
 
+    // An 18+ story can't go back to ทั่วไป once 18+ content in it passed the check or an admin confirmed it
+    // (lib/moderation.ts); otherwise that content would be shown without the age gate
+    if (isMature === false && comics[0].is_mature) {
+        const [confirmed] = await pool.query<RowDataPacket[]>(
+            `SELECT 1 FROM moderation_checks WHERE story_id = ? AND episode_id IS NOT NULL AND verdict = 'MATURE'
+             AND status IN ('CLEARED', 'APPROVED') LIMIT 1`,
+            [id]
+        );
+        if (confirmed.length > 0) {
+            return NextResponse.json({ error: 'เรื่องนี้มีตอนที่ผ่านการตรวจว่าเป็นเนื้อหา 18+ จึงเปลี่ยนเป็นระดับทั่วไปไม่ได้ กรุณาติดต่อแอดมิน' }, { status: 400 });
+        }
+    }
+
     if (status !== undefined) {
         if (comics[0].status === 'BANNED') {
             return NextResponse.json({ error: 'การ์ตูนนี้ถูกระงับโดยผู้ดูแล ไม่สามารถเปลี่ยนสถานะได้' }, { status: 403 });

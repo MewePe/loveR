@@ -4,11 +4,12 @@ import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
 import { v4 as uuidv4 } from 'uuid';
 import { parsePrice } from '@/lib/coins';
-import { canViewContent } from '@/lib/visibility';
+import { canViewContent, isOwnerOrAdmin } from '@/lib/visibility';
 import { validatePageUrls } from '@/lib/upload';
-import { notifyNewItem } from '@/lib/notifications';
+import { mockDirective, moderateItem } from '@/lib/moderation';
 
-// GET - Fetch all episodes for a comic
+// GET - Fetch all episodes for a comic. The author/admin get every episode with its moderation_status (and the
+// admin's reason when rejected); readers only get APPROVED ones.
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
     const { id: comicId } = await params;
 
@@ -19,11 +20,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             return NextResponse.json({ error: 'ไม่พบการ์ตูนเรื่องนี้' }, { status: 404 });
         }
 
+        const isOwner = isOwnerOrAdmin(session?.user, comics[0].author_id);
         const [episodes] = await pool.query<RowDataPacket[]>(
             `SELECT e.*,
-             (SELECT COUNT(*) FROM comic_pages WHERE episode_id = e.id) as page_count 
-             FROM comic_episodes e 
-             WHERE e.comic_id = ? 
+             (SELECT COUNT(*) FROM comic_pages WHERE episode_id = e.id) as page_count
+             ${isOwner ? `, (SELECT m.review_note FROM moderation_checks m WHERE m.episode_id = e.id AND m.status = 'REJECTED'
+                            ORDER BY m.created_at DESC LIMIT 1) AS moderation_note` : ''}
+             FROM comic_episodes e
+             WHERE e.comic_id = ? ${isOwner ? '' : "AND e.moderation_status = 'APPROVED'"}
              ORDER BY e.episode_order ASC, e.created_at ASC`,
             [comicId]
         );
@@ -34,7 +38,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     }
 }
 
-// POST - Create a new episode
+// POST - Create a new episode. Saved hidden (PENDING) and published once the content check of its title and pages
+// passes (lib/moderation.ts); the response's `moderation` says what happened.
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
     const { id: comicId } = await params;
     const session = await auth();
@@ -57,6 +62,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const body = await req.json();
     const { title, pages } = body;
+    if (typeof title !== 'string' || !title.trim()) {
+        return NextResponse.json({ error: 'กรุณากรอกชื่อตอน' }, { status: 400 });
+    }
     const price = parsePrice(body.price);
     if (price === null) {
         return NextResponse.json({ error: 'ราคาต้องเป็นจำนวนเต็ม 0-10000 เหรียญ' }, { status: 400 });
@@ -77,7 +85,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     try {
         // Create episode
         await pool.query(
-            'INSERT INTO comic_episodes (id, title, episode_order, comic_id, price) VALUES (?, ?, ?, ?, ?)',
+            `INSERT INTO comic_episodes (id, title, episode_order, comic_id, price, moderation_status) VALUES (?, ?, ?, ?, ?, 'PENDING')`,
             [episodeId, title, nextOrder, comicId, price]
         );
 
@@ -92,9 +100,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             }
         }
 
-        await notifyNewItem('comic', comics[0] as { id: string; title: string; author_id: string; status: string }, episodeId, title);
+        // Readers are notified about the episode when it is published (moderateItem / admin approval)
+        const urls: string[] = pages ?? [];
+        const moderation = await moderateItem(
+            { itemType: 'episode', itemId: episodeId, title, story: comics[0] as { id: string; title: string; author_id: string; status: string; is_mature: number } },
+            { pages: urls.map((url, i) => ({ url, number: i + 1 })) }, 'SUBMIT', mockDirective(req)
+        );
 
-        return NextResponse.json({ id: episodeId, title, episode_order: nextOrder });
+        return NextResponse.json({ id: episodeId, title, episode_order: nextOrder, moderation });
     } catch (error) {
         console.error('Database error:', error);
         return NextResponse.json({ error: 'สร้างตอนไม่สำเร็จ' }, { status: 500 });

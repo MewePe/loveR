@@ -5,6 +5,8 @@ import { RowDataPacket } from 'mysql2';
 import { v4 as uuidv4 } from 'uuid';
 import { canAccess, parsePrice, AccessItem } from '@/lib/coins';
 import { validatePageUrls } from '@/lib/upload';
+import { needsAgeGate } from '@/lib/ageGate';
+import { mockDirective, moderateItem } from '@/lib/moderation';
 
 // GET - Fetch single episode with pages
 export async function GET(req: Request, { params }: { params: Promise<{ id: string; episodeId: string }> }) {
@@ -12,7 +14,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
     try {
         const [episodes] = await pool.query<RowDataPacket[]>(
-            'SELECT e.*, c.author_id, c.status AS content_status FROM comic_episodes e JOIN comics c ON e.comic_id = c.id WHERE e.id = ? AND e.comic_id = ?',
+            'SELECT e.*, c.author_id, c.status AS content_status, c.is_mature FROM comic_episodes e JOIN comics c ON e.comic_id = c.id WHERE e.id = ? AND e.comic_id = ?',
             [episodeId, comicId]
         );
         if (!episodes[0]) {
@@ -21,11 +23,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
         const session = await auth();
         if (!(await canAccess(session?.user, 'episode', episodes[0] as AccessItem))) {
-            // Unpublished comics don't exist for other users; published paid episodes are just locked
-            if (episodes[0].content_status !== 'PUBLISHED') {
+            // Unpublished comics and unchecked episodes don't exist for other users; published paid episodes are just locked
+            if (episodes[0].content_status !== 'PUBLISHED' || episodes[0].moderation_status !== 'APPROVED') {
                 return NextResponse.json({ error: 'ไม่พบตอนนี้' }, { status: 404 });
             }
             return NextResponse.json({ ...episodes[0], pages: [], locked: true });
+        }
+        if (await needsAgeGate(session?.user, episodes[0])) {
+            return NextResponse.json({ error: 'เนื้อหานี้สำหรับผู้มีอายุ 18 ปีขึ้นไป กรุณายืนยันอายุก่อน', age_required: true }, { status: 403 });
         }
 
         const [pages] = await pool.query<RowDataPacket[]>(
@@ -40,7 +45,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     }
 }
 
-// PATCH - Update episode
+// PATCH - Update episode. A new title or added pages are checked (lib/moderation.ts); the episode is hidden until
+// that passes.
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string; episodeId: string }> }) {
     const { id: comicId, episodeId } = await params;
     const session = await auth();
@@ -61,7 +67,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         return NextResponse.json({ error: 'ไม่มีสิทธิ์ทำรายการนี้' }, { status: 403 });
     }
 
-    const [owned] = await pool.query<RowDataPacket[]>('SELECT id FROM comic_episodes WHERE id = ? AND comic_id = ?', [episodeId, comicId]);
+    const [owned] = await pool.query<RowDataPacket[]>('SELECT id, title FROM comic_episodes WHERE id = ? AND comic_id = ?', [episodeId, comicId]);
     if (!owned[0]) {
         return NextResponse.json({ error: 'ไม่พบตอนนี้' }, { status: 404 });
     }
@@ -87,6 +93,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         }
 
         // Add new pages if provided
+        const added: { url: string; number: number }[] = [];
         if (pages && pages.length > 0) {
             // Get current max page order
             const [orderResult] = await pool.query<RowDataPacket[]>(
@@ -97,6 +104,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
             for (const pageUrl of pages) {
                 const pageId = uuidv4();
+                added.push({ url: pageUrl, number: nextOrder });
                 await pool.query(
                     'INSERT INTO comic_pages (id, image_url, page_order, episode_id) VALUES (?, ?, ?, ?)',
                     [pageId, pageUrl, nextOrder++, episodeId]
@@ -104,7 +112,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
             }
         }
 
-        return NextResponse.json({ success: true });
+        // New pages or a new title are checked again; a price change alone isn't
+        const newTitle = title || owned[0].title;
+        const moderation = added.length > 0 || newTitle !== owned[0].title
+            ? await moderateItem(
+                { itemType: 'episode', itemId: episodeId, title: newTitle, story: comics[0] as { id: string; title: string; author_id: string; status: string; is_mature: number } },
+                { pages: added }, 'EDIT', mockDirective(req)
+            )
+            : null;
+
+        return NextResponse.json({ success: true, moderation });
     } catch (error) {
         console.error('Database error:', error);
         return NextResponse.json({ error: 'แก้ไขตอนไม่สำเร็จ' }, { status: 500 });

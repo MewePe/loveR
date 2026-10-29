@@ -40,9 +40,12 @@ model chapters {
   novel_id      String?  @db.VarChar(36)
   views         Int?     @default(0)
   price         Int      @default(0)
+  /// APPROVED | PENDING | BLOCKED | REJECTED (lib/moderation.ts), only APPROVED is public
+  moderation_status String @default("APPROVED") @db.VarChar(20)
   created_at    DateTime @default(now()) @db.Timestamp(0)
   updated_at    DateTime @default(now()) @db.Timestamp(0)
   purchases     purchases[]
+  moderation_checks moderation_checks[]
   reading_history reading_history[]
   item_reads    item_reads[]
   novels        novels?  @relation(fields: [novel_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "chapters_ibfk_1")
@@ -57,8 +60,11 @@ model comic_episodes {
   comic_id      String?       @db.VarChar(36)
   views         Int?          @default(0)
   price         Int           @default(0)
+  /// APPROVED | PENDING | BLOCKED | REJECTED (lib/moderation.ts), only APPROVED is public
+  moderation_status String      @default("APPROVED") @db.VarChar(20)
   created_at    DateTime      @default(now()) @db.Timestamp(0)
   updated_at    DateTime      @default(now()) @db.Timestamp(0)
+  moderation_checks moderation_checks[]
   comics        comics?       @relation(fields: [comic_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "comic_episodes_ibfk_1")
   comic_pages   comic_pages[]
   purchases     purchases[]
@@ -196,6 +202,8 @@ model users {
   role_before_ban users_role_before_ban?
   /// JSON novel reader display settings (lib/readerSettings.ts)
   reader_settings String?           @db.Text
+  /// Saved when the user passes the 18+ age check (lib/ageGate.ts)
+  birth_date      DateTime?         @db.Date
   created_at      DateTime          @default(now()) @db.Timestamp(0)
   updated_at      DateTime          @default(now()) @db.Timestamp(0)
   following       follows[]         @relation("follows_follower")
@@ -220,6 +228,9 @@ model users {
   coin_adjustments coin_adjustments[] @relation("coin_adjustments_user")
   coin_adjustments_made coin_adjustments[] @relation("coin_adjustments_admin")
   admin_logs      admin_logs[]
+  moderation_checks moderation_checks[] @relation("moderation_author")
+  moderation_reports moderation_checks[] @relation("moderation_reporter")
+  moderation_reviews moderation_checks[] @relation("moderation_reviewer")
 }
 
 model withdrawals {
@@ -537,4 +548,39 @@ model admin_logs {
   @@index([created_at], map: "idx_time")
   @@index([action, created_at], map: "idx_action_time")
   @@index([target_id], map: "idx_target")
+}
+
+/// Content check of a chapter/episode by the Gemini API (lib/moderation.ts). The admin queue is status = PENDING.
+model moderation_checks {
+  id              String          @id @db.VarChar(36)
+  /// chapter | episode
+  item_type       String          @db.VarChar(10)
+  chapter_id      String?         @db.VarChar(36)
+  episode_id      String?         @db.VarChar(36)
+  story_id        String          @db.VarChar(36)
+  author_id       String          @db.VarChar(36)
+  reporter_id     String?         @db.VarChar(36)
+  /// SUBMIT | EDIT | READER_REPORT
+  source          String          @db.VarChar(20)
+  declared_mature Boolean         @default(false)
+  /// SAFE | MATURE | EXPLICIT | ILLEGAL | MINOR | REFUSED | ERROR
+  verdict         String?         @db.VarChar(20)
+  /// JSON { summary, issues: [{ page, category, reason }] }
+  analysis        String?         @db.Text
+  model           String?         @db.VarChar(64)
+  /// CHECKING | CLEARED | PENDING | APPROVED | REJECTED | SUPERSEDED
+  status          String          @default("CHECKING") @db.VarChar(20)
+  reviewer_id     String?         @db.VarChar(36)
+  review_note     String?         @db.Text
+  reviewed_at     DateTime?       @db.Timestamp(0)
+  created_at      DateTime        @default(now()) @db.Timestamp(3)
+  updated_at      DateTime        @default(now()) @db.Timestamp(3)
+  chapter         chapters?       @relation(fields: [chapter_id], references: [id], onDelete: SetNull)
+  episode         comic_episodes? @relation(fields: [episode_id], references: [id], onDelete: SetNull)
+  author          users           @relation("moderation_author", fields: [author_id], references: [id], onDelete: Cascade)
+  reporter        users?          @relation("moderation_reporter", fields: [reporter_id], references: [id], onDelete: SetNull)
+  reviewer        users?          @relation("moderation_reviewer", fields: [reviewer_id], references: [id], onDelete: SetNull)
+
+  @@index([status, created_at], map: "idx_status_time")
+  @@index([author_id, status], map: "idx_author")
 }

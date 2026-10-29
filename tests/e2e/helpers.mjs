@@ -17,6 +17,11 @@ export const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAA
 export const png = () => new Blob([PNG], { type: 'image/png' });
 export const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// Content check (lib/moderation.ts): every Client sends this header so chapters/episodes created through the API pass
+// a faked "safe" check without calling Gemini. Set client.extraHeaders[MOCK_HEADER] to another result
+// ("mature", "explicit:2", "minor", "error", ...) or delete it to call the real API. Dev server only.
+export const MOCK_HEADER = 'x-moderation-mock';
+
 // These tests write to the database, so only run them against a local server unless explicitly allowed
 if (!/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(BASE) && !process.env.E2E_ALLOW_REMOTE) {
     throw new Error(`Refusing to run E2E tests against ${BASE}. Set E2E_ALLOW_REMOTE=1 if you really mean it.`);
@@ -46,7 +51,7 @@ export class Client {
     // extraHeaders are sent with every request, e.g. { 'x-forwarded-for': '203.0.113.7' } to simulate a client IP
     constructor(extraHeaders = {}) {
         this.cookies = {};
-        this.extraHeaders = extraHeaders;
+        this.extraHeaders = { [MOCK_HEADER]: 'safe', ...extraHeaders };
         this.lastLoginCode = null; // NextAuth error code of the last failed login, e.g. 'credentials' or 'rate_limited'
     }
 

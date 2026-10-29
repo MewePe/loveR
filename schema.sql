@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS users (
     banned_at TIMESTAMP NULL,
     role_before_ban ENUM('VISITOR', 'READER', 'AUTHOR', 'ADMIN'), -- restored on unban
     reader_settings TEXT, -- JSON novel reader display settings (lib/readerSettings.ts)
+    birth_date DATE NULL, -- saved when the user passes the 18+ age check (lib/ageGate.ts), never shown
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -58,6 +59,7 @@ CREATE TABLE IF NOT EXISTS chapters (
     novel_id VARCHAR(36),
     views INT DEFAULT 0,
     price INT NOT NULL DEFAULT 0, -- coins; 0 = free
+    moderation_status VARCHAR(20) NOT NULL DEFAULT 'APPROVED', -- APPROVED | PENDING | BLOCKED | REJECTED (lib/moderation.ts), only APPROVED is public
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (novel_id) REFERENCES novels(id) ON DELETE CASCADE
@@ -89,6 +91,7 @@ CREATE TABLE IF NOT EXISTS comic_episodes (
     comic_id VARCHAR(36),
     views INT DEFAULT 0,
     price INT NOT NULL DEFAULT 0, -- coins; 0 = free
+    moderation_status VARCHAR(20) NOT NULL DEFAULT 'APPROVED', -- APPROVED | PENDING | BLOCKED | REJECTED (lib/moderation.ts), only APPROVED is public
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (comic_id) REFERENCES comics(id) ON DELETE CASCADE
@@ -401,4 +404,35 @@ CREATE TABLE IF NOT EXISTS admin_logs (
     INDEX idx_action_time (action, created_at),
     INDEX idx_target (target_id),
     FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Content checks of chapters/episodes by the Gemini API (lib/moderation.ts). One row per check; the admin queue
+-- ("คิวตรวจเนื้อหา") is status = 'PENDING'. chapter_id/episode_id become NULL when the item is deleted, so the
+-- author's history (the "10 clean chapters" trust rule) survives.
+CREATE TABLE IF NOT EXISTS moderation_checks (
+    id VARCHAR(36) PRIMARY KEY,
+    item_type VARCHAR(10) NOT NULL, -- chapter | episode
+    chapter_id VARCHAR(36) NULL,
+    episode_id VARCHAR(36) NULL,
+    story_id VARCHAR(36) NOT NULL, -- novel/comic id at the time
+    author_id VARCHAR(36) NOT NULL,
+    reporter_id VARCHAR(36) NULL, -- reader who reported a wrong label (source READER_REPORT)
+    source VARCHAR(20) NOT NULL, -- SUBMIT | EDIT | READER_REPORT
+    declared_mature TINYINT(1) NOT NULL DEFAULT 0, -- the story's 18+ label when checked
+    verdict VARCHAR(20) NULL, -- SAFE | MATURE | EXPLICIT | ILLEGAL | MINOR | REFUSED | ERROR (NULL while checking)
+    analysis TEXT, -- JSON { summary, issues: [{ page, category, reason }] }, Thai text from the API
+    model VARCHAR(64),
+    status VARCHAR(20) NOT NULL DEFAULT 'CHECKING', -- CHECKING | CLEARED | PENDING | APPROVED | REJECTED | SUPERSEDED
+    reviewer_id VARCHAR(36) NULL,
+    review_note TEXT, -- admin's reason, plain text
+    reviewed_at TIMESTAMP NULL,
+    created_at TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP(3),
+    updated_at TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+    INDEX idx_status_time (status, created_at),
+    INDEX idx_author (author_id, status),
+    FOREIGN KEY (chapter_id) REFERENCES chapters(id) ON DELETE SET NULL,
+    FOREIGN KEY (episode_id) REFERENCES comic_episodes(id) ON DELETE SET NULL,
+    FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (reporter_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (reviewer_id) REFERENCES users(id) ON DELETE SET NULL
 );

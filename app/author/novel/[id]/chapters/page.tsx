@@ -5,6 +5,8 @@ import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Plus, Edit, Trash2, Save, X, GripVertical, Eye } from 'lucide-react';
 import { useConfirm } from '@/components/ConfirmDialog';
 import { useToast } from '@/components/Toast';
+import { ModerationBadge } from '@/components/ModerationNotice';
+import { showModerationResult } from '@/components/author/moderationToast';
 
 interface Chapter {
     id: string;
@@ -13,6 +15,8 @@ interface Chapter {
     chapter_order: number;
     views: number;
     price: number;
+    moderation_status: string; // lib/moderationLabels.ts ITEM_STATUSES
+    moderation_note: string | null; // the admin's reason when REJECTED
     created_at: string;
 }
 
@@ -96,7 +100,8 @@ export default function ChapterManagement() {
             });
 
             if (res.ok) {
-                toast.success(editingChapter ? 'แก้ไขบทสำเร็จ' : 'เพิ่มบทสำเร็จ');
+                const data = await res.json().catch(() => ({}));
+                showModerationResult(toast, data.moderation, editingChapter ? 'แก้ไขบทสำเร็จ' : 'เพิ่มบทสำเร็จ');
                 setShowModal(false);
                 fetchData();
             } else {
@@ -175,7 +180,13 @@ export default function ChapterManagement() {
                                         {index + 1}
                                     </div>
                                     <div className="flex-1">
-                                        <h3 className="font-medium text-gray-900 dark:text-white">{chapter.title}</h3>
+                                        <h3 className="font-medium text-gray-900 dark:text-white flex flex-wrap items-center gap-2">
+                                            {chapter.title}
+                                            <ModerationBadge status={chapter.moderation_status} />
+                                        </h3>
+                                        {chapter.moderation_status === 'REJECTED' && chapter.moderation_note && (
+                                            <p className="text-sm text-red-700 dark:text-red-400 mt-1 whitespace-pre-line">เหตุผลจากแอดมิน: {chapter.moderation_note} (แก้ไขแล้วบันทึกเพื่อส่งตรวจใหม่)</p>
+                                        )}
                                         <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400 mt-1">
                                             <span className="flex items-center gap-1">
                                                 <Eye className="w-4 h-4" />

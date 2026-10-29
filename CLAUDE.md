@@ -32,8 +32,9 @@ node --test --test-name-pattern="XSS" tests/e2e/security.test.mjs      # ที�
 - **ต้องเปิด `npm run dev` และ MySQL ไว้ก่อน** เทสต์ยิง HTTP ไปที่ dev server จริง (`E2E_BASE_URL`, ค่าเริ่มต้น `http://localhost:3000`) และอ่าน/เขียน DB ตามที่ตั้งใน `.env`
 - เทสต์สร้างผู้ใช้ `e2e-*@test.local` และข้อมูลของตัวเอง แล้วลบทิ้งเองใน `after()` (ใช้ `cleanupUsers()` ใน `tests/e2e/helpers.mjs`) ไม่แตะข้อมูลจริง ยกเว้น `maintenance.test.mjs` ที่เปิด/ปิด maintenance mode ชั่วคราวแล้วคืนค่าเดิม (สคริปต์จึงรันแบบ `--test-concurrency=1`)
 - ไม่ยอมรันกับ server ที่ไม่ใช่ localhost ถ้าไม่ได้ตั้ง `E2E_ALLOW_REMOTE=1`
-- ใช้ `node:test` + `node:assert` ไม่มี dependency เพิ่ม เขียนเป็น `.mjs` ไฟล์ละ 1 หัวข้อ ภายในไฟล์ test จะรันตามลำดับ และใช้ state ร่วมกันผ่านตัวแปรระดับ module
-- **แก้ระบบเงิน การล็อกเนื้อหา สิทธิ์ หรือการอัปโหลดเมื่อไหร่ ให้รัน `npm run test:e2e` ทุกครั้ง**
+- **ตรวจเนื้อหา (Gemini) ในเทสต์ใช้ผลจำลองเสมอ**: `Client` ใน `helpers.mjs` ส่ง header `x-moderation-mock: safe` ทุก request บท/ตอนที่สร้างผ่าน API จึงผ่านการตรวจทันทีโดยไม่เรียก API จริง เปลี่ยนผลได้ด้วย `client.extraHeaders[MOCK_HEADER] = 'mature' | 'explicit:2,3' | 'illegal' | 'minor' | 'refused' | 'error'` (ตัวเลขหลัง `:` = หน้าการ์ตูนที่มีปัญหา) header นี้ใช้ได้เฉพาะตอน `NODE_ENV !== 'production'` เทสต์กับ API จริงอยู่ใน `moderation-gemini.test.mjs` (ข้อความปลอดภัย + คำหยาบเล็กน้อยเท่านั้น ข้ามเองถ้าไม่มี `GEMINI_API_KEY`)
+- ใช้ `node:test` + `node:assert` ไม่มี dependency เพิ่มเขียนเป็น `.mjs` ไฟล์ละ 1 หัวข้อ ภายในไฟล์ test จะรันตามลำดับ และใช้ state ร่วมกันผ่านตัวแปรระดับ module
+- **แก้ระบบเงิน การล็อกเนื้อหา สิทธิ์ การตรวจเนื้อหา/ยืนยันอายุ หรือการอัปโหลดเมื่อไหร่ ให้รัน `npm run test:e2e` ทุกครั้ง**
 
 สคริปต์จัดการฐานข้อมูลใน `scripts/` รันด้วย `npx tsx` เช่น:
 
@@ -57,13 +58,14 @@ npx tsx scripts/add_author_profiles.ts # คอลัมน์โปรไฟล
 npx tsx scripts/add_admin_tools.ts # คอลัมน์แบนใน users (ban_reason/banned_at/role_before_ban), ตาราง coin_adjustments และ admin_logs (รันซ้ำได้)
 npx tsx scripts/add_mature_flag.ts # คอลัมน์ is_mature (18+) ใน novels/comics (รันซ้ำได้)
 npx tsx scripts/add_reader_settings.ts # คอลัมน์ users.reader_settings (ตั้งค่าการอ่าน Aa) (รันซ้ำได้)
+npx tsx scripts/add_moderation.ts # ตรวจเนื้อหาด้วย API + ยืนยันอายุ: moderation_status ใน chapters/comic_episodes (ของเดิมเป็น APPROVED), users.birth_date, ตาราง moderation_checks (รันซ้ำได้)
 ```
 
 `reset_db.ts` และ `drop_old_db.ts` ลบข้อมูล
 
 ## Environment
 
-ใช้ MySQL/MariaDB บนเครื่อง (XAMPP) ใน `.env` ต้องมี `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` (ค่าเริ่มต้น `loveread_db`) และ `AUTH_SECRET` ส่วน `DATABASE_URL` ใช้เฉพาะกับเครื่องมือของ Prisma
+ใช้ MySQL/MariaDB บนเครื่อง (XAMPP) ใน `.env` ต้องมี `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` (ค่าเริ่มต้น `loveread_db`) และ `AUTH_SECRET` ส่วน `DATABASE_URL` ใช้เฉพาะกับเครื่องมือของ Prisma `GEMINI_API_KEY` ใช้ตรวจเนื้อหา (ไม่มีก็ใช้งานได้ แต่ทุกบท/ตอนใหม่จะรอแอดมินตรวจ) `GEMINI_MODEL` เปลี่ยนโมเดลได้ (ค่าเริ่มต้น `gemini-3.1-flash-lite`)
 
 ## สถาปัตยกรรม
 
@@ -96,7 +98,7 @@ npx tsx scripts/add_reader_settings.ts # คอลัมน์ users.reader_sett
 
 **แอดมิน** (`app/admin/page.tsx` + `components/admin/`): page.tsx มีแค่ sidebar, การเช็กสิทธิ์ และสลับแท็บ แต่ละแท็บเป็น component แยก (`DashboardPanel`, `UsersPanel` + `UserDetail`, `ContentPanel`, `ReportsPanel`, `ModerationPanel`, `WritersPanel`, `PaymentsPanel`, `AuditLogPanel`, `CategoriesPanel`, `SettingsPanel` ซึ่งได้ props แบบ `PanelProps` ใน `components/admin/types.ts`) ส่วนที่ใช้ร่วมกัน (Badge, ปุ่มที่มีข้อความ, Modal, `ReasonDialog`, `ImageLightbox`, Pagination, `fetchJson`/`sendJson`) อยู่ใน `components/admin/ui.tsx` หน้าเก่าอย่าง `/admin/users`, `/admin/content` ฯลฯ แค่ redirect ไป `/admin`
 - **state อยู่ใน URL**: `?tab=` และ `?user=<id>` (หน้ารายละเอียดผู้ใช้), `?view=topups|withdrawals|history` (การเงิน), `?type=novels|comics` (เนื้อหา), `?target=<id>` (ประวัติแอดมินของรายการเดียว) ใช้ `navigate(tab, params)` ที่ page ส่งให้ panel จะถูก remount เมื่อ view/type/target เปลี่ยน
-- **ตัวเลขแดงบนเมนู**: `GET /api/admin/counts` (`writers`, `topups`, `withdrawals`, `reports`, `moderation`) โหลดตอนเปิด ตอนเปลี่ยนแท็บ ทุก 60 วินาที และเมื่อ panel เรียก `refreshCounts()` หลังทำรายการ `moderation` เป็น 0 เสมอจนกว่าจะทำข้อ 12 (เมนู "คิวตรวจเนื้อหา" เป็น placeholder)
+- **ตัวเลขแดงบนเมนู**: `GET /api/admin/counts` (`writers`, `topups`, `withdrawals`, `reports`, `moderation`) โหลดตอนเปิด ตอนเปลี่ยนแท็บ ทุก 60 วินาที และเมื่อ panel เรียก `refreshCounts()` หลังทำรายการ `moderation` = จำนวนในคิวตรวจเนื้อหา (`QUEUE_SQL` ใน `lib/moderation.ts`)
 - **ภาพรวม** `GET /api/admin`: การ์ด 6 ใบ (ผู้ใช้ทั้งหมด/ใหม่วันนี้/นักเขียน/เรื่องทั้งหมด/เติมเหรียญเดือนนี้เฉพาะ APPROVED/รายได้แพลตฟอร์ม = `SPENT_SQL` − author_earning) กล่องงานรอดำเนินการ กราฟ (`AnalyticsPanel`) เรื่องยอดนิยม 5 อันดับ (นิยาย+การ์ตูนรวมกันตามวิว จาก `listStories`) และกิจกรรมล่าสุด 10 รายการ
 - **ผู้ใช้**: `GET /api/admin/users?search=&role=READER|AUTHOR|ADMIN&status=active|banned&page=` → `{ users, total, page, pageSize }` (role กรองจากสิทธิ์ก่อนแบนด้วย) `GET /api/admin/users/[id]` คืนข้อมูลบัญชี, เติมเหรียญ, ซื้อตอน, สนับสนุน, การปรับเหรียญ, ผลงาน, รายงานที่โดน (บัญชี/เรื่อง/คอมเมนต์ของเขา) และ log ที่เกี่ยวกับเขา
 - **แบน**: `PATCH /api/admin/users/[id]` `{ action: 'ban', reason }` (ต้องมีเหตุผล) เก็บ role เดิมใน `users.role_before_ban` พร้อม `ban_reason`/`banned_at` ส่วน `{ action: 'unban' }` คืน role เดิม `{ role }` แบบเก่ายังใช้ได้ (`role: 'BANNED'` = แบนโดยไม่บังคับเหตุผล, role อื่น = เปลี่ยนสิทธิ์และปลดแบน) แบน/เปลี่ยนสิทธิ์ตัวเองไม่ได้
@@ -151,7 +153,7 @@ npx tsx scripts/add_reader_settings.ts # คอลัมน์ users.reader_sett
 - ทุกแถวเลื่อนซ้ายขวาด้วย `components/home/ScrollRow.tsx` (+ `RowItem`) ปัดนิ้วบนมือถือ มีปุ่มลูกศรตั้งแต่ `md` **ตัว list ต้องเป็น `relative`** และการ์ดข้างในต้องมี positioned ancestor (StoryCard เป็น `relative`) ไม่งั้นสิ่งที่เป็น `absolute` เช่น `sr-only` จะหลุดออกนอก scroller ทำให้ทั้งหน้าเลื่อนซ้ายขวาได้ (เคยเกิดแล้ว)
 - **ทุกแถวจาก `lib/ranking.ts`** มี `item_count`, `last_item_at`, `is_completed`, `is_mature` (เป็น boolean แล้ว) และ `listStories()` รับ `completed`/`hasItems` เพิ่ม sort `updated` อยู่ใน `SORTS` แต่ไม่อยู่ใน `SEARCH_SORTS`/`RANKING_SORTS` จึงรับจาก input ไม่ได้
 - **การ์ดเรื่อง** `components/StoryCard.tsx`: ป้ายนิยาย/การ์ตูน, 18+, จบแล้ว, วิวแบบย่อ (`compactNumber()`), คะแนน, จำนวนบท/ตอน, ยกขึ้นตอนชี้ (`motion-reduce` ปิด) `maxTags` จำกัดป้ายหมวด ปกใช้ `components/StoryCover.tsx`: รูปโหลดแบบ `loading="lazy"` (ยกเว้นสไลด์แรก) ไม่มีรูปจะสร้างปกจากชื่อเรื่องบน gradient ที่สีมาจาก `hueOf(id)` (FNV-1a, **ห้ามกลับไปใช้ `h*31+c`** เพราะ UUID ได้สีเกือบเดียวกันหมด) ความสว่าง 30%/17% ให้ตัวอักษรขาวอ่านได้ทุกสี
-- **18+** (`novels.is_mature`/`comics.is_mature`): นักเขียนติ๊กใน `WorkFormModal` API รับ `isMature: boolean` (POST/PATCH ไม่ใช่ boolean = 400) การ์ดเบลอปกและมีป้าย ยังไม่มีการยืนยันอายุก่อนอ่าน
+- **18+** (`novels.is_mature`/`comics.is_mature`): นักเขียนต้องเลือก "ทั่วไป" หรือ "18+" ใน `WorkFormModal` ตอนสร้างเรื่อง (POST ไม่ส่ง `isMature: boolean` = 400, PATCH ไม่ใช่ boolean = 400) การ์ดเบลอปกและมีป้าย หน้าเรื่องมีป้าย 18+ และต้องยืนยันอายุก่อนเข้า (ดูหัวข้อ "ยืนยันอายุ 18+")
 - `timeAgo()` อยู่ที่ `lib/timeAgo.ts` (ใช้ได้ทั้ง server/client, `NotificationBell` re-export)
 - **Footer** `components/Footer.tsx` อยู่ใน `app/layout.tsx` ซ่อนในหน้า `/admin`, `/author`, หน้าอ่าน และ `/maintenance` (`HIDDEN`)
 - เทสต์อยู่ใน `tests/e2e/home.test.mjs` (ใช้ยอดวิวหลักพันล้านให้เรื่องทดสอบอยู่บนสุด)
@@ -233,8 +235,30 @@ npx tsx scripts/add_reader_settings.ts # คอลัมน์ users.reader_sett
 - **ยอดของนักเขียนคำนวณสดเสมอ** ด้วย `getAuthorBalance()` = SUM(`purchases.author_earning`) + SUM(`supports.author_earning`) − SUM(`withdrawals` ที่เป็น PENDING/APPROVED) ไม่มีคอลัมน์ยอดคงเหลือ ถ้าปฏิเสธการถอน เงินจะกลับเข้ายอดเอง
 - **ถอนเงิน**: ต้องมี `writer_profiles` ที่อนุมัติแล้วและกรอกบัญชีธนาคาร แอดมินโอนเงินแล้วแนบสลิปเพื่ออนุมัติ
 - **การเปลี่ยนสถานะเงินทุกแบบ** (อนุมัติเติมเหรียญ, อนุมัติ/ปฏิเสธการถอน) ต้องมีเงื่อนไข `WHERE status = 'PENDING'` เพื่อกันการทำซ้ำ
-- **ทุกที่ที่ส่งเนื้อหาบท/ตอนออกไป** ต้องผ่าน `canAccess()` ได้แก่ `app/read/[chapterId]`, `app/comic/[id]/read/[episodeId]`, `/api/chapters`, `/api/novels/[id]/chapters` (ส่ง `content` ให้เฉพาะเจ้าของ), `/api/comics/[id]/episodes/[episodeId]` และ `.../pages` ถ้าเพิ่ม endpoint ใหม่ที่คืนเนื้อหา ต้องเช็กเหมือนกัน
+- `canAccess()` ไม่ให้คนอื่นนอกจากเจ้าของ/แอดมินเปิดบท/ตอนที่ `moderation_status` ไม่ใช่ `APPROVED` (query ที่ส่งให้ต้องมี `moderation_status` ด้วย ไม่งั้นจะถูกปฏิเสธเสมอ) `purchaseItem()` ก็ขายได้เฉพาะ `APPROVED`
+- **ทุกที่ที่ส่งเนื้อหาบท/ตอนออกไป** ต้องผ่าน `canAccess()` และ `needsAgeGate()` (`lib/ageGate.ts`)ได้แก่ `app/read/[chapterId]`, `app/comic/[id]/read/[episodeId]`, `/api/chapters`, `/api/novels/[id]/chapters` (ส่ง `content` ให้เฉพาะเจ้าของ), `/api/comics/[id]/episodes/[episodeId]` และ `.../pages` ถ้าเพิ่ม endpoint ใหม่ที่คืนเนื้อหา ต้องเช็กเหมือนกัน
 - รูปหน้าการ์ตูนส่งผ่าน `/api/media/...` ซึ่งเช็กสิทธิ์ก่อนส่งไฟล์ (ดูหัวข้อ "อัปโหลดไฟล์")
+
+**ตรวจเนื้อหาด้วย API (ข้อ 12)** (`lib/moderation.ts`, Gemini ผ่าน REST `generateContent` + JSON schema ไม่มี SDK):
+- นักเขียนติดป้ายเรื่องเอง (ทั่วไป/18+ = `is_mature`) แล้ว**ทุกบท/ตอนใหม่และที่แก้ไข**ถูกตรวจซ้ำ: นิยายส่งชื่อบท+ข้อความ (ตัดช่วงละ 60,000 ตัวอักษร) การ์ตูนส่งชื่อตอน+รูปหลายหน้าต่อคำขอ (ไม่เกิน 10 รูป/12MB ต่อคำขอ มีเลขหน้ากำกับ) แก้แค่ราคาไม่ตรวจซ้ำ เพิ่มหน้าการ์ตูนตรวจเฉพาะหน้าใหม่
+- `chapters.moderation_status`/`comic_episodes.moderation_status`: `APPROVED` (เผยแพร่) / `PENDING` (รอแอดมิน) / `BLOCKED` (ถูกระงับ รอแอดมิน) / `REJECTED` (แอดมินปฏิเสธ) มีแต่ `APPROVED` ที่ผู้อ่านเห็น (404 ทั้งหน้าและ API, ไม่อยู่ในรายการตอน/ปุ่มเลือกตอน/ก่อนหน้า-ถัดไป, ไม่นับใน `item_count`/อัปเดตล่าสุด/หน้าแรก) เจ้าของ/แอดมินเห็นทั้งหมดพร้อมป้ายสถานะ (`ModerationBadge`/`ModerationNotice`) route สร้างบท/ตอนบันทึกเป็น `PENDING` ก่อนแล้วเรียก `moderateItem()` ซึ่งตั้งสถานะจริง response มี `moderation: { status, background, verdict, message }`
+- ผล API → `verdict` (`SAFE | MATURE | EXPLICIT | ILLEGAL | MINOR | REFUSED | ERROR`) → `decide()`: ตรงป้ายและปลอดภัย = เผยแพร่ / ป้ายทั่วไปแต่เจอ 18+ = รอแอดมิน / โป๊โจ่งแจ้ง ผิดกฎหมาย หรือ `MINOR` (ทางเพศกับตัวละครที่ดูเป็นเด็ก ไม่สนป้าย) = `BLOCKED` / API ล่ม ไม่มี key หรือ `REFUSED` = รอแอดมิน
+- **`REFUSED` ไม่ใช่ผลร้ายแรง**: Gemini ตอบ `finishReason: PROHIBITED_CONTENT` กับข้อความธรรมดาได้ จึง retry 1 ครั้งแล้วค่อยส่งให้แอดมิน ไม่บล็อกและไม่นับเป็นปัญหาของนักเขียน 429/5xx ก็ retry 1 ครั้ง (timeout 45 วินาทีสำหรับข้อความ 90 วินาทีสำหรับรูป)
+- **ห้ามตั้ง `temperature: 0` และห้ามเขียน prompt บรรยายเนื้อหาทางเพศกับผู้เยาว์ละเอียด** (เจอ 2026-10-29): ทั้งสองอย่างทำให้ `gemini-3.1-flash-lite` ตอบ `PROHIBITED_CONTENT` กับข้อความธรรมดาเกือบทุกครั้ง (เรื่องเด็กไปตลาดกับยาย, รถติดแล้วสบถ) ถ้าแก้ prompt ให้ลองกับข้อความใน `moderation-gemini.test.mjs` ซ้ำหลายรอบ
+- **นักเขียนที่เชื่อถือได้** (`isTrustedAuthor()`): มีบท/ตอนที่ยังอยู่และผ่านอัตโนมัติ (`CLEARED`) ครบ `TRUSTED_AFTER` = 10 และไม่เคยมีปัญหา (ถูกปฏิเสธ, ผลร้ายแรง หรือติดป้ายผิดที่แอดมินไม่ได้อนุมัติ) → เผยแพร่ทันทีแล้วตรวจเบื้องหลังด้วย `after()` ถ้าเจอปัญหาจะซ่อนตอน (`PENDING`/`BLOCKED`) และแจ้ง `MODERATION_HELD` ถ้า API ล่มจะปล่อยไว้แต่เข้าคิว
+- ตาราง `moderation_checks` (1 แถวต่อการตรวจ, `analysis` = JSON `{ summary, issues: [{ page, category, reason }] }` ภาษาไทยจาก API) `status`: `CHECKING` → `CLEARED` (ผ่านเอง) / `PENDING` (คิว) → `APPROVED`/`REJECTED` (แอดมิน) และ `SUPERSEDED` เมื่อมีการแก้ไขใหม่กว่า (ผลของการตรวจเก่าที่เสร็จทีหลังจะไม่ทับ) `chapter_id`/`episode_id` เป็น `ON DELETE SET NULL` เพื่อเก็บประวัติไว้ใช้กับกฎ 10 ตอน คิว = `QUEUE_SQL` (PENDING + CHECKING ที่ค้างเกิน 10 นาที ไม่รวมตอนที่ถูกลบ)
+- **แอดมิน** แท็บ "คิวตรวจเนื้อหา" (`components/admin/ModerationPanel.tsx`, `GET /api/admin/moderation?status=PENDING|CLEARED|APPROVED|REJECTED|all&page=`) แสดงป้ายที่นักเขียนเลือก ผล API เหตุผลภาษาไทย หน้าการ์ตูนที่มีปัญหา (กดดูรูปได้) หรือตัวอย่างข้อความ `PATCH /api/admin/moderation/[id]` `{ action: 'approve' | 'mark_mature' | 'reject', reason }`: ปฏิเสธต้องมีเหตุผล อนุมัติผลร้ายแรงต้องมีเหตุผล `mark_mature` = ปรับเรื่องเป็น 18+ แล้วอนุมัติ ทุกแบบแจ้งนักเขียน (`MODERATION_APPROVED`/`MODERATION_REJECTED`) บันทึก admin log (`MODERATION_*`) และแจ้งผู้อ่านเรื่องตอนใหม่ตอนที่เผยแพร่ (`notifyNewItem()` ส่งครั้งเดียวต่อบท/ตอน) ถูกปฏิเสธแล้วนักเขียนเห็นเหตุผลในหน้าจัดการตอน และแก้ไขเพื่อส่งตรวจใหม่ได้
+- เรื่อง 18+ ที่มีตอนผ่านการตรวจว่าเป็น 18+ (หรือแอดมินปรับให้) นักเขียนเปลี่ยนกลับเป็นทั่วไปเองไม่ได้ (400)
+- **ผู้อ่านรายงานว่าติดป้ายผิด** (`components/MislabelReportButton.tsx` ล่างหน้าอ่านทั้งสองหน้า, `POST /api/moderation/report` `{ item_type, item_id }`, ต้องล็อกอิน) ส่งตอนกลับเข้าคิวพร้อมตรวจด้วย API ใหม่ (เข้าคิวเสมอแม้ API บอกว่าปลอดภัย) ตอนยังเปิดอ่านได้ ยกเว้น API ยืนยันว่ามีปัญหา รายการละ 1 คิวที่ค้าง ผู้ใช้ละ 10 ครั้ง/ชั่วโมง รายงานตอนของตัวเองไม่ได้
+- ข้อความ/รูปที่ส่งให้ API ถือเป็นข้อมูลที่ไม่น่าเชื่อถือ (prompt สั่งให้ไม่ทำตามคำสั่งในเนื้อหา) label ภาษาไทยของทุกค่าอยู่ใน `lib/moderationLabels.ts` (ไม่มี import ฝั่ง server ใช้ใน client ได้)
+- ยังไม่ได้ตรวจคอมเมนต์ ชื่อเรื่อง เรื่องย่อ และปก
+- เทสต์อยู่ใน `tests/e2e/moderation.test.mjs` (ผลจำลอง) และ `moderation-gemini.test.mjs` (API จริง ถ้า Gemini หมดเวลา/503 จะขึ้นเป็น skip พร้อมเหตุผล ไม่ใช่ fail)
+
+**ยืนยันอายุ 18+** (`lib/ageGate.ts`, `lib/age.ts`, `components/AgeGate.tsx`):
+- เรื่องที่ `is_mature` ทั้งหน้าเรื่องและหน้าอ่าน (นิยาย/การ์ตูน) แสดงหน้ายืนยันอายุแทนเนื้อหา (ปกเบลอ+ป้าย 18+ แบบเดียวกับการ์ด ข้อความเตือน dropdown วัน/เดือน/ปี พ.ศ.) เจ้าของและแอดมินไม่ต้องยืนยัน ยังไม่ผ่านก็ไม่นับวิว/ประวัติ
+- `POST /api/age-verification` `{ day, month, year }` (ปี พ.ศ.) คำนวณอายุฝั่ง server → `{ allowed }` ถึง 18 (นับวันเกิดวันนี้) → ตั้ง cookie `loveread-age-ok` (httpOnly, 1 ปี) และถ้าล็อกอินอยู่เก็บ `users.birth_date` (ใช้ได้ทุกเบราว์เซอร์) ไม่ถึง 18 ไม่เก็บอะไร วันที่ผิด/อนาคต = 400
+- เช็กฝั่ง server ด้วย `needsAgeGate()` ทุกที่: หน้าเรื่อง หน้าอ่าน `/api/chapters?chapterId=` `/api/comics/[id]/episodes/[episodeId]` และ `.../pages` (403 `age_required`) และรูปหน้าการ์ตูนใน `/api/media/comic-pages` (404)
+- เทสต์อยู่ใน `tests/e2e/age-gate.test.mjs`
 
 ## ข้อควรระวังตอนพัฒนา
 
@@ -244,7 +268,7 @@ npx tsx scripts/add_reader_settings.ts # คอลัมน์ users.reader_sett
 - ข้อความทั้งหมดใน UI (รวม toast, confirm, title, placeholder และข้อความ error จาก API ที่แสดงให้ผู้ใช้เห็น) เป็นภาษาไทย ค่า enum ที่แสดงในตารางให้แปลงผ่าน label map (เช่น `ROLE_LABEL` ใน `app/admin/page.tsx`) ไม่แสดงค่าดิบ
 - **อย่ารัน `npm run build` ขณะที่ `npm run dev` เปิดอยู่** เพราะทั้งคู่เขียนลง `.next/` ให้ปิด dev ก่อน แล้วลบ `.next` ก่อนเปิด dev ใหม่
 
-## งานที่เหลือ (อัปเดตล่าสุด 2026-10-28)
+## งานที่เหลือ (อัปเดตล่าสุด 2026-10-29)
 
 **สถานะ branch**: ทุกอย่างอยู่บน `main` และ push ขึ้น `origin/main` แล้ว ไม่มีงานค้างในเครื่อง
 
@@ -277,25 +301,26 @@ npx tsx scripts/add_reader_settings.ts # คอลัมน์ users.reader_sett
    npx tsx scripts/add_admin_tools.ts         # แบนพร้อมเหตุผล ปรับเหรียญ ประวัติการทำงานของแอดมิน
    npx tsx scripts/add_mature_flag.ts         # ป้าย 18+ (หน้าแรกใหม่)
    npx tsx scripts/add_reader_settings.ts     # ตั้งค่าการอ่าน (ปุ่ม Aa)
+   npx tsx scripts/add_moderation.ts          # ตรวจเนื้อหาด้วย API + ยืนยันอายุ 18+
    ```
    DB ที่เก่ากว่านั้นให้รันสคริปต์ก่อนหน้าตามลำดับใน README ก่อน ส่วน DB ใหม่ใช้ `schema.sql` ได้เลยไม่ต้องรันพวกนี้
-3. ลบ `.next` แล้วเปิด `npm run dev` ใหม่ จากนั้นรัน `npm run test:e2e` เพื่อเช็ก (ต้องผ่านทั้งหมด 152 เทสต์)
+3. ลบ `.next` แล้วเปิด `npm run dev` ใหม่ จากนั้นรัน `npm run test:e2e` เพื่อเช็ก (176 เทสต์ ต้องผ่านทั้งหมด ยกเว้น 2 เทสต์ใน `moderation-gemini.test.mjs` ที่อาจ skip เมื่อ Gemini ไม่ว่าง)
 
 **ผู้ดูแลต้องทำเอง**:
 - กรอก "ข้อมูลการชำระเงิน" ที่ `/admin` → ตั้งค่า (เครื่องนี้ยังเป็นข้อความตัวอย่างอยู่) ถ้ายังไม่กรอก ผู้อ่านจะเติมเหรียญไม่ได้
 - สำรอง `storage/` และ `public/uploads/` ซึ่งไม่อยู่ใน git (ไฟล์สำรองเก่า `storage-2026-10-17.zip` ย้ายไปไว้ที่ `D:\loveR-backups\` แล้ว)
 - ถ้ามั่นใจแล้วว่ารูปการ์ตูนใน storage ใช้ได้: `npx tsx scripts/move_comic_pages_private.ts --delete-originals` (URL เก่าใน `public/uploads/` ยังเปิดได้จนกว่าจะรัน)
-- ตอน deploy: ให้ reverse proxy (เช่น nginx) ตั้ง `x-forwarded-for` ไม่งั้น limit ต่อ IP ของการล็อกอินและการสมัครจะไม่ทำงาน (IP เป็น `'unknown'`)
+- ใส่ `GEMINI_API_KEY` ใน `.env` ของเครื่องที่ใช้งานจริง (ไม่มี key = ทุกบท/ตอนใหม่ต้องรอแอดมินอนุมัติ)
+- ตอน deploy: ให้ reverse proxy (เช่น nginx) ตั้ง `x-forwarded-for`ไม่งั้น limit ต่อ IP ของการล็อกอินและการสมัครจะไม่ทำงาน (IP เป็น `'unknown'`)
 
 **งานพัฒนา** (เรียงตามความสำคัญ ข้อ 1-2 คือหัวข้อในขอบเขตโปรเจกต์ที่ยังไม่ครบ ดูตารางในหัวข้อถัดไป):
-1. **ข้อ 12 ตรวจเนื้อหาด้วย API** (ยังเป็น ❌): ผู้ใช้เลือกทำข้อ 8 ก่อน ยังไม่ได้ตัดสินใจว่าจะใช้ API ตัวไหน ข้อเสนอคือ OpenAI Moderation (ฟรี, ข้อความ+รูป) + รายการคำต้องห้ามไทย ดูทางเลือกทั้งหมดในหัวข้อถัดไป ต้องให้ผู้ใช้สมัครและใส่ API key ใน `.env` เอง แผน: ตรวจตอนโพสต์คอมเมนต์ บันทึกบท/ตอน และชื่อเรื่อง/เรื่องย่อ ถ้าถูกตีธงให้สร้างแถว `reports` (PENDING) ให้แอดมินตัดสิน ไม่บล็อกอัตโนมัติ ถ้า API ล่มหรือไม่มี key ต้องโพสต์ได้ตามปกติ
+1. **ข้อ 12 ส่วนที่ยังไม่ทำ** (ทำบท/ตอน + ยืนยันอายุแล้ว 2026-10-29): ตรวจคอมเมนต์ ชื่อเรื่อง/เรื่องย่อ และรูปปกด้วย API ยังไม่ได้ทำ ถ้าทำให้ใช้ `analyse()` ใน `lib/moderation.ts` ซ้ำ ยังไม่ได้ตรวจหน้า "คิวตรวจเนื้อหา", หน้ายืนยันอายุ และตัวเลือกระดับเนื้อหาในฟอร์มด้วยเบราว์เซอร์ (ผ่าน lint/tsc/e2e แล้ว)
 2. **ข้อ 14 เก็บงาน UX** (⚠️): งานในโค้ดเสร็จแล้ว (2026-10-27: `/admin` บนมือถือ, เลิกใช้ `prompt()`, error จาก API เป็นภาษาไทย, ตรวจการแสดงผลทุกหน้า) เหลือผลทดสอบกับผู้ใช้จริง (เช่น แบบสอบถาม SUS) สำหรับรายงาน
 3. **ลบแจ้งเตือนเก่า**: ตาราง `notifications` ยังไม่มีการลบอัตโนมัติ ถ้าใช้งานนานควรลบที่เก่ากว่า ~90 วัน (เช่นใน `notify()` นานๆ ครั้ง หรือ cron)
 4. **dependency ที่มีช่องโหว่** (อัปเกรด next เป็น 15.5.28 และรัน `npm audit fix` แล้วเมื่อ 2026-10-21): ที่เหลือแก้ได้ทางเดียวคือขึ้น Next 16 (breaking) ได้แก่ `postcss` ที่ next ฝังมาเอง (ใช้ตอน build CSS ของเราเอง ไม่ได้รับ input จากผู้ใช้) และ `braces`/`micromatch`/`fast-glob` ใต้ `eslint-config-next` (dev เท่านั้น) อย่าใช้ `npm audit fix --force` เพราะจะอัปเกรดแบบ breaking
 5. **object storage**: จำเป็นเฉพาะถ้าจะ deploy บน Vercel/serverless ตอนนี้ไฟล์ทั้งหมดเขียนลงดิสก์ (`lib/upload.ts` เป็นจุดเดียวที่ต้องแก้)
-6. **คิวตรวจเนื้อหาในหน้าแอดมิน** (ผูกกับข้อ 1): เมนู "คิวตรวจเนื้อหา" (`components/admin/ModerationPanel.tsx`) และตัวเลข `moderation` ใน `/api/admin/counts` เตรียมไว้แล้วแต่เป็น placeholder (0 เสมอ) ตอนทำข้อ 12 ให้แยกรายการที่ระบบตีธงออกจากรายงานของผู้อ่าน (เช่น คอลัมน์ `reports.source`) แล้วนับ/แสดงที่หน้านี้
-7. **18+**: ตอนนี้มีแค่ป้ายและเบลอปกบนการ์ด (ไม่ขึ้นแบนเนอร์) ยังไม่มีการยืนยันอายุก่อนเปิดอ่าน และหน้าเรื่อง `/novel/[id]`, `/comic/[id]` ยังไม่แสดงป้าย 18+
-8. **เล็กน้อยที่เจอระหว่างทำ** (ยังไม่ได้แก้): แถบหมวดหมู่ใต้แบนเนอร์และแถวต่างๆ ไม่มีตัวบอกว่าเลื่อนได้บนมือถือนอกจากการ์ดที่โผล่ขอบขวา, แผง Aa ยังไม่มีในหน้าอ่านการ์ตูน (ตามที่สั่ง), อันดับยังเป็นแบบรวมตลอดกาล (รายสัปดาห์ต้องมีตารางวิวรายวัน)
+6. **ความเร็ว/ความแม่นของการตรวจ**: นักเขียนที่ยังไม่ได้รับความเชื่อถือต้องรอผลก่อนได้ response ปกติ 2-20 วินาที แต่วันที่ทดสอบ (2026-10-29) Gemini ช้าเป็นช่วงๆ บางครั้งถึง 45 วินาทีแล้วหมดเวลา (บท/ตอนจะไปรอแอดมิน) ถ้าเป็นปัญหาให้เปลี่ยนเป็นตรวจเบื้องหลังแล้วให้หน้าจัดการตอนแสดง "กำลังตรวจ" ใช้ `gemini-3.1-flash-lite` เพราะตอบเร็วที่สุดตอนทดสอบ โมเดลใหญ่กว่า (`gemini-3.8-flash`) ช้า 15-90 วินาทีหรือได้ 503ถ้าต้องการความแม่นกว่าให้ตั้ง `GEMINI_MODEL` แล้วลองกับเนื้อหาจริง เรื่องที่ตั้งเป็น 18+ ไปแล้วนักเขียนเปลี่ยนกลับเองไม่ได้ ต้องให้แอดมินแก้ใน DB (ยังไม่มีปุ่ม)
+7. **เล็กน้อยที่เจอระหว่างทำ** (ยังไม่ได้แก้): แถบหมวดหมู่ใต้แบนเนอร์และแถวต่างๆ ไม่มีตัวบอกว่าเลื่อนได้บนมือถือนอกจากการ์ดที่โผล่ขอบขวา, แผง Aa ยังไม่มีในหน้าอ่านการ์ตูน (ตามที่สั่ง), อันดับยังเป็นแบบรวมตลอดกาล (รายสัปดาห์ต้องมีตารางวิวรายวัน)
 
 ## ตรวจตามขอบเขตโปรเจกต์ที่เสนออาจารย์ (ตรวจจากโค้ด 2026-10-23)
 
@@ -312,16 +337,16 @@ npx tsx scripts/add_reader_settings.ts # คอลัมน์ users.reader_sett
 | 9 | ผู้ดูแลระบบ | ✅ | `/admin` ทุกแท็บ | `app/admin/page.tsx`, `app/api/admin/**` |
 | 10 | รีวิว/คอมเมนต์และให้คะแนน | ✅ | ล่างหน้า `/novel/[id]`, `/comic/[id]` | `components/CommentSection.tsx`, `components/RatingStars.tsx`, `api/comments`, `api/ratings` |
 | 11 | จัดอันดับและแนะนำ | ✅ (อันดับรวมตลอดกาล) | `/ranking`, `/` (แนะนำสำหรับคุณ + ยอดนิยม), ล่างหน้า `/novel/[id]` (เรื่องที่คล้ายกัน), `/search` (เรียงตาม) | `lib/ranking.ts`, `app/ranking/page.tsx`, `components/StoryCard.tsx` |
-| 12 | ตรวจสอบเนื้อหาเบื้องต้นด้วย API | ❌ | — | — |
+| 12 | ตรวจสอบเนื้อหาเบื้องต้นด้วย API | ✅ (บท/ตอน + ยืนยันอายุ) | ลงตอนใหม่ที่ `/author` → `/admin?tab=moderation`, เปิดเรื่อง 18+ | `lib/moderation.ts`, `lib/ageGate.ts`, `components/admin/ModerationPanel.tsx`, `components/AgeGate.tsx` |
 | 13 | รักษาความปลอดภัย | ✅ | `/login` (ล็อกอินผิดเกิน 5 ครั้ง), เปิดตอนที่ยังไม่ซื้อ | `lib/auth.ts`, `lib/loginThrottle.ts`, `lib/upload.ts`, `lib/visibility.ts`, `tests/e2e/security.test.mjs` |
-| 14 | ทดสอบระบบและปรับ UX/UI | ⚠️ | `npm run test:e2e` (152 เทสต์) | `tests/e2e/` |
+| 14 | ทดสอบระบบและปรับ UX/UI | ⚠️ | `npm run test:e2e` (176 เทสต์) | `tests/e2e/` |
 
 **สิ่งที่ขาด**:
 - ~~ยอดวิวไม่เคยเพิ่ม~~ **แก้แล้ว 2026-10-23** (ดูหัวข้อ "ยอดวิว" ในสถาปัตยกรรม) ยอดวิวเก่าก่อนวันนั้นของนิยาย/บท/การ์ตูนยังเป็น 0 เพราะไม่มีข้อมูลย้อนหลัง
 - **ข้อ 7**: **ทำแล้ว 2026-10-23** (กราฟรายได้และสถิติรายเรื่องในแท็บภาพรวมของ `/author`)
 - **ข้อ 8**: **ทำแล้ว 2026-10-23** ส่วน "รูปแบบการจัดเก็บ" ใช้ `schema.sql`/`prisma/schema.prisma` ทำ ER diagram ใส่รายงานได้
 - **ข้อ 11**: **ทำแล้ว 2026-10-23** เหลือเพิ่มได้ถ้าต้องการ: อันดับรายสัปดาห์/รายเดือน (ต้องมีตารางเก็บวิวรายวัน) และกันการกดรีเฟรชซ้ำในการนับวิว
-- **ข้อ 12**: ยังไม่มีการตรวจเนื้อหาอัตโนมัติ มีแค่ผู้ใช้กดรายงาน → แอดมินดู ทางเลือก API ที่ตรวจภาษาไทย (ราคาเปลี่ยนบ่อย เช็กหน้า pricing ก่อนเขียนรายงาน):
+- **ข้อ 12**: **ทำแล้ว 2026-10-29** ด้วย Gemini (ผู้ใช้เลือก) แบบนักเขียนติดป้ายเอง แล้ว API ตรวจซ้ำ ดูหัวข้อ "ตรวจเนื้อหาด้วย API" ในสถาปัตยกรรม ทางเลือกอื่นที่เคยพิจารณา (ใช้เขียนรายงานได้) API ที่ตรวจภาษาไทย(ราคาเปลี่ยนบ่อย เช็กหน้า pricing ก่อนเขียนรายงาน):
   - **OpenAI Moderation API** (`omni-moderation-latest`): ฟรี รองรับหลายภาษารวมไทย ตรวจได้ทั้งข้อความและรูป (ใช้กับหน้าการ์ตูนได้) ใช้ง่าย / ข้อเสีย: แม่นกับภาษาไทยน้อยกว่าอังกฤษ (คำแสลง คำหยาบเลี่ยงตัวสะกด) หมวดตายตัว ปรับนโยบายเองไม่ได้ ส่งข้อมูลออกไปต่างประเทศ
   - **LLM (เช่น Claude Haiku) + prompt นโยบายของเว็บ**: เข้าใจภาษาไทยและบริบทนิยายดีที่สุด กำหนดหมวดเองได้ (18+, ด่าทอ, สแปม/ลิงก์พนัน) และให้เหตุผลภาษาไทยกลับมาได้ / ข้อเสีย: เสียเงินตาม token (บทนิยายยาว ต้องตัดเป็นช่วงหรือตรวจเฉพาะคอมเมนต์+ชื่อเรื่อง+เรื่องย่อ) ช้ากว่า ผลไม่ deterministic
   - **Azure AI Content Safety**: ตรวจข้อความ+รูป มีระดับความรุนแรง มี free tier / ข้อเสีย: ภาษาไทยไม่อยู่ในกลุ่มภาษาที่ train หลัก (ใช้ได้แต่คุณภาพต่ำกว่า) ต้องมีบัญชี Azure

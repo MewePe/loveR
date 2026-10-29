@@ -26,7 +26,8 @@ export default function WorkFormModal({ kind, work, categories, onClose, onSaved
         description: work?.description || '',
         categoryIds: work?.categories.map((c) => c.id) ?? [],
         isCompleted: !!work?.is_completed,
-        isMature: !!work?.is_mature,
+        // A new story has no level until the author picks one (required)
+        isMature: work ? !!work.is_mature : null as boolean | null,
     });
     const [coverFile, setCoverFile] = useState<File | null>(null);
     const [coverPreview, setCoverPreview] = useState<string | null>(work?.cover_image || null);
@@ -42,6 +43,10 @@ export default function WorkFormModal({ kind, work, categories, onClose, onSaved
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
+        if (form.isMature === null) {
+            toast.error('กรุณาเลือกระดับเนื้อหา: ทั่วไป หรือ 18+');
+            return;
+        }
         setSaving(true);
         try {
             let coverImageUrl = work ? work.cover_image : null;
@@ -155,18 +160,43 @@ export default function WorkFormModal({ kind, work, categories, onClose, onSaved
                             <span className="block text-xs text-gray-500 dark:text-gray-400">แสดงป้าย &quot;จบแล้ว&quot; บนการ์ดเรื่องและหน้าโปรไฟล์ของคุณ</span>
                         </span>
                     </label>
-                    <label className="flex items-start gap-3 cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={form.isMature}
-                            onChange={(e) => setForm({ ...form, isMature: e.target.checked })}
-                            className="mt-1 w-4 h-4 accent-red-700"
-                        />
-                        <span>
-                            <span className="block text-sm font-medium text-gray-700 dark:text-gray-300">เนื้อหาสำหรับผู้ใหญ่ (18+)</span>
-                            <span className="block text-xs text-gray-500 dark:text-gray-400">แสดงป้าย 18+ และเบลอปกในหน้ารายการเรื่อง</span>
-                        </span>
-                    </label>
+                    <fieldset>
+                        <legend className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            ระดับเนื้อหา <span className="text-red-600 dark:text-red-400">*</span>
+                        </legend>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                            ทุกตอนจะถูกตรวจด้วยระบบอัตโนมัติว่าตรงกับระดับที่เลือก ถ้าไม่ตรงจะรอแอดมินตรวจก่อนเผยแพร่
+                        </p>
+                        <div className="grid sm:grid-cols-2 gap-2">
+                            {([
+                                [false, 'ทั่วไป', 'อ่านได้ทุกวัย ไม่มีฉากทางเพศ คำหยาบหรือความรุนแรงเล็กน้อยได้'],
+                                [true, '18+ (เนื้อหาผู้ใหญ่)', 'ฉากทางเพศที่ไม่โจ่งแจ้ง ความรุนแรง หรือภาษาหยาบ ผู้อ่านต้องยืนยันอายุ'],
+                            ] as const).map(([value, label, hint]) => (
+                                <label
+                                    key={label}
+                                    className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer ${form.isMature === value
+                                        ? (value ? 'border-red-600 bg-red-50 dark:bg-red-900/20 dark:border-red-500' : 'border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-500')
+                                        : 'border-gray-300 dark:border-gray-600'}`}
+                                >
+                                    <input
+                                        type="radio"
+                                        name="content-level"
+                                        required
+                                        checked={form.isMature === value}
+                                        onChange={() => setForm({ ...form, isMature: value })}
+                                        className={`mt-1 w-4 h-4 ${value ? 'accent-red-700' : 'accent-emerald-700'}`}
+                                    />
+                                    <span>
+                                        <span className="block text-sm font-medium text-gray-800 dark:text-gray-200">{label}</span>
+                                        <span className="block text-xs text-gray-500 dark:text-gray-400">{hint}</span>
+                                    </span>
+                                </label>
+                            ))}
+                        </div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                            เนื้อหาโป๊โจ่งแจ้ง ผิดกฎหมาย หรือเนื้อหาทางเพศที่เกี่ยวกับตัวละครที่ดูเป็นเด็ก ลงไม่ได้ทุกระดับ
+                        </p>
+                    </fieldset>
                     <div className="flex gap-3 pt-4">
                         <button
                             type="button"

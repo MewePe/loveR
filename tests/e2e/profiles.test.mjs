@@ -117,7 +117,7 @@ test('follow / unfollow is idempotent and counted on the profile', async () => {
 });
 
 test('followers hear about a new story once, and about new chapters (once even if they also bookmarked)', async () => {
-    const created = await users.author.post('/api/novels', { title: `E2E PF ${TAG} Novel`, description: 'เรื่องย่อ', isCompleted: true });
+    const created = await users.author.post('/api/novels', { title: `E2E PF ${TAG} Novel`, description: 'เรื่องย่อ', isCompleted: true, isMature: false });
     s.novel = created.json.id;
     assert.equal((await users.author.patch(`/api/novels/${s.novel}`, { status: 'PUBLISHED' })).status, 200);
     let n = await notes(ids.reader, 'NEW_STORY');
@@ -137,7 +137,7 @@ test('followers hear about a new story once, and about new chapters (once even i
     n = await notes(ids.reader, 'NEW_CHAPTER');
     assert.equal(n.length, 1, 'follower + bookmark = one notification');
 
-    const comic = await users.author.post('/api/comics', { title: `E2E PF ${TAG} Comic`, description: 'x' });
+    const comic = await users.author.post('/api/comics', { title: `E2E PF ${TAG} Comic`, description: 'x', isMature: false });
     s.comic = comic.json.id;
     await users.author.patch(`/api/comics/${s.comic}`, { status: 'PUBLISHED' });
     assert.equal((await notes(ids.reader, 'NEW_STORY')).length, 2, 'comics too');
@@ -245,7 +245,7 @@ test('top fans rank purchases + supports, top 10 only, banned users and the auth
 test('works tabs list published stories with completion, categories and counts', async () => {
     await db.query('UPDATE novels SET views = 4321 WHERE id = ?', [s.novel]);
     await users.reader.post('/api/comments', { content_type: 'novel', content_id: s.novel, body: 'ชอบมาก' });
-    const draft = (await users.author.post('/api/novels', { title: `E2E PF ${TAG} Draft`, description: 'x' })).json.id;
+    const draft = (await users.author.post('/api/novels', { title: `E2E PF ${TAG} Draft`, description: 'x', isMature: false })).json.id;
 
     const html = await page(anon, `/profile/${username}?tab=novels`);
     assert.ok(html.includes(`E2E PF ${TAG} Novel`));

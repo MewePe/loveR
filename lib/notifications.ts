@@ -8,9 +8,9 @@ export const NOTIFICATION_TYPES = [
     'NEW_CHAPTER', 'NEW_STORY', 'TOPUP_APPROVED', 'TOPUP_REJECTED', 'COMMENT_REPLY', 'COINS_ADJUSTED',
     // authors
     'NEW_COMMENT', 'NEW_RATING', 'PURCHASE', 'SUPPORT', 'WRITER_APPROVED', 'WRITER_REJECTED', 'WITHDRAWAL_APPROVED', 'WITHDRAWAL_REJECTED',
-    'CONTENT_MODERATED',
+    'CONTENT_MODERATED', 'MODERATION_HELD', 'MODERATION_APPROVED', 'MODERATION_REJECTED',
     // admins
-    'ADMIN_TOPUP', 'ADMIN_WRITER_REQUEST', 'ADMIN_WITHDRAWAL', 'ADMIN_REPORT',
+    'ADMIN_TOPUP', 'ADMIN_WRITER_REQUEST', 'ADMIN_WITHDRAWAL', 'ADMIN_REPORT', 'ADMIN_MODERATION',
 ] as const;
 export type NotificationType = typeof NOTIFICATION_TYPES[number];
 
@@ -61,10 +61,14 @@ async function followerIds(authorId: string) {
 }
 
 // Readers who bookmarked a published novel/comic, or follow its author, hear about each new chapter/episode
-// (once each, even if both)
+// (once each, even if both). Only once per chapter/episode: one held by the content check is announced when an
+// admin approves it, and approving it again later doesn't repeat it.
 export async function notifyNewItem(kind: 'novel' | 'comic', content: { id: string; title: string; author_id: string; status: string }, itemId: string, itemTitle: string) {
     if (content.status !== 'PUBLISHED') return;
+    const link = kind === 'novel' ? `/read/${itemId}` : `/comic/${content.id}/read/${itemId}`;
     try {
+        const [sent] = await pool.query<RowDataPacket[]>("SELECT 1 FROM notifications WHERE type = 'NEW_CHAPTER' AND link = ? LIMIT 1", [link]);
+        if (sent.length > 0) return;
         const [rows] = await pool.query<RowDataPacket[]>(
             `SELECT user_id FROM bookmarks WHERE ${kind === 'novel' ? 'novel_id' : 'comic_id'} = ?`,
             [content.id]
@@ -72,7 +76,7 @@ export async function notifyNewItem(kind: 'novel' | 'comic', content: { id: stri
         await notify([...rows.map((r) => r.user_id), ...await followerIds(content.author_id)], {
             type: 'NEW_CHAPTER',
             message: `"${short(content.title)}" มี${kind === 'novel' ? 'บท' : 'ตอน'}ใหม่: ${short(itemTitle)}`,
-            link: kind === 'novel' ? `/read/${itemId}` : `/comic/${content.id}/read/${itemId}`,
+            link,
         }, content.author_id);
     } catch (error) {
         console.error('Failed to notify bookmarkers:', error);

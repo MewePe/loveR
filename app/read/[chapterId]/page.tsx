@@ -12,12 +12,18 @@ import { canAccess, AccessItem } from '@/lib/coins';
 import { recordRead } from '@/lib/readingHistory';
 import { recordView } from '@/lib/views';
 import { getEpisodeList } from '@/lib/episodeList';
+import { isOwnerOrAdmin } from '@/lib/visibility';
+import { needsAgeGate } from '@/lib/ageGate';
+import AgeGate from '@/components/AgeGate';
+import MislabelReportButton from '@/components/MislabelReportButton';
+import ModerationNotice from '@/components/ModerationNotice';
 
 // Content is loaded separately, only after the access check, so a locked chapter's text is never
 // fetched for the request (React dev mode also serializes awaited query results into the page).
 async function getChapter(id: string) {
     const [rows] = await pool.query<RowDataPacket[]>(`
-    SELECT c.id, c.title, c.chapter_order, c.novel_id, c.price, n.title as novel_title, n.author_id, n.status as content_status
+    SELECT c.id, c.title, c.chapter_order, c.novel_id, c.price, c.moderation_status,
+           n.title as novel_title, n.author_id, n.status as content_status, n.is_mature, n.cover_image
     FROM chapters c
     JOIN novels n ON c.novel_id = n.id
     WHERE c.id = ?
@@ -42,13 +48,15 @@ async function getSavedReaderSettings(userId: string | undefined): Promise<Reade
     }
 }
 
-async function getAdjacentChapters(novelId: string, currentOrder: number) {
+// Readers skip chapters that haven't passed the content check; the author and admins see them all
+async function getAdjacentChapters(novelId: string, currentOrder: number, approvedOnly: boolean) {
+    const visible = approvedOnly ? `AND moderation_status = 'APPROVED'` : '';
     const [prev] = await pool.query<RowDataPacket[]>(`
-    SELECT id FROM chapters WHERE novel_id = ? AND chapter_order < ? ORDER BY chapter_order DESC LIMIT 1
+    SELECT id FROM chapters WHERE novel_id = ? AND chapter_order < ? ${visible} ORDER BY chapter_order DESC LIMIT 1
   `, [novelId, currentOrder]);
 
     const [next] = await pool.query<RowDataPacket[]>(`
-    SELECT id FROM chapters WHERE novel_id = ? AND chapter_order > ? ORDER BY chapter_order ASC LIMIT 1
+    SELECT id FROM chapters WHERE novel_id = ? AND chapter_order > ? ${visible} ORDER BY chapter_order ASC LIMIT 1
   `, [novelId, currentOrder]);
 
     return { prev: prev[0], next: next[0] };
@@ -62,10 +70,15 @@ export default async function ReadChapter({ params }: { params: Promise<{ chapte
 
     const session = await auth();
     const unlocked = await canAccess(session?.user, 'chapter', chapter as AccessItem);
-    // Only published novels show a paywall; unpublished ones simply don't exist for other users
-    if (!unlocked && chapter.content_status !== 'PUBLISHED') notFound();
+    // Only published, checked chapters show a paywall; the rest simply don't exist for other users
+    if (!unlocked && (chapter.content_status !== 'PUBLISHED' || chapter.moderation_status !== 'APPROVED')) notFound();
+    // 18+ stories: age check first (nothing is counted or recorded until it is passed)
+    if (await needsAgeGate(session?.user, chapter)) {
+        return <AgeGate storyId={chapter.novel_id} title={chapter.novel_title} coverImage={chapter.cover_image} kind="novel" />;
+    }
+    const isOwner = isOwnerOrAdmin(session?.user, chapter.author_id);
 
-    const { prev, next } = await getAdjacentChapters(chapter.novel_id, chapter.chapter_order);
+    const { prev, next } = await getAdjacentChapters(chapter.novel_id, chapter.chapter_order, !isOwner);
     const content = unlocked ? await getChapterContent(chapter.id) : null;
     if (unlocked) {
         await recordView('novel', chapter.id, session?.user?.id, chapter.author_id);
@@ -91,6 +104,7 @@ export default async function ReadChapter({ params }: { params: Promise<{ chapte
 
             {/* Content */}
             <div className="reader-column mx-auto px-6 py-12 md:py-20">
+                <ModerationNotice status={chapter.moderation_status} className="mb-8" />
                 {unlocked ? (
                     // Rendered as plain text (never as HTML): chapter content is author input, and HTML here
                     // would let an author run scripts in readers' browsers
@@ -99,6 +113,11 @@ export default async function ReadChapter({ params }: { params: Promise<{ chapte
                     </div>
                 ) : (
                     <Paywall kind="chapter" itemId={chapter.id} price={chapter.price} loggedIn={!!session?.user} />
+                )}
+                {unlocked && !isOwner && (
+                    <div className="mt-12 flex justify-end">
+                        <MislabelReportButton itemType="chapter" itemId={chapter.id} loggedIn={!!session?.user} />
+                    </div>
                 )}
             </div>
 

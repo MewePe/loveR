@@ -22,7 +22,7 @@ const s = {}; // story ids
 
 const api = (type) => (type === 'novel' ? '/api/novels' : '/api/comics');
 async function create(type, title, categoryIds, extra = {}) {
-    const res = await users.author.post(api(type), { title: `E2E CT ${TAG} ${title}`, description: 'x', categoryIds, ...extra });
+    const res = await users.author.post(api(type), { title: `E2E CT ${TAG} ${title}`, description: 'x', categoryIds, isMature: false, ...extra });
     assert.equal(res.status, 200, JSON.stringify(res.json));
     return res.json.id;
 }

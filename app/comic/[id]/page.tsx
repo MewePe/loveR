@@ -15,6 +15,9 @@ import { getSimilarStories } from '@/lib/ranking';
 import { getCategoriesFor } from '@/lib/categories';
 import CategoryTags from '@/components/CategoryTags';
 import AuthorLink from '@/components/AuthorLink';
+import AgeGate from '@/components/AgeGate';
+import { ModerationBadge } from '@/components/ModerationNotice';
+import { needsAgeGate } from '@/lib/ageGate';
 
 async function getComic(id: string) {
     const [rows] = await pool.query<RowDataPacket[]>(`
@@ -43,8 +46,13 @@ export default async function ComicDetail({ params }: { params: Promise<{ id: st
     const session = await auth();
     if (!comic || !canViewContent(session?.user, comic)) notFound();
 
-    const episodes = await getEpisodes(id);
+    if (await needsAgeGate(session?.user, comic)) {
+        return <AgeGate storyId={comic.id} title={comic.title} coverImage={comic.cover_image} kind="comic" />;
+    }
+
     const isOwner = isOwnerOrAdmin(session?.user, comic.author_id);
+    // Readers only see chapters/episodes that passed the content check; the author and admins see all with a badge
+    const episodes = (await getEpisodes(id)).filter((item) => isOwner || item.moderation_status === 'APPROVED');
     const similar = await getSimilarStories('comic', comic.id);
     const categories = (await getCategoriesFor('comic', [comic.id])).get(comic.id) ?? [];
     const purchased = await getPurchasedIds(session?.user?.id, 'episode', episodes.filter(e => e.price > 0).map(e => e.id));
@@ -70,6 +78,9 @@ export default async function ComicDetail({ params }: { params: Promise<{ id: st
                         <div className="flex-grow">
                             <div className="flex flex-wrap items-center gap-3 mb-4">
                                 <span className="px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium">การ์ตูน</span>
+                                {!!comic.is_mature && (
+                                    <span className="px-3 py-1 rounded-full bg-red-700 text-white text-sm font-bold" title="เนื้อหาสำหรับผู้มีอายุ 18 ปีขึ้นไป">18+</span>
+                                )}
                                 {!!comic.is_completed && (
                                     <span className="px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 text-sm font-medium">จบแล้ว</span>
                                 )}
@@ -130,6 +141,7 @@ export default async function ComicDetail({ params }: { params: Promise<{ id: st
                                     </div>
                                 </div>
                                 <span className="flex items-center gap-4 text-sm">
+                                    {isOwner && <ModerationBadge status={episode.moderation_status} />}
                                     <PriceBadge price={episode.price} unlocked={isOwner || purchased.has(episode.id)} />
                                     <span className="text-gray-500 dark:text-gray-400">{new Date(episode.created_at).toLocaleDateString('th-TH')}</span>
                                 </span>

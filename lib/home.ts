@@ -38,7 +38,7 @@ export async function getFeatured(limit = 5) {
         if (ids.length === 0) continue;
         const t = ITEMS[type];
         const [rows] = await pool.query<RowDataPacket[]>(
-            `SELECT id, ${t.fk} AS story_id FROM ${t.table} WHERE ${t.fk} IN (?) ORDER BY ${t.order}, created_at`, [ids]);
+            `SELECT id, ${t.fk} AS story_id FROM ${t.table} WHERE ${t.fk} IN (?) AND moderation_status = 'APPROVED' ORDER BY ${t.order}, created_at`, [ids]);
         for (const r of rows) if (!first.has(r.story_id)) first.set(r.story_id, r.id);
     }
     return stories.map((s) => ({ ...s, description: short(s.description, 160), first_item_id: first.get(s.id) ?? null }));
@@ -66,7 +66,7 @@ export async function getLatestUpdates(limit = 12): Promise<LatestUpdate[]> {
         const t = ITEMS[type];
         const [rows] = await pool.query<RowDataPacket[]>(
             `SELECT id, title, ${t.order} AS number, ${t.fk} AS story_id, created_at FROM ${t.table}
-             WHERE ${t.fk} IN (?) ORDER BY created_at DESC, ${t.order} DESC`,
+             WHERE ${t.fk} IN (?) AND moderation_status = 'APPROVED' ORDER BY created_at DESC, ${t.order} DESC`,
             [ids]
         );
         for (const r of rows) {
@@ -89,12 +89,12 @@ export async function getContinueReading(userId: string, limit = 12): Promise<Co
         const [rows] = await pool.query<RowDataPacket[]>(
             `SELECT * FROM (
                 SELECT 'novel' AS type, n.id, n.title, n.cover_image, n.is_mature, h.chapter_id AS item_id, c.title AS item_title,
-                       c.chapter_order AS item_number, (SELECT COUNT(*) FROM chapters WHERE novel_id = n.id) AS item_count, h.read_at
+                       c.chapter_order AS item_number, (SELECT COUNT(*) FROM chapters WHERE novel_id = n.id AND moderation_status = 'APPROVED') AS item_count, h.read_at
                 FROM reading_history h JOIN novels n ON n.id = h.novel_id LEFT JOIN chapters c ON c.id = h.chapter_id
                 WHERE h.user_id = ? AND (n.status = 'PUBLISHED' OR n.author_id = ?)
                 UNION ALL
                 SELECT 'comic', m.id, m.title, m.cover_image, m.is_mature, h.episode_id, e.title,
-                       e.episode_order, (SELECT COUNT(*) FROM comic_episodes WHERE comic_id = m.id), h.read_at
+                       e.episode_order, (SELECT COUNT(*) FROM comic_episodes WHERE comic_id = m.id AND moderation_status = 'APPROVED'), h.read_at
                 FROM reading_history h JOIN comics m ON m.id = h.comic_id LEFT JOIN comic_episodes e ON e.id = h.episode_id
                 WHERE h.user_id = ? AND (m.status = 'PUBLISHED' OR m.author_id = ?)
              ) x ORDER BY read_at DESC LIMIT ?`,

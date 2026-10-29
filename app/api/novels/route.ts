@@ -56,6 +56,13 @@ export async function POST(req: Request) {
     if ('error' in parsed) {
         return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
+    // The author must choose the content level (ทั่วไป or 18+); every chapter/episode is checked against it
+    if (typeof isMature !== 'boolean') {
+        return NextResponse.json({ error: 'กรุณาเลือกระดับเนื้อหา: ทั่วไป หรือ 18+' }, { status: 400 });
+    }
+    if (isCompleted !== undefined && typeof isCompleted !== 'boolean') {
+        return NextResponse.json({ error: 'ข้อมูลไม่ถูกต้อง' }, { status: 400 });
+    }
     const id = uuidv4();
 
     const conn = await pool.getConnection();
@@ -64,7 +71,7 @@ export async function POST(req: Request) {
         await conn.query(
             `INSERT INTO novels (id, title, description, cover_image, is_completed, is_mature, author_id, status)
              VALUES (?, ?, ?, ?, ?, ?, ?, 'DRAFT')`,
-            [id, title, description, coverImage || null, isCompleted === true ? 1 : 0, isMature === true ? 1 : 0, user.id]
+            [id, title, description, coverImage || null, isCompleted === true ? 1 : 0, isMature ? 1 : 0, user.id]
         );
         await setStoryCategories(conn, 'novel', id, parsed.ids);
         await conn.commit();

@@ -38,7 +38,8 @@ export type StoryRow = RowDataPacket & {
 };
 
 // s.* plus the author's name/username and the aggregated stats (item_count / last_item_at = number of chapters or
-// episodes and when the newest was added). Ratings by BANNED users don't count (same as /api/ratings).
+// episodes and when the newest was added, counting only ones that passed the content check). Ratings by BANNED
+// users don't count (same as /api/ratings).
 function baseSql(type: ContentType) {
     const t = TABLES[type];
     return `
@@ -56,7 +57,7 @@ function baseSql(type: ContentType) {
     LEFT JOIN (SELECT ${t.ref} AS cid, COUNT(*) AS bookmarks
                FROM bookmarks WHERE ${t.ref} IS NOT NULL GROUP BY ${t.ref}) b ON b.cid = s.id
     LEFT JOIN (SELECT ${t.itemFk} AS cid, COUNT(*) AS item_count, MAX(created_at) AS last_item_at
-               FROM ${t.items} GROUP BY ${t.itemFk}) ic ON ic.cid = s.id
+               FROM ${t.items} WHERE moderation_status = 'APPROVED' GROUP BY ${t.itemFk}) ic ON ic.cid = s.id
     WHERE s.status = 'PUBLISHED'`;
 }
 

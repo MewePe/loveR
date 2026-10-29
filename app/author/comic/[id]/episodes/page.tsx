@@ -6,6 +6,8 @@ import { ArrowLeft, Plus, Edit, Trash2, Save, X, GripVertical, Eye, Upload, Imag
 import Image from 'next/image';
 import { useConfirm } from '@/components/ConfirmDialog';
 import { useToast } from '@/components/Toast';
+import { ModerationBadge } from '@/components/ModerationNotice';
+import { showModerationResult } from '@/components/author/moderationToast';
 
 interface Episode {
     id: string;
@@ -15,6 +17,8 @@ interface Episode {
     price: number;
     created_at: string;
     page_count?: number;
+    moderation_status: string; // lib/moderationLabels.ts ITEM_STATUSES
+    moderation_note: string | null; // the admin's reason when REJECTED
 }
 
 interface Comic {
@@ -130,7 +134,8 @@ export default function EpisodeManagement() {
             });
 
             if (res.ok) {
-                toast.success(editingEpisode ? 'แก้ไขตอนสำเร็จ' : 'เพิ่มตอนสำเร็จ');
+                const data = await res.json().catch(() => ({}));
+                showModerationResult(toast, data.moderation, editingEpisode ? 'แก้ไขตอนสำเร็จ' : 'เพิ่มตอนสำเร็จ');
                 setShowModal(false);
                 fetchData();
             } else {
@@ -203,7 +208,13 @@ export default function EpisodeManagement() {
                                         {index + 1}
                                     </div>
                                     <div className="flex-1">
-                                        <h3 className="font-medium text-gray-900 dark:text-white">{episode.title}</h3>
+                                        <h3 className="font-medium text-gray-900 dark:text-white flex flex-wrap items-center gap-2">
+                                            {episode.title}
+                                            <ModerationBadge status={episode.moderation_status} />
+                                        </h3>
+                                        {episode.moderation_status === 'REJECTED' && episode.moderation_note && (
+                                            <p className="text-sm text-red-700 dark:text-red-400 mt-1 whitespace-pre-line">เหตุผลจากแอดมิน: {episode.moderation_note} (แก้ไขแล้วบันทึกเพื่อส่งตรวจใหม่)</p>
+                                        )}
                                         <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400 mt-1">
                                             <span className="flex items-center gap-1">
                                                 <Eye className="w-4 h-4" />

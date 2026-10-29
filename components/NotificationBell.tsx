@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { timeAgo } from "@/lib/timeAgo";
-import { Bell, BookOpen, CheckCircle, Coins, Flag, HeartHandshake, ShieldAlert, MessageCircle, ShoppingCart, Sparkles, Star, UserCheck, Wallet, XCircle } from "lucide-react";
+import { Bell, BookOpen, CheckCircle, Coins, Flag, HeartHandshake, ShieldAlert, ShieldCheck, MessageCircle, ShoppingCart, Sparkles, Star, UserCheck, Wallet, XCircle } from "lucide-react";
 
 export interface NotificationItem {
     id: string;
@@ -35,6 +35,10 @@ const ICONS: Record<string, { icon: typeof Bell; color: string }> = {
     WITHDRAWAL_APPROVED: { icon: Wallet, color: "text-green-500 dark:text-green-400" },
     WITHDRAWAL_REJECTED: { icon: Wallet, color: "text-red-500 dark:text-red-400" },
     CONTENT_MODERATED: { icon: ShieldAlert, color: "text-red-500 dark:text-red-400" },
+    MODERATION_HELD: { icon: ShieldAlert, color: "text-amber-500 dark:text-amber-400" },
+    MODERATION_APPROVED: { icon: ShieldCheck, color: "text-green-500 dark:text-green-400" },
+    MODERATION_REJECTED: { icon: ShieldAlert, color: "text-red-500 dark:text-red-400" },
+    ADMIN_MODERATION: { icon: ShieldAlert, color: "text-amber-500 dark:text-amber-400" },
     ADMIN_TOPUP: { icon: Coins, color: "text-amber-500 dark:text-amber-400" },
     ADMIN_WRITER_REQUEST: { icon: UserCheck, color: "text-purple-500 dark:text-purple-400" },
     ADMIN_WITHDRAWAL: { icon: Wallet, color: "text-amber-500 dark:text-amber-400" },

@@ -2,10 +2,10 @@ import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
+import { QUEUE_SQL } from '@/lib/moderation';
 
 // GET /api/admin/counts — pending work per admin menu (the red badges in the sidebar and the
-// "งานที่รอดำเนินการ" box on the overview).
-// `moderation` is the automatic content check queue (scope item 12), which doesn't exist yet: always 0 until then.
+// "งานที่รอดำเนินการ" box on the overview). `moderation` is the content check queue (lib/moderation.ts QUEUE_SQL).
 export async function GET() {
     const session = await auth();
     if (session?.user?.role !== 'ADMIN') {
@@ -18,14 +18,15 @@ export async function GET() {
                 (SELECT COUNT(*) FROM writer_profiles WHERE status = 'PENDING') AS writers,
                 (SELECT COUNT(*) FROM coin_topups WHERE status = 'PENDING') AS topups,
                 (SELECT COUNT(*) FROM withdrawals WHERE status = 'PENDING') AS withdrawals,
-                (SELECT COUNT(*) FROM reports WHERE status = 'PENDING') AS reports`);
+                (SELECT COUNT(*) FROM reports WHERE status = 'PENDING') AS reports,
+                (SELECT COUNT(*) FROM moderation_checks m WHERE ${QUEUE_SQL}) AS moderation`);
         const r = rows[0];
         return NextResponse.json({
             writers: Number(r.writers),
             topups: Number(r.topups),
             withdrawals: Number(r.withdrawals),
             reports: Number(r.reports),
-            moderation: 0,
+            moderation: Number(r.moderation),
         });
     } catch (error) {
         console.error('Failed to count pending admin work:', error);

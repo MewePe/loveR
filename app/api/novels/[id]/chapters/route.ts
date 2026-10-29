@@ -4,10 +4,11 @@ import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
 import { v4 as uuidv4 } from 'uuid';
 import { parsePrice } from '@/lib/coins';
-import { notifyNewItem } from '@/lib/notifications';
 import { canViewContent, isOwnerOrAdmin } from '@/lib/visibility';
+import { mockDirective, moderateItem } from '@/lib/moderation';
 
-// GET - Fetch all chapters for a novel. Content is only included for the author/admin (editor view).
+// GET - Fetch all chapters for a novel. Content is only included for the author/admin (editor view), who also get
+// every chapter with its moderation_status (and the admin's reason when rejected); readers only get APPROVED ones.
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
     const { id: novelId } = await params;
 
@@ -20,8 +21,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         const isOwner = isOwnerOrAdmin(session?.user, novels[0].author_id);
 
         const [chapters] = await pool.query<RowDataPacket[]>(
-            `SELECT ${isOwner ? '*' : 'id, title, chapter_order, novel_id, views, price, created_at, updated_at'}
-             FROM chapters WHERE novel_id = ? ORDER BY chapter_order ASC, created_at ASC`,
+            isOwner
+                ? `SELECT c.*, (SELECT m.review_note FROM moderation_checks m WHERE m.chapter_id = c.id AND m.status = 'REJECTED'
+                                ORDER BY m.created_at DESC LIMIT 1) AS moderation_note
+                   FROM chapters c WHERE c.novel_id = ? ORDER BY c.chapter_order ASC, c.created_at ASC`
+                : `SELECT id, title, chapter_order, novel_id, views, price, created_at, updated_at
+                   FROM chapters WHERE novel_id = ? AND moderation_status = 'APPROVED' ORDER BY chapter_order ASC, created_at ASC`,
             [novelId]
         );
         return NextResponse.json(chapters);
@@ -31,7 +36,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     }
 }
 
-// POST - Create a new chapter
+// POST - Create a new chapter. It is saved hidden (PENDING) and published once the content check passes
+// (lib/moderation.ts); the response's `moderation` says what happened.
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
     const { id: novelId } = await params;
     const session = await auth();
@@ -55,6 +61,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const body = await req.json();
     const { title, content } = body;
+    if (typeof title !== 'string' || !title.trim() || (content !== undefined && content !== null && typeof content !== 'string')) {
+        return NextResponse.json({ error: 'กรุณากรอกชื่อบทและเนื้อหา' }, { status: 400 });
+    }
     const price = parsePrice(body.price);
     if (price === null) {
         return NextResponse.json({ error: 'ราคาต้องเป็นจำนวนเต็ม 0-10000 เหรียญ' }, { status: 400 });
@@ -70,12 +79,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     try {
         await pool.query(
-            'INSERT INTO chapters (id, title, content, chapter_order, novel_id, price) VALUES (?, ?, ?, ?, ?, ?)',
-            [id, title, content, nextOrder, novelId, price]
+            `INSERT INTO chapters (id, title, content, chapter_order, novel_id, price, moderation_status) VALUES (?, ?, ?, ?, ?, ?, 'PENDING')`,
+            [id, title, content ?? '', nextOrder, novelId, price]
         );
-        await notifyNewItem('novel', novels[0] as { id: string; title: string; author_id: string; status: string }, id, title);
+        // Readers are notified about the chapter when it is published (moderateItem / admin approval)
+        const moderation = await moderateItem(
+            { itemType: 'chapter', itemId: id, title, story: novels[0] as { id: string; title: string; author_id: string; status: string; is_mature: number } },
+            { text: content ?? '' }, 'SUBMIT', mockDirective(req)
+        );
 
-        return NextResponse.json({ id, title, chapter_order: nextOrder });
+        return NextResponse.json({ id, title, chapter_order: nextOrder, moderation });
     } catch (error) {
         console.error('Database error:', error);
         return NextResponse.json({ error: 'สร้างบทไม่สำเร็จ' }, { status: 500 });

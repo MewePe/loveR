@@ -7,14 +7,15 @@ export type ItemKind = 'chapter' | 'episode';
 
 export const MIN_WITHDRAWAL = 100; // baht
 
-// A chapter/episode plus what access depends on. content_status is the parent novel/comic status.
-export type AccessItem = { id: string; price: number; author_id: string; content_status: string };
+// A chapter/episode plus what access depends on. content_status is the parent novel/comic status,
+// moderation_status the item's content check result (lib/moderation.ts).
+export type AccessItem = { id: string; price: number; author_id: string; content_status: string; moderation_status: string };
 
 // Price, owning author and parent status of a chapter/episode, or undefined if it doesn't exist
 export async function getItem(kind: ItemKind, id: string) {
     const sql = kind === 'chapter'
-        ? `SELECT c.id, c.title, c.price, n.author_id, n.status AS content_status FROM chapters c JOIN novels n ON c.novel_id = n.id WHERE c.id = ?`
-        : `SELECT e.id, e.title, e.price, c.author_id, c.status AS content_status FROM comic_episodes e JOIN comics c ON e.comic_id = c.id WHERE e.id = ?`;
+        ? `SELECT c.id, c.title, c.price, c.moderation_status, n.author_id, n.status AS content_status FROM chapters c JOIN novels n ON c.novel_id = n.id WHERE c.id = ?`
+        : `SELECT e.id, e.title, e.price, e.moderation_status, c.author_id, c.status AS content_status FROM comic_episodes e JOIN comics c ON e.comic_id = c.id WHERE e.id = ?`;
     const [rows] = await pool.query<RowDataPacket[]>(sql, [id]);
     return rows[0] as (AccessItem & { title: string }) | undefined;
 }
@@ -24,8 +25,11 @@ export async function getItem(kind: ItemKind, id: string) {
 // - PUBLISHED: free items for everyone, paid items for buyers
 // - ARCHIVED: only people who bought it before it was archived
 // - DRAFT / BANNED: nobody else
+// - not passed the content check (moderation_status other than APPROVED, lib/moderation.ts): nobody else
+// The 18+ age gate is checked separately (lib/ageGate.ts), so pages can show it instead of a paywall.
 export async function canAccess(viewer: Viewer, kind: ItemKind, item: AccessItem) {
     if (isOwnerOrAdmin(viewer, item.author_id)) return true;
+    if (item.moderation_status !== 'APPROVED') return false;
     if (item.content_status === 'PUBLISHED') {
         if (!item.price || item.price <= 0) return true;
     } else if (item.content_status !== 'ARCHIVED' || !item.price || item.price <= 0) {
@@ -81,7 +85,7 @@ export type PurchaseResult =
 // so concurrent requests can't double-spend or double-buy.
 export async function purchaseItem(userId: string, kind: ItemKind, itemId: string): Promise<PurchaseResult> {
     const item = await getItem(kind, itemId);
-    if (!item || item.content_status !== 'PUBLISHED') return { ok: false, status: 404, error: 'ไม่พบตอนนี้' };
+    if (!item || item.content_status !== 'PUBLISHED' || item.moderation_status !== 'APPROVED') return { ok: false, status: 404, error: 'ไม่พบตอนนี้' };
     if (!item.price || item.price <= 0) return { ok: false, status: 400, error: 'ตอนนี้อ่านฟรี' };
     if (item.author_id === userId) return { ok: false, status: 400, error: 'คุณเป็นเจ้าของผลงานนี้' };
 

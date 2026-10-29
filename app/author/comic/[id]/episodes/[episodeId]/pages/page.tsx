@@ -129,7 +129,11 @@ export default function PageManagement() {
                     }
                 );
                 if (saveRes.ok) {
-                    showToast(`อัปโหลดสำเร็จ ${uploadedUrls.length} หน้า`);
+                    // The new pages go through the content check; tell the author if the episode is now held
+                    const data = await saveRes.json().catch(() => ({}));
+                    const moderation = data.moderation as { status: string; message: string } | undefined;
+                    if (moderation && moderation.status !== 'APPROVED') showToast(moderation.message, 'error');
+                    else showToast(`อัปโหลดสำเร็จ ${uploadedUrls.length} หน้า${moderation ? ` ${moderation.message}` : ''}`);
                     setQueuedFiles([]);
                     setQueuedPreviews([]);
                     fetchData();

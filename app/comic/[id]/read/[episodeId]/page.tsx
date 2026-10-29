@@ -10,10 +10,15 @@ import { canAccess, AccessItem } from '@/lib/coins';
 import { recordRead } from '@/lib/readingHistory';
 import { recordView } from '@/lib/views';
 import { getEpisodeList } from '@/lib/episodeList';
+import { isOwnerOrAdmin } from '@/lib/visibility';
+import { needsAgeGate } from '@/lib/ageGate';
+import AgeGate from '@/components/AgeGate';
+import MislabelReportButton from '@/components/MislabelReportButton';
+import ModerationNotice from '@/components/ModerationNotice';
 
 async function getEpisode(comicId: string, episodeId: string) {
     const [rows] = await pool.query<RowDataPacket[]>(`
-    SELECT e.*, c.title as comic_title, c.id as comic_id, c.author_id, c.status as content_status
+    SELECT e.*, c.title as comic_title, c.id as comic_id, c.author_id, c.status as content_status, c.is_mature, c.cover_image
     FROM comic_episodes e
     JOIN comics c ON e.comic_id = c.id
     WHERE e.id = ? AND e.comic_id = ?
@@ -30,16 +35,18 @@ async function getPages(episodeId: string) {
     return rows;
 }
 
-async function getNextPrevEpisodes(comicId: string, currentOrder: number) {
+// Readers skip episodes that haven't passed the content check; the author and admins see them all
+async function getNextPrevEpisodes(comicId: string, currentOrder: number, approvedOnly: boolean) {
+    const visible = approvedOnly ? `AND moderation_status = 'APPROVED'` : '';
     const [prev] = await pool.query<RowDataPacket[]>(`
     SELECT id FROM comic_episodes 
-    WHERE comic_id = ? AND episode_order < ? 
+    WHERE comic_id = ? AND episode_order < ? ${visible}
     ORDER BY episode_order DESC LIMIT 1
   `, [comicId, currentOrder]);
 
     const [next] = await pool.query<RowDataPacket[]>(`
     SELECT id FROM comic_episodes 
-    WHERE comic_id = ? AND episode_order > ? 
+    WHERE comic_id = ? AND episode_order > ? ${visible}
     ORDER BY episode_order ASC LIMIT 1
   `, [comicId, currentOrder]);
 
@@ -57,10 +64,15 @@ export default async function ReadEpisode({ params }: { params: Promise<{ id: st
 
     const session = await auth();
     const unlocked = await canAccess(session?.user, 'episode', episode as AccessItem);
-    // Only published comics show a paywall; unpublished ones simply don't exist for other users
-    if (!unlocked && episode.content_status !== 'PUBLISHED') notFound();
+    // Only published, checked episodes show a paywall; the rest simply don't exist for other users
+    if (!unlocked && (episode.content_status !== 'PUBLISHED' || episode.moderation_status !== 'APPROVED')) notFound();
+    // 18+ stories: age check first (nothing is counted or recorded until it is passed)
+    if (await needsAgeGate(session?.user, episode)) {
+        return <AgeGate storyId={episode.comic_id} title={episode.comic_title} coverImage={episode.cover_image} kind="comic" />;
+    }
+    const isOwner = isOwnerOrAdmin(session?.user, episode.author_id);
     const pages = unlocked ? await getPages(episodeId) : [];
-    const { prev, next } = await getNextPrevEpisodes(episode.comic_id, episode.episode_order);
+    const { prev, next } = await getNextPrevEpisodes(episode.comic_id, episode.episode_order, !isOwner);
 
     if (unlocked) {
         await recordView('comic', episodeId, session?.user?.id, episode.author_id);
@@ -103,6 +115,7 @@ export default async function ReadEpisode({ params }: { params: Promise<{ id: st
 
             {/* Pages */}
             <div className="max-w-4xl mx-auto py-4">
+                <ModerationNotice status={episode.moderation_status} className="mx-4 mb-4" />
                 {!unlocked ? (
                     <Paywall kind="episode" itemId={episode.id} price={episode.price} loggedIn={!!session?.user} />
                 ) : pages.length > 0 ? (
@@ -120,6 +133,11 @@ export default async function ReadEpisode({ params }: { params: Promise<{ id: st
                     <div className="text-center py-20 text-gray-500 dark:text-gray-400">
                         <p className="text-6xl mb-4">🎨</p>
                         <p>ยังไม่มีหน้าในตอนนี้</p>
+                    </div>
+                )}
+                {unlocked && !isOwner && (
+                    <div className="mt-6 px-4 flex justify-end">
+                        <MislabelReportButton itemType="episode" itemId={episode.id} loggedIn={!!session?.user} />
                     </div>
                 )}
             </div>

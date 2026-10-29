@@ -5,6 +5,8 @@ import { RowDataPacket } from 'mysql2';
 import { v4 as uuidv4 } from 'uuid';
 import { canAccess, AccessItem } from '@/lib/coins';
 import { validatePageUrls } from '@/lib/upload';
+import { needsAgeGate } from '@/lib/ageGate';
+import { mockDirective, moderateItem } from '@/lib/moderation';
 
 type Params = { params: Promise<{ id: string; episodeId: string }> };
 
@@ -14,7 +16,7 @@ export async function GET(_req: Request, { params }: Params) {
 
     try {
         const [episodes] = await pool.query<RowDataPacket[]>(
-            'SELECT e.id, e.price, c.author_id, c.status AS content_status FROM comic_episodes e JOIN comics c ON e.comic_id = c.id WHERE e.id = ? AND e.comic_id = ?',
+            'SELECT e.id, e.price, e.moderation_status, c.author_id, c.status AS content_status, c.is_mature FROM comic_episodes e JOIN comics c ON e.comic_id = c.id WHERE e.id = ? AND e.comic_id = ?',
             [episodeId, comicId]
         );
         if (!episodes[0]) {
@@ -22,10 +24,13 @@ export async function GET(_req: Request, { params }: Params) {
         }
         const session = await auth();
         if (!(await canAccess(session?.user, 'episode', episodes[0] as AccessItem))) {
-            if (episodes[0].content_status !== 'PUBLISHED') {
+            if (episodes[0].content_status !== 'PUBLISHED' || episodes[0].moderation_status !== 'APPROVED') {
                 return NextResponse.json({ error: 'ไม่พบตอนนี้' }, { status: 404 });
             }
             return NextResponse.json({ error: 'ตอนนี้ต้องซื้อก่อนอ่าน', locked: true }, { status: 402 });
+        }
+        if (await needsAgeGate(session?.user, episodes[0])) {
+            return NextResponse.json({ error: 'เนื้อหานี้สำหรับผู้มีอายุ 18 ปีขึ้นไป กรุณายืนยันอายุก่อน', age_required: true }, { status: 403 });
         }
 
         const [pages] = await pool.query<RowDataPacket[]>(
@@ -39,7 +44,8 @@ export async function GET(_req: Request, { params }: Params) {
     }
 }
 
-// POST - Add pages to an episode
+// POST - Add pages to an episode. The new pages are checked (lib/moderation.ts) and the episode is hidden until
+// that passes.
 export async function POST(req: Request, { params }: Params) {
     const { id: comicId, episodeId } = await params;
     const session = await auth();
@@ -58,7 +64,8 @@ export async function POST(req: Request, { params }: Params) {
     // Verify comic ownership
     const [comics] = await pool.query<RowDataPacket[]>(
         // Also verify the episode belongs to this comic, so authors can't edit other comics' episodes
-        'SELECT c.id FROM comics c JOIN comic_episodes e ON e.comic_id = c.id WHERE c.id = ? AND c.author_id = ? AND e.id = ?',
+        `SELECT c.id, c.title, c.author_id, c.status, c.is_mature, e.title AS episode_title
+         FROM comics c JOIN comic_episodes e ON e.comic_id = c.id WHERE c.id = ? AND c.author_id = ? AND e.id = ?`,
         [comicId, userId, episodeId]
     );
     if (!comics[0]) return NextResponse.json({ error: 'ไม่มีสิทธิ์ทำรายการนี้' }, { status: 403 });
@@ -82,17 +89,22 @@ export async function POST(req: Request, { params }: Params) {
         );
         let nextOrder: number = orderResult[0].max_order + 1;
 
-        const insertedIds: string[] = [];
+        const added: { url: string; number: number }[] = [];
         for (const url of imageUrls) {
             const pageId = uuidv4();
+            added.push({ url, number: nextOrder });
             await pool.query(
                 'INSERT INTO comic_pages (id, image_url, page_order, episode_id) VALUES (?, ?, ?, ?)',
                 [pageId, url, nextOrder++, episodeId]
             );
-            insertedIds.push(pageId);
         }
 
-        return NextResponse.json({ success: true, count: insertedIds.length });
+        const moderation = await moderateItem(
+            { itemType: 'episode', itemId: episodeId, title: comics[0].episode_title, story: comics[0] as { id: string; title: string; author_id: string; status: string; is_mature: number } },
+            { pages: added }, 'EDIT', mockDirective(req)
+        );
+
+        return NextResponse.json({ success: true, count: added.length, moderation });
     } catch (error) {
         console.error('Database error:', error);
         return NextResponse.json({ error: 'เพิ่มหน้าไม่สำเร็จ' }, { status: 500 });

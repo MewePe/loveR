@@ -172,7 +172,7 @@ export async function getAuthorWorks(authorId: string, type: ContentType): Promi
     const t = WORK_TABLES[type];
     const [rows] = await pool.query<RowDataPacket[]>(
         `SELECT s.id, s.title, s.description, s.cover_image, s.is_completed, s.views,
-                (SELECT COUNT(*) FROM ${t.items} i WHERE i.${t.itemFk} = s.id) AS items,
+                (SELECT COUNT(*) FROM ${t.items} i WHERE i.${t.itemFk} = s.id AND i.moderation_status = 'APPROVED') AS items,
                 (SELECT COUNT(*) FROM comments c JOIN users cu ON cu.id = c.user_id
                  WHERE c.${t.commentFk} = s.id AND cu.role != 'BANNED') AS comments
          FROM ${t.table} s WHERE s.author_id = ? AND s.status = 'PUBLISHED'

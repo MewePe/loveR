@@ -15,6 +15,9 @@ import { getSimilarStories } from '@/lib/ranking';
 import { getCategoriesFor } from '@/lib/categories';
 import CategoryTags from '@/components/CategoryTags';
 import AuthorLink from '@/components/AuthorLink';
+import AgeGate from '@/components/AgeGate';
+import { ModerationBadge } from '@/components/ModerationNotice';
+import { needsAgeGate } from '@/lib/ageGate';
 
 async function getNovel(id: string) {
     const [rows] = await pool.query<RowDataPacket[]>(`
@@ -28,7 +31,7 @@ async function getNovel(id: string) {
 
 async function getChapters(novelId: string) {
     const [rows] = await pool.query<RowDataPacket[]>(`
-    SELECT id, title, chapter_order, price, created_at
+    SELECT id, title, chapter_order, price, moderation_status, created_at
     FROM chapters
     WHERE novel_id = ? 
     ORDER BY chapter_order ASC
@@ -43,8 +46,13 @@ export default async function NovelDetail({ params }: { params: Promise<{ id: st
     const session = await auth();
     if (!novel || !canViewContent(session?.user, novel)) notFound();
 
-    const chapters = await getChapters(id);
+    if (await needsAgeGate(session?.user, novel)) {
+        return <AgeGate storyId={novel.id} title={novel.title} coverImage={novel.cover_image} kind="novel" />;
+    }
+
     const isOwner = isOwnerOrAdmin(session?.user, novel.author_id);
+    // Readers only see chapters/episodes that passed the content check; the author and admins see all with a badge
+    const chapters = (await getChapters(id)).filter((item) => isOwner || item.moderation_status === 'APPROVED');
     const similar = await getSimilarStories('novel', novel.id);
     const categories = (await getCategoriesFor('novel', [novel.id])).get(novel.id) ?? [];
     const purchased = await getPurchasedIds(session?.user?.id, 'chapter', chapters.filter(c => c.price > 0).map(c => c.id));
@@ -70,6 +78,9 @@ export default async function NovelDetail({ params }: { params: Promise<{ id: st
                         <div className="flex-grow">
                             <div className="flex flex-wrap items-center gap-3 mb-4">
                                 <span className="px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium">นิยาย</span>
+                                {!!novel.is_mature && (
+                                    <span className="px-3 py-1 rounded-full bg-red-700 text-white text-sm font-bold" title="เนื้อหาสำหรับผู้มีอายุ 18 ปีขึ้นไป">18+</span>
+                                )}
                                 {!!novel.is_completed && (
                                     <span className="px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 text-sm font-medium">จบแล้ว</span>
                                 )}
@@ -127,6 +138,7 @@ export default async function NovelDetail({ params }: { params: Promise<{ id: st
                                     </span>
                                 </div>
                                 <span className="flex items-center gap-4 text-sm">
+                                    {isOwner && <ModerationBadge status={chapter.moderation_status} />}
                                     <PriceBadge price={chapter.price} unlocked={isOwner || purchased.has(chapter.id)} />
                                     <span className="text-gray-500 dark:text-gray-400">{new Date(chapter.created_at).toLocaleDateString('th-TH')}</span>
                                 </span>
