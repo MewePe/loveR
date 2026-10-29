@@ -37,6 +37,13 @@ export default function Navbar() {
         }
     }, [status]);
 
+    // /profile/edit announces saved changes so the name/avatar here update without a reload
+    useEffect(() => {
+        const onUpdate = () => fetchProfile();
+        window.addEventListener('loveread:profile-updated', onUpdate);
+        return () => window.removeEventListener('loveread:profile-updated', onUpdate);
+    }, []);
+
     async function fetchProfile() {
         try {
             const res = await fetch('/api/profile', { credentials: 'include' });
@@ -108,7 +115,7 @@ export default function Navbar() {
                                                     โปรไฟล์
                                                 </Link>
                                                 <Link
-                                                    href="/bookmarks"
+                                                    href="/profile?tab=bookmarks"
                                                     className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                                                     onClick={() => setIsDropdownOpen(false)}
                                                 >
@@ -116,7 +123,7 @@ export default function Navbar() {
                                                     ชั้นหนังสือ
                                                 </Link>
                                                 <Link
-                                                    href="/history"
+                                                    href="/profile?tab=history"
                                                     className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                                                     onClick={() => setIsDropdownOpen(false)}
                                                 >
@@ -203,8 +210,8 @@ export default function Navbar() {
                                     </div>
                                 </div>
                                 <Link href="/profile" className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 hover:bg-gray-50 dark:hover:bg-gray-800">โปรไฟล์</Link>
-                                <Link href="/bookmarks" className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 hover:bg-gray-50 dark:hover:bg-gray-800"><Bookmark className="w-4 h-4 text-yellow-500 dark:text-yellow-400" />ชั้นหนังสือ</Link>
-                                <Link href="/history" className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 hover:bg-gray-50 dark:hover:bg-gray-800"><History className="w-4 h-4 text-blue-500 dark:text-blue-400" />ประวัติการอ่าน</Link>
+                                <Link href="/profile?tab=bookmarks" className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 hover:bg-gray-50 dark:hover:bg-gray-800"><Bookmark className="w-4 h-4 text-yellow-500 dark:text-yellow-400" />ชั้นหนังสือ</Link>
+                                <Link href="/profile?tab=history" className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 hover:bg-gray-50 dark:hover:bg-gray-800"><History className="w-4 h-4 text-blue-500 dark:text-blue-400" />ประวัติการอ่าน</Link>
                                 <Link href="/coins" className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 hover:bg-gray-50 dark:hover:bg-gray-800"><Coins className="w-4 h-4 text-amber-500 dark:text-amber-400" />เหรียญ ({userProfile?.coins ?? 0})</Link>
                                 {(displayRole === 'AUTHOR' || displayRole === 'ADMIN') && (
                                     <Link href="/author" className="block px-3 py-2 rounded-md text-base font-medium text-indigo-600 dark:text-indigo-400 hover:bg-gray-50 dark:hover:bg-gray-800">หน้านักเขียน</Link>

@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
                    CASE WHEN b.novel_id IS NOT NULL THEN 'novel' ELSE 'comic' END AS content_type,
                    COALESCE(b.novel_id, b.comic_id) AS content_id,
                    COALESCE(n.title, c.title) AS title,
-                   COALESCE(n.cover_image, c.cover_image) AS cover_image,
+                   COALESCE(n.cover_image, c.cover_image) AS cover_image, COALESCE(n.is_mature, c.is_mature) AS is_mature,
                    COALESCE(n.description, c.description) AS description,
                    u.name AS author_name, u.id AS author_id, u.username AS author_username
             FROM bookmarks b

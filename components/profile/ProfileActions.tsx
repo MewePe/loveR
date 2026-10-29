@@ -2,14 +2,15 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { HeartHandshake, Pencil, Share2, UserCheck, UserPlus } from 'lucide-react';
+import { HeartHandshake, Pencil, PenTool, Share2, UserCheck, UserPlus } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import SupportDialog from '@/components/profile/SupportDialog';
 
-// Follow / support / share buttons on /profile/[username]. After a change the server page is refreshed so the
+// Buttons on /profile/[username]: the owner gets "edit profile" (and "writer center" for authors); others get
+// follow / support on author profiles. Share is for everyone. After a change the server page is refreshed so the
 // follower count and top fans re-render from the database.
-export default function ProfileActions({ authorId, authorName, isOwner, loggedIn, initiallyFollowing }: {
-    authorId: string; authorName: string; isOwner: boolean; loggedIn: boolean; initiallyFollowing: boolean;
+export default function ProfileActions({ authorId, authorName, isOwner, isAuthor, showWriterCenter, loggedIn, initiallyFollowing }: {
+    authorId: string; authorName: string; isOwner: boolean; isAuthor: boolean; showWriterCenter: boolean; loggedIn: boolean; initiallyFollowing: boolean;
 }) {
     const router = useRouter();
     const toast = useToast();
@@ -42,7 +43,8 @@ export default function ProfileActions({ authorId, authorName, isOwner, loggedIn
     }
 
     async function share() {
-        const url = window.location.href;
+        // The profile itself, without ?tab= (the owner's private tabs aren't for sharing)
+        const url = window.location.origin + window.location.pathname;
         try {
             if (navigator.share) {
                 await navigator.share({ title: `${authorName} | LoveRead`, url });
@@ -61,10 +63,17 @@ export default function ProfileActions({ authorId, authorName, isOwner, loggedIn
     return (
         <div className="flex flex-wrap items-center gap-2">
             {isOwner ? (
-                <Link href="/author?tab=public-profile" className={`${base} bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-600`}>
-                    <Pencil className="w-4 h-4" /> แก้ไขโปรไฟล์
-                </Link>
-            ) : (
+                <>
+                    <Link href="/profile/edit" className={`${base} bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-600`}>
+                        <Pencil className="w-4 h-4" /> แก้ไขโปรไฟล์
+                    </Link>
+                    {showWriterCenter && (
+                        <Link href="/author" className={`${base} bg-indigo-600 text-white hover:bg-indigo-700`}>
+                            <PenTool className="w-4 h-4" /> หน้านักเขียน
+                        </Link>
+                    )}
+                </>
+            ) : isAuthor && (
                 <>
                     <button
                         type="button"

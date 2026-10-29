@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
             SELECT CASE WHEN h.novel_id IS NOT NULL THEN 'novel' ELSE 'comic' END AS content_type,
                    COALESCE(h.novel_id, h.comic_id) AS content_id,
                    COALESCE(n.title, c.title) AS title,
-                   COALESCE(n.cover_image, c.cover_image) AS cover_image,
+                   COALESCE(n.cover_image, c.cover_image) AS cover_image, COALESCE(n.is_mature, c.is_mature) AS is_mature,
                    u.name AS author_name, u.id AS author_id, u.username AS author_username,
                    COALESCE(h.chapter_id, h.episode_id) AS last_item_id,
                    COALESCE(ch.title, ep.title) AS last_item_title,

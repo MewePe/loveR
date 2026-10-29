@@ -70,7 +70,7 @@ test('authors get a username and can edit their public profile; bad input is rej
     assert.equal((await anon.patch('/api/author/public-profile', { bio: 'x' })).status, 401);
 });
 
-test('only authors/admins (or anyone with a published story) have a profile page', async () => {
+test('author profile page; banned and unknown users are 404 (readers: profile-page.test.mjs)', async () => {
     const res = await anon.get(`/profile/${username}`);
     assert.equal(res.status, 200);
     assert.ok(res.text.includes(`E2E PF ${TAG} Author`));
@@ -85,7 +85,10 @@ test('only authors/admins (or anyone with a published story) have a profile page
     assert.ok(byId.headers.get('location').endsWith(`/profile/${username}`));
     assert.ok([307, 308].includes((await anon.get(`/profile/${username.toUpperCase()}`)).status), 'case-insensitive');
 
-    for (const path of [`/profile/${ids.reader}`, `/profile/${ids.banned}`, `/profile/nobody_${TAG}`, '/profile/x']) {
+    const bannedId = uuid();
+    extraUsers.push(bannedId);
+    await db.query(`INSERT INTO users (id, name, email, role) VALUES (?, 'E2E PF banned', ?, 'BANNED')`, [bannedId, `e2e-pf-banned-${TAG}@test.local`]);
+    for (const path of [`/profile/${bannedId}`, `/profile/nobody_${TAG}`, '/profile/x']) {
         const r = await anon.get(path);
         assert.equal(r.status, 404, path);
     }

@@ -9,7 +9,7 @@ const HIDDEN = [/^\/admin/, /^\/author/, /^\/read\//, /^\/comic\/[^/]+\/read\//,
 
 const COLUMNS = [
     { title: "สำรวจ", links: [["หน้าแรก", "/"], ["ค้นหาเรื่อง", "/search"], ["จัดอันดับ", "/ranking"], ["นิยายยอดนิยม", "/ranking?type=novel"], ["การ์ตูนยอดนิยม", "/ranking?type=comic"]] },
-    { title: "นักอ่าน", links: [["เติมเหรียญ", "/coins"], ["ที่คั่นหน้า", "/bookmarks"], ["ประวัติการอ่าน", "/history"], ["แจ้งเตือน", "/notifications"]] },
+    { title: "นักอ่าน", links: [["เติมเหรียญ", "/coins"], ["ที่คั่นหน้า", "/profile?tab=bookmarks"], ["ประวัติการอ่าน", "/profile?tab=history"], ["แจ้งเตือน", "/notifications"]] },
     { title: "นักเขียน", links: [["สมัครเป็นนักเขียน", "/become-author"], ["ศูนย์นักเขียน", "/author"]] },
 ] as const;
 

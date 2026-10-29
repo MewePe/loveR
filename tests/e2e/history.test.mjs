@@ -97,6 +97,12 @@ test('remove one entry, then clear all', async () => {
     assert.equal((await users.reader.get('/api/profile')).json.stats.novelsRead, 0);
 });
 
-test('the history page loads', async () => {
-    assert.equal((await users.reader.get('/history')).status, 200);
+test('the history page moved to the profile tab', async () => {
+    const old = await users.reader.get('/history');
+    assert.ok([307, 308].includes(old.status));
+    assert.ok(old.headers.get('location').endsWith('/profile?tab=history'));
+    const own = await users.reader.get('/profile?tab=history');
+    const target = own.headers.get('location').replace(/^https?:\/\/[^/]+/, '');
+    assert.match(target, /^\/profile\/[a-z0-9_]+\?tab=history$/);
+    assert.equal((await users.reader.get(target)).status, 200);
 });

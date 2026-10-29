@@ -66,19 +66,22 @@ export function validateSocialLinks(input: unknown): { links: SocialLinks } | { 
 
 // ---------- profile lookup ----------
 
-export type PublicAuthor = {
-    id: string; name: string | null; username: string | null; image: string | null;
-    bio: string | null; cover_image: string | null; social_links: SocialLinks;
+export type PublicProfile = {
+    id: string; name: string | null; username: string | null; image: string | null; role: string;
+    bio: string | null; cover_image: string | null; social_links: SocialLinks; created_at: Date;
+    // Authors/admins, or anyone with a published story: they get works, top fans, follow and support
+    is_author: boolean;
 };
+export type PublicAuthor = PublicProfile;
 
-// The author shown at /profile/<param>. <param> is a username, or a user id (old links / users without one).
-// Only authors and admins, or anyone with a published story, have a public profile; banned users don't.
-export async function getPublicAuthor(param: string): Promise<PublicAuthor | null> {
+// The user shown at /profile/<param>. <param> is a username, or a user id (old links / users without one).
+// Every user has a profile page except banned ones; only authors get the works/fans parts (`is_author`).
+export async function getPublicProfile(param: string): Promise<PublicProfile | null> {
     const byId = UUID_PATTERN.test(param);
     const username = byId ? null : normalizeUsername(param);
     if (!byId && !username) return null;
     const [rows] = await pool.query<RowDataPacket[]>(
-        `SELECT u.id, u.name, u.username, u.image, u.bio, u.cover_image, u.social_links, u.role,
+        `SELECT u.id, u.name, u.username, u.image, u.bio, u.cover_image, u.social_links, u.role, u.created_at,
                 (EXISTS (SELECT 1 FROM novels WHERE author_id = u.id AND status = 'PUBLISHED')
                  OR EXISTS (SELECT 1 FROM comics WHERE author_id = u.id AND status = 'PUBLISHED')) AS has_published
          FROM users u WHERE ${byId ? 'u.id' : 'u.username'} = ?`,
@@ -86,11 +89,17 @@ export async function getPublicAuthor(param: string): Promise<PublicAuthor | nul
     );
     const u = rows[0];
     if (!u || u.role === 'BANNED') return null;
-    if (u.role !== 'AUTHOR' && u.role !== 'ADMIN' && !Number(u.has_published)) return null;
     return {
-        id: u.id, name: u.name, username: u.username, image: u.image, bio: u.bio,
-        cover_image: u.cover_image, social_links: parseSocialLinks(u.social_links),
+        id: u.id, name: u.name, username: u.username, image: u.image, role: u.role, bio: u.bio,
+        cover_image: u.cover_image, social_links: parseSocialLinks(u.social_links), created_at: u.created_at,
+        is_author: u.role === 'AUTHOR' || u.role === 'ADMIN' || !!Number(u.has_published),
     };
+}
+
+// Only authors can be followed and supported (readers have a profile page, but nothing to follow)
+export async function getPublicAuthor(param: string): Promise<PublicAuthor | null> {
+    const profile = await getPublicProfile(param);
+    return profile?.is_author ? profile : null;
 }
 
 export async function canHaveProfile(userId: string) {
@@ -157,8 +166,8 @@ export async function getTopFans(authorId: string, limit = TOP_FANS) {
 // ---------- works ----------
 
 export type AuthorWork = {
-    id: string; title: string; description: string | null; cover_image: string | null; is_completed: boolean;
-    views: number; items: number; comments: number; categories: CategoryTag[];
+    id: string; title: string; description: string | null; cover_image: string | null; is_completed: boolean; is_mature: boolean;
+    views: number;items: number; comments: number; categories: CategoryTag[];
 };
 
 const WORK_TABLES = {
@@ -171,7 +180,7 @@ const WORK_TABLES = {
 export async function getAuthorWorks(authorId: string, type: ContentType): Promise<AuthorWork[]> {
     const t = WORK_TABLES[type];
     const [rows] = await pool.query<RowDataPacket[]>(
-        `SELECT s.id, s.title, s.description, s.cover_image, s.is_completed, s.views,
+        `SELECT s.id, s.title, s.description, s.cover_image, s.is_completed, s.is_mature, s.views,
                 (SELECT COUNT(*) FROM ${t.items} i WHERE i.${t.itemFk} = s.id AND i.moderation_status = 'APPROVED') AS items,
                 (SELECT COUNT(*) FROM comments c JOIN users cu ON cu.id = c.user_id
                  WHERE c.${t.commentFk} = s.id AND cu.role != 'BANNED') AS comments
@@ -181,7 +190,7 @@ export async function getAuthorWorks(authorId: string, type: ContentType): Promi
     );
     const works = rows.map((r) => ({
         id: r.id as string, title: r.title as string, description: r.description as string | null,
-        cover_image: r.cover_image as string | null, is_completed: !!r.is_completed,
+        cover_image: r.cover_image as string | null, is_completed: !!r.is_completed, is_mature: !!r.is_mature,
         views: Number(r.views) || 0, items: Number(r.items), comments: Number(r.comments),
     }));
     return withCategories(type, works);

@@ -2,22 +2,11 @@
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { Coins, Upload, Send } from 'lucide-react';
 import { useToast } from '@/components/Toast';
-import AuthorLink from '@/components/AuthorLink';
-
-interface Topup { id: string; amount: number; status: string; rejection_reason: string | null; created_at: string; }
-interface SupportSent { id: string; amount: number; message: string | null; created_at: string; author_id: string; author_name: string | null; author_username: string | null; }
-interface Purchase { id: string; item_title: string; price: number; created_at: string; chapter_id: string | null; episode_id: string | null; comic_id: string | null; }
+import CoinHistory, { Purchase, SupportSent, Topup } from '@/components/profile/CoinHistory';
 
 const PRESET_AMOUNTS = [50, 100, 300, 500, 1000];
-const statusText: Record<string, string> = { PENDING: 'รอตรวจสอบ', APPROVED: 'สำเร็จ', REJECTED: 'ไม่อนุมัติ' };
-const statusColors: Record<string, string> = {
-    PENDING: 'text-yellow-700 dark:text-yellow-400',
-    APPROVED: 'text-green-700 dark:text-green-400',
-    REJECTED: 'text-red-600 dark:text-red-400',
-};
 
 export default function CoinsPage() {
     const toast = useToast();
@@ -103,7 +92,7 @@ export default function CoinsPage() {
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-10">
             <div className="container mx-auto px-4 max-w-3xl space-y-6">
-                <div className="bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl p-8 text-white">
+                <div className="bg-gradient-to-r from-amber-700 to-orange-700 rounded-2xl p-8 text-white">
                     <p className="text-sm opacity-90">เหรียญคงเหลือ</p>
                     <p className="text-4xl font-bold mt-2 flex items-center gap-2"><Coins className="w-8 h-8" /> {coins.toLocaleString()}</p>
                     <p className="text-xs opacity-80 mt-2">1 เหรียญ = 1 บาท ใช้ปลดล็อกตอนพิเศษของนิยายและการ์ตูน</p>
@@ -149,61 +138,7 @@ export default function CoinsPage() {
                     </button>
                 </form>
 
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-6">
-                    <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">ประวัติการเติมเหรียญ</h2>
-                    {topups.length === 0 ? <p className="text-gray-500 dark:text-gray-400 text-sm">ยังไม่มีรายการ</p> : (
-                        <ul className="divide-y dark:divide-gray-700">
-                            {topups.map((t) => (
-                                <li key={t.id} className="py-3 flex justify-between text-sm">
-                                    <span className="text-gray-600 dark:text-gray-300">{new Date(t.created_at).toLocaleString('th-TH')}</span>
-                                    <span className="text-right">
-                                        <span className="font-semibold text-gray-900 dark:text-white">+{t.amount}</span>{' '}
-                                        <span className={statusColors[t.status]}>{statusText[t.status]}</span>
-                                        {t.rejection_reason && <span className="block text-xs text-gray-500 dark:text-gray-400">{t.rejection_reason}</span>}
-                                    </span>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                </div>
-
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-6">
-                    <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">ตอนที่ซื้อแล้ว</h2>
-                    {purchases.length === 0 ? <p className="text-gray-500 dark:text-gray-400 text-sm">ยังไม่มีรายการ</p> : (
-                        <ul className="divide-y dark:divide-gray-700">
-                            {purchases.map((p) => {
-                                const href = p.chapter_id ? `/read/${p.chapter_id}` : p.episode_id && p.comic_id ? `/comic/${p.comic_id}/read/${p.episode_id}` : null;
-                                return (
-                                    <li key={p.id} className="py-3 flex justify-between text-sm">
-                                        <span className="text-gray-700 dark:text-gray-200">
-                                            {href ? <Link href={href} className="hover:text-indigo-600">{p.item_title}</Link> : <span className="text-gray-500 dark:text-gray-400">{p.item_title} (ถูกลบแล้ว)</span>}
-                                            <span className="block text-xs text-gray-500 dark:text-gray-400">{new Date(p.created_at).toLocaleString('th-TH')}</span>
-                                        </span>
-                                        <span className="font-semibold text-gray-900 dark:text-white">-{p.price}</span>
-                                    </li>
-                                );
-                            })}
-                        </ul>
-                    )}
-                </div>
-
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-6">
-                    <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">เหรียญที่ส่งสนับสนุนนักเขียน</h2>
-                    {supports.length === 0 ? <p className="text-gray-500 dark:text-gray-400 text-sm">ยังไม่มีรายการ</p> : (
-                        <ul className="divide-y dark:divide-gray-700">
-                            {supports.map((s) => (
-                                <li key={s.id} className="py-3 flex justify-between gap-4 text-sm">
-                                    <span className="min-w-0 text-gray-700 dark:text-gray-200">
-                                        สนับสนุน <AuthorLink id={s.author_id} username={s.author_username} name={s.author_name} className="font-medium text-gray-900 dark:text-white" />
-                                        {s.message && <span className="block text-gray-600 dark:text-gray-300 break-words">&ldquo;{s.message}&rdquo;</span>}
-                                        <span className="block text-xs text-gray-500 dark:text-gray-400">{new Date(s.created_at).toLocaleString('th-TH')}</span>
-                                    </span>
-                                    <span className="font-semibold text-gray-900 dark:text-white">-{s.amount}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                </div>
+                <CoinHistory topups={topups} purchases={purchases} supports={supports} />
             </div>
         </div>
     );

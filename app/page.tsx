@@ -171,7 +171,7 @@ export default async function Home() {
       <div className="container mx-auto px-4 py-8 sm:py-10 space-y-10 sm:space-y-12">
         {continueReading.length > 0 && (
           <section aria-labelledby="sec-continue">
-            <SectionHeader id="sec-continue" icon={History} title="อ่านต่อ" href="/history" linkText="ประวัติทั้งหมด" color="text-indigo-600 dark:text-indigo-400" />
+            <SectionHeader id="sec-continue" icon={History} title="อ่านต่อ" href="/profile?tab=history" linkText="ประวัติทั้งหมด"color="text-indigo-600 dark:text-indigo-400" />
             <ScrollRow label="อ่านต่อ">
               {continueReading.map((item) => <RowItem key={`${item.type}-${item.id}`} wide><ContinueCard item={item} /></RowItem>)}
             </ScrollRow>

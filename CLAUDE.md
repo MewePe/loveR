@@ -159,16 +159,22 @@ npx tsx scripts/add_moderation.ts # ตรวจเนื้อหาด้ว�
 - เทสต์อยู่ใน `tests/e2e/home.test.mjs` (ใช้ยอดวิวหลักพันล้านให้เรื่องทดสอบอยู่บนสุด)
 - **ตรวจหน้าตาโดยไม่มี Chrome extension**: ใช้ Chrome headless ผ่าน DevTools Protocol (`--remote-debugging-port`, `Emulation.setDeviceMetricsOverride` + `setEmulatedMedia prefers-color-scheme`, `Page.captureScreenshot captureBeyondViewport`) ห้ามตั้งความสูงหน้าต่างเท่าทั้งหน้า เพราะ `min-h-screen` จะดัน footer ออกนอกภาพ
 
-**โปรไฟล์นักเขียนสาธารณะ** (`/profile/[username]`, `lib/authors.ts`, `lib/username.ts`):
-- มีเฉพาะ AUTHOR/ADMIN หรือคนที่มีเรื่อง PUBLISHED ส่วน READER และ `BANNED` ได้ 404 (`getPublicAuthor()`) รับได้ทั้ง username และ user id (id หรือตัวพิมพ์ใหญ่จะ redirect ไป URL ที่ถูกต้อง)
+**หน้าโปรไฟล์** (`/profile/[username]`, `lib/authors.ts`, `lib/username.ts`, `lib/profile.ts`) หน้าเดียวสำหรับทุกคน:
+- ผู้ใช้ทุกคนมีหน้าโปรไฟล์ (รวม READER) ยกเว้น `BANNED` และ username ที่ไม่มีอยู่ได้ 404 (`getPublicProfile()`) รับได้ทั้ง username และ user id (id หรือตัวพิมพ์ใหญ่จะ redirect ไป URL ที่ถูกต้อง)
+- `is_author` (AUTHOR/ADMIN หรือมีเรื่อง PUBLISHED) เท่านั้นที่มีแท็บผลงาน (นิยาย/การ์ตูน) แฟนตัวยง จำนวนผู้ติดตาม และปุ่มติดตาม/สนับสนุน (`getPublicAuthor()`/`canHaveProfile()` ใช้กับ follow/support จึงยังได้ 404 สำหรับผู้อ่าน) ผู้อ่านที่คนอื่นเปิดดูจะเห็นแค่ส่วนหัวกับข้อความ "ยังไม่มีผลงานที่เผยแพร่"
+- **เจ้าของโปรไฟล์** เห็นเพิ่ม: แท็บ บุ๊กมาร์ก/ประวัติการอ่าน/กระเป๋าเหรียญ (`components/profile/BookmarksTab.tsx`, `HistoryTab.tsx`, `WalletTab.tsx` ดึงจาก `/api/bookmarks`, `/api/history`, `/api/coins`) ปุ่ม "แก้ไขโปรไฟล์" และ "หน้านักเขียน" (AUTHOR/ADMIN) และกล่องแนะนำให้ตั้งชื่อถ้ายังเป็น `user_xxxx` (`isDefaultUsername()`) คนอื่นส่ง `?tab=wallet` มาก็ได้แท็บปกติ บนมือถือแท็บใช้ชื่อสั้น (ประวัติ/เหรียญ) และเลื่อนซ้ายขวาได้ถ้ามี 5 แท็บ
+- `/profile` redirect ไปโปรไฟล์ของตัวเอง (เก็บ `?tab=` ที่ถูกต้องไว้) ไม่ล็อกอินไป `/login` ส่วน `/bookmarks` และ `/history` redirect ไป `/profile?tab=bookmarks|history` หน้าเติมเหรียญยังเป็น `/coins` (ประวัติเหรียญใช้ `components/profile/CoinHistory.tsx` ร่วมกับแท็บกระเป๋าเหรียญ)
+- **แก้ไขโปรไฟล์** ที่ `/profile/edit` (ทุกคน): รูปโปรไฟล์ รูปปก ชื่อที่แสดง (1-100) @username แนะนำตัว ลิงก์โซเชียล → `PATCH /api/profile` (ส่งเฉพาะช่องที่เปลี่ยน) ตรวจทั้งหมดใน `updateProfile()` (`lib/profile.ts`) ซึ่ง `PATCH /api/author/public-profile` แบบเก่าก็ใช้ (จำกัดเฉพาะนักเขียนเหมือนเดิม) แท็บ "โปรไฟล์สาธารณะ" ใน `/author` แค่ลิงก์มาหน้านี้ บันทึกแล้วส่ง event `loveread:profile-updated` ให้ Navbar โหลดชื่อ/รูปใหม่
+- **@username ตรวจขณะพิมพ์**: กฎรูปแบบเช็กใน client ทันที (`usernameProblem()` ใน `lib/username.ts`) แล้วถาม `GET /api/profile/username?username=` (`checkUsername()`) หลังหยุดพิมพ์ 400ms → `{ available, taken, current, error }` ห้ามใช้ชื่อใน `RESERVED_USERNAMES` (เช่น `edit` ซึ่งชนกับ `/profile/edit`) และห้ามตั้งชื่อขึ้นต้น `user_` (สงวนไว้ให้ชื่ออัตโนมัติ ยกเว้นชื่อปัจจุบันของตัวเอง) เช็ก "มีคนใช้แล้ว" (409) ก่อน "สงวนไว้" (400) และ UNIQUE index เป็นตัวตัดสินสุดท้ายถ้าบันทึกพร้อมกัน
 - `users.username`: a-z 0-9 _ ยาว 3-30 (`USERNAME_PATTERN` ไม่มี `-` จึงไม่ชนกับ UUID) ค่าเริ่มต้นคือ `user_<hex จาก id>` (`defaultUsername()`) **ไม่สร้างจากอีเมล** เพราะจะเปิดเผยอีเมล ตั้งให้ตอนสมัคร (`ensureUsername()`), ใน `create_admin.ts` และใน migration ผู้ใช้ที่ยังไม่มี username ลิงก์จะใช้ id แทน
 - ลิงก์ชื่อนักเขียนทุกที่ใช้ `components/AuthorLink.tsx` / `profileHref()` (query ต้องคืน `author_username` และ `author_id`) ใน `StoryCard` และแถวของ `/ranking` ชื่อนักเขียนเป็นลิงก์แยกจากลิงก์เรื่อง (ห้ามซ้อน `<a>`: การ์ดแยกลิงก์ปก/ชื่อเรื่อง ส่วนแถวอันดับใช้ stretched link `after:absolute after:inset-0` + `relative z-10`) ในคอมเมนต์ลิงก์เฉพาะชื่อเจ้าของเรื่อง (API ส่ง `author_username` เฉพาะตอน `is_author`)
-- นักเขียนแก้ username, รูปปก (`/uploads/` เท่านั้น ไม่มีใช้ `public/images/default-cover.svg`), แนะนำตัว (plain text ≤1000 แสดงด้วย `whitespace-pre-line`) และลิงก์โซเชียล (`SOCIAL_PLATFORMS`, เก็บ JSON ใน `users.social_links`, รับเฉพาะ http(s) ผ่าน `isSafeUrl()`, แสดงด้วย `rel="noopener noreferrer nofollow ugc"`) ที่ `/author?tab=public-profile` (`components/author/PublicProfilePanel.tsx`, `GET/PATCH /api/author/public-profile`) ส่วนชื่อและรูปโปรไฟล์แก้ที่ `/profile`
+- รูปโปรไฟล์/รูปปกต้องเป็น `/uploads/` เท่านั้น (ไม่มีปกใช้ `public/images/default-cover.svg`) แนะนำตัวเป็น plain text ≤1000 แสดงด้วย `whitespace-pre-line` ลิงก์โซเชียล (`SOCIAL_PLATFORMS`, เก็บ JSON ใน `users.social_links`) รับเฉพาะ http(s) ผ่าน `isSafeUrl()` แสดงด้วย `rel="noopener noreferrer nofollow ugc"`
+- ปกเรื่องในแท็บผลงาน บุ๊กมาร์ก และประวัติใช้ `StoryCover` (ไม่มีปก = ปกอัตโนมัติแบบหน้าแรก, 18+ เบลอ) ตัว `getAuthorWorks()` และ `/api/bookmarks`, `/api/history` จึงคืน `is_mature` ด้วย
 - **ติดตาม**: ตาราง `follows`, `POST/DELETE /api/authors/[id]/follow` (ซ้ำได้ ไม่ error) ห้ามติดตามตัวเอง ผู้ติดตามได้แจ้งเตือน `NEW_STORY` ตอนเรื่องเปลี่ยนจาก DRAFT เป็น PUBLISHED ครั้งแรก (`notifyNewStory()` เช็กว่าเคยส่งลิงก์นี้แล้วหรือยัง) และ `NEW_CHAPTER` รวมกับคนที่บุ๊กมาร์ก (ได้ครั้งเดียวแม้เป็นทั้งสองอย่าง)
 - **สนับสนุน**: `POST /api/authors/[id]/support` `{ amount, message? }` → `supportAuthor()` ใน `lib/coins.ts` (lock แถวผู้ส่ง `FOR UPDATE` แบบเดียวกับ `purchaseItem()`) 1-10,000 เหรียญ ข้อความ ≤200 ตัว (plain text) จำกัด 5 ครั้งต่อนาทีต่อคน (429) เหรียญไม่พอ 402 บันทึกในตาราง `supports` พร้อม `author_earning` = จำนวน × `author_share_percent` ณ ตอนส่ง แล้วแจ้งเตือน `SUPPORT` ถึงนักเขียน (มีชื่อผู้ส่งและข้อความ) ค่าคงที่ฝั่ง client ใน `components/profile/SupportDialog.tsx` ต้องตรงกับ `SUPPORT_MIN/MAX/MESSAGE_MAX`
 - **แฟนตัวยง** (`getTopFans()`): รวม `purchases.price` + `supports.amount` ต่อผู้ใช้ 10 อันดับ ไม่นับ `BANNED` และตัวนักเขียนเอง เท่ากันให้คนที่จ่ายก่อนขึ้นก่อน **ไม่แสดงจำนวนเงิน** ในหน้าเว็บ 3 อันดับแรกใช้สีทอง/เงิน/ทองแดงเดียวกับ `/ranking`
 - ผลงาน (`getAuthorWorks()`): เฉพาะ PUBLISHED แท็บ `?tab=novels|comics` มีจำนวนตอน วิว จำนวนคอมเมนต์ (ไม่นับ `BANNED`) หมวดหมู่ และป้าย "จบแล้ว" จาก `novels/comics.is_completed` (ติ๊กในฟอร์ม `WorkFormModal`, API รับ `isCompleted: boolean`) ป้ายนี้แสดงบน `StoryCard` และหน้าเรื่องด้วย
-- เทสต์อยู่ใน `tests/e2e/profiles.test.mjs`
+- เทสต์อยู่ใน `tests/e2e/profiles.test.mjs` (นักเขียน ติดตาม สนับสนุน แฟนตัวยง) และ `profile-page.test.mjs` (หน้าเดียวกันทุกคน แท็บของเจ้าของ แก้ไขโปรไฟล์ เช็ก username)
 
 **หมวดหมู่** (`lib/categories.ts`, ตาราง `novel_categories`/`comic_categories`):
 - เรื่องละ 0-5 หมวด (`MAX_CATEGORIES`) เก็บลำดับที่ผู้เขียนเลือกใน `sort_order` หมวดแรกคือหมวดหลัก
@@ -201,7 +207,7 @@ npx tsx scripts/add_moderation.ts # ตรวจเนื้อหาด้ว�
 **ประวัติการอ่าน** (`lib/readingHistory.ts`, ตาราง `reading_history`):
 - 1 แถวต่อคนต่อเรื่อง เก็บบท/ตอนล่าสุดที่เปิด (`chapter_id`/`episode_id`) และ `read_at` (`TIMESTAMP(3)`)
 - `recordRead()` ถูกเรียกในหน้า `app/read/[chapterId]` และ `app/comic/[id]/read/[episodeId]` เฉพาะเมื่อผ่าน `canAccess()` แล้ว (หน้า paywall ไม่บันทึก) ถ้า error จะ log แล้วยังให้อ่านได้ตามปกติ
-- `GET /api/history?page=` (ล่าสุดก่อน หน้าละ 20) ซ่อนเรื่องที่ไม่ได้ `PUBLISHED` ยกเว้นเรื่องของตัวเอง (กฎเดียวกับ bookmarks) และ `DELETE /api/history` (`{ content_type, content_id }` หรือ `{ all: true }`) หน้า UI คือ `/history` ซึ่งมีปุ่ม "อ่านต่อ"
+- `GET /api/history?page=` (ล่าสุดก่อน หน้าละ 20) ซ่อนเรื่องที่ไม่ได้ `PUBLISHED` ยกเว้นเรื่องของตัวเอง (กฎเดียวกับ bookmarks) และ `DELETE /api/history` (`{ content_type, content_id }` หรือ `{ all: true }`) หน้า UI คือแท็บ "ประวัติการอ่าน" ในโปรไฟล์ของตัวเอง (`/history` redirect ไป) ซึ่งมีปุ่ม "อ่านต่อ"
 - ถ้าบทถูกลบ แถวยังอยู่แต่ `chapter_id` เป็น NULL (ปุ่มอ่านต่อจะพาไปหน้าเรื่องแทน) `novelsRead`/`comicsRead` ใน `/api/profile` นับจากตารางนี้
 - `recordRead()` บันทึกลงตาราง `item_reads` ด้วย (1 แถวต่อคนต่อบท/ตอน ไว้ทำเครื่องหมาย "อ่านแล้ว") ทั้งสองตารางแยก try/catch กัน การลบประวัติ (`DELETE /api/history`) ลบ `item_reads` ของเรื่องนั้น/ทั้งหมดด้วย ผ่าน `clearReadItems()`
 
@@ -266,11 +272,17 @@ npx tsx scripts/add_moderation.ts # ตรวจเนื้อหาด้ว�
 - **ไฟล์ใน `public/uploads/` เคยถูก track ใน git** จนถึง commit `627e644` ซึ่ง `git rm` ออกไป ทำให้ไฟล์ในเครื่องหายด้วย (ปก/รูปเก่าขึ้น 404) การ checkout commit ก่อนหน้านั้นแล้วกลับมาก็ทำให้หายได้อีก กู้คืนได้ด้วย `git archive 627e644^ public/uploads | tar -x --skip-old-files` (ไฟล์ที่อัปโหลดหลังจากนั้นไม่อยู่ใน git ต้องสำรองเอง)
 - `npm run lint` ต้องไม่มีทั้ง error และ warning (`npm run build` รัน lint ด้วย ถ้ามี error จะ build ไม่ผ่าน) ห้ามใช้ `any` ให้ใช้ type จริงหรือ `RowDataPacket` แทน ฟังก์ชันที่เรียกใน `useEffect` ให้ห่อด้วย `useCallback` แล้วใส่ใน dependency
 - ข้อความทั้งหมดใน UI (รวม toast, confirm, title, placeholder และข้อความ error จาก API ที่แสดงให้ผู้ใช้เห็น) เป็นภาษาไทย ค่า enum ที่แสดงในตารางให้แปลงผ่าน label map (เช่น `ROLE_LABEL` ใน `app/admin/page.tsx`) ไม่แสดงค่าดิบ
-- **อย่ารัน `npm run build` ขณะที่ `npm run dev` เปิดอยู่** เพราะทั้งคู่เขียนลง `.next/` ให้ปิด dev ก่อน แล้วลบ `.next` ก่อนเปิด dev ใหม่
+- **dev server แก้ไฟล์ไปหลายรอบแล้วหน้าอ่านขึ้น 500 `useToast must be used inside <ToastProvider>` สลับกับปกติ** (เจอ 2026-10-29): Turbopack ถือ `components/Toast.tsx` ไว้สองชุดหลัง hot reload ไม่ใช่บั๊กในโค้ด แก้ด้วยการปิด dev ลบ `.next` แล้วเปิดใหม่ ก่อนรันเทสต์ทั้งชุดหลังแก้ไฟล์เยอะๆ ควรทำแบบนี้
+- **อย่ารัน `npm run build` ขณะที่ `npm run dev` เปิดอยู่**เพราะทั้งคู่เขียนลง `.next/` ให้ปิด dev ก่อน แล้วลบ `.next` ก่อนเปิด dev ใหม่
 
 ## งานที่เหลือ (อัปเดตล่าสุด 2026-10-29)
 
 **สถานะ branch**: ทุกอย่างอยู่บน `main` และ push ขึ้น `origin/main` แล้ว ไม่มีงานค้างในเครื่อง
+
+**งานวันที่ 2026-10-29** (push แล้วทั้งหมด): ตรวจเนื้อหาด้วย Gemini + คิวตรวจของแอดมิน + ยืนยันอายุ 18+ (`7b2f91f`) และหน้าโปรไฟล์แบบเดียวกันทุกคน + หน้าแก้ไขโปรไฟล์ (commit ถัดมา) เทสต์ผ่าน 184/184 (รวม 2 เทสต์ที่เรียก Gemini จริง)
+- **หน้าโปรไฟล์ตรวจด้วย Chrome headless แล้ว** (โปรไฟล์ตัวเอง/คนอื่น/นักเขียน, แท็บบุ๊กมาร์ก/ประวัติ/เหรียญ, หน้าแก้ไข × 320/390/1280px × สว่าง/มืด ไม่มีหน้าไหนเลื่อนซ้ายขวา) แต่ยังไม่ได้ลองอัปโปรไฟล์/ปกจริงผ่านหน้าเว็บ และยังไม่ได้ลองช่อง @username แบบพิมพ์จริงในเบราว์เซอร์ (API และกฎผ่านเทสต์แล้ว)
+- **ยังไม่ได้ตรวจในเบราว์เซอร์**: หน้า "คิวตรวจเนื้อหา" ในแอดมิน หน้ายืนยันอายุ 18+ และตัวเลือกระดับเนื้อหา (ทั่วไป/18+) ในฟอร์มสร้างเรื่อง รวมถึงหน้า `/admin` ที่ปรับเมื่อ 2026-10-28
+- สคริปต์ถ่ายภาพหน้าจอด้วย headless Chrome อยู่ใน scratchpad ชั่วคราว ไม่ได้เก็บใน repo วิธีคือ: เปิด `chrome.exe --headless=new --remote-debugging-port=9334 --user-data-dir=<โฟลเดอร์ชั่วคราว>` (ใช้เวลาเปิดเกิน 10 วินาที ต้องรอ) สร้างผู้ใช้ด้วย `createUsers()` ใส่ cookie ของ `Client` ด้วย `Network.setCookie` แล้ว `Page.captureScreenshot` และวัด `scrollWidth - innerWidth` เพื่อหาการเลื่อนซ้ายขวา จบแล้ว `cleanupUsers()`
 
 **งานวันที่ 2026-10-28** (push แล้วทั้งหมด): ปรับหน้าแอดมิน (`752c2c2`), หน้าแรกใหม่ + ป้าย 18+ (`f8a17bc`), ปุ่มเลือกตอนเป็นแผงข้าง/ล่าง (`747f74c`), ตั้งค่าการอ่าน Aa (`52aa1e5`) เทสต์ผ่าน 152/152
 - Chrome extension เชื่อมต่อไม่ได้ทั้งวัน หน้าแรก ปุ่มเลือกตอน และแผง Aa จึงตรวจด้วย Chrome headless ผ่าน DevTools Protocol แทน (จอคอม 1280 / แท็บเล็ต 768 / มือถือ 390 และ 320 × สว่าง/มืด, กดปุ่มจริง, วัดตำแหน่ง/ค่า CSS จริง) วิธีจดไว้ในหัวข้อ "หน้าแรก" สคริปต์ที่ใช้อยู่ใน scratchpad ชั่วคราว ไม่ได้เก็บใน repo
@@ -304,7 +316,7 @@ npx tsx scripts/add_moderation.ts # ตรวจเนื้อหาด้ว�
    npx tsx scripts/add_moderation.ts          # ตรวจเนื้อหาด้วย API + ยืนยันอายุ 18+
    ```
    DB ที่เก่ากว่านั้นให้รันสคริปต์ก่อนหน้าตามลำดับใน README ก่อน ส่วน DB ใหม่ใช้ `schema.sql` ได้เลยไม่ต้องรันพวกนี้
-3. ลบ `.next` แล้วเปิด `npm run dev` ใหม่ จากนั้นรัน `npm run test:e2e` เพื่อเช็ก (176 เทสต์ ต้องผ่านทั้งหมด ยกเว้น 2 เทสต์ใน `moderation-gemini.test.mjs` ที่อาจ skip เมื่อ Gemini ไม่ว่าง)
+3. ลบ `.next` แล้วเปิด `npm run dev` ใหม่ จากนั้นรัน `npm run test:e2e` เพื่อเช็ก (184 เทสต์ ต้องผ่านทั้งหมด ยกเว้น 2 เทสต์ใน `moderation-gemini.test.mjs` ที่อาจ skip เมื่อ Gemini ไม่ว่าง)
 
 **ผู้ดูแลต้องทำเอง**:
 - กรอก "ข้อมูลการชำระเงิน" ที่ `/admin` → ตั้งค่า (เครื่องนี้ยังเป็นข้อความตัวอย่างอยู่) ถ้ายังไม่กรอก ผู้อ่านจะเติมเหรียญไม่ได้
@@ -314,20 +326,21 @@ npx tsx scripts/add_moderation.ts # ตรวจเนื้อหาด้ว�
 - ตอน deploy: ให้ reverse proxy (เช่น nginx) ตั้ง `x-forwarded-for`ไม่งั้น limit ต่อ IP ของการล็อกอินและการสมัครจะไม่ทำงาน (IP เป็น `'unknown'`)
 
 **งานพัฒนา** (เรียงตามความสำคัญ ข้อ 1-2 คือหัวข้อในขอบเขตโปรเจกต์ที่ยังไม่ครบ ดูตารางในหัวข้อถัดไป):
-1. **ข้อ 12 ส่วนที่ยังไม่ทำ** (ทำบท/ตอน + ยืนยันอายุแล้ว 2026-10-29): ตรวจคอมเมนต์ ชื่อเรื่อง/เรื่องย่อ และรูปปกด้วย API ยังไม่ได้ทำ ถ้าทำให้ใช้ `analyse()` ใน `lib/moderation.ts` ซ้ำ ยังไม่ได้ตรวจหน้า "คิวตรวจเนื้อหา", หน้ายืนยันอายุ และตัวเลือกระดับเนื้อหาในฟอร์มด้วยเบราว์เซอร์ (ผ่าน lint/tsc/e2e แล้ว)
+1. **ข้อ 12 ส่วนที่ยังไม่ทำ** (ทำบท/ตอน + ยืนยันอายุแล้ว 2026-10-29): ตรวจคอมเมนต์ ชื่อเรื่อง/เรื่องย่อ และรูปปกด้วย API ยังไม่ได้ทำ ถ้าทำให้ใช้ `analyse()` ใน `lib/moderation.ts` ซ้ำ และยังไม่ได้ตรวจหน้าที่เกี่ยวข้องในเบราว์เซอร์ (ดูงานวันที่ 2026-10-29 ข้างบน)
 2. **ข้อ 14 เก็บงาน UX** (⚠️): งานในโค้ดเสร็จแล้ว (2026-10-27: `/admin` บนมือถือ, เลิกใช้ `prompt()`, error จาก API เป็นภาษาไทย, ตรวจการแสดงผลทุกหน้า) เหลือผลทดสอบกับผู้ใช้จริง (เช่น แบบสอบถาม SUS) สำหรับรายงาน
 3. **ลบแจ้งเตือนเก่า**: ตาราง `notifications` ยังไม่มีการลบอัตโนมัติ ถ้าใช้งานนานควรลบที่เก่ากว่า ~90 วัน (เช่นใน `notify()` นานๆ ครั้ง หรือ cron)
 4. **dependency ที่มีช่องโหว่** (อัปเกรด next เป็น 15.5.28 และรัน `npm audit fix` แล้วเมื่อ 2026-10-21): ที่เหลือแก้ได้ทางเดียวคือขึ้น Next 16 (breaking) ได้แก่ `postcss` ที่ next ฝังมาเอง (ใช้ตอน build CSS ของเราเอง ไม่ได้รับ input จากผู้ใช้) และ `braces`/`micromatch`/`fast-glob` ใต้ `eslint-config-next` (dev เท่านั้น) อย่าใช้ `npm audit fix --force` เพราะจะอัปเกรดแบบ breaking
 5. **object storage**: จำเป็นเฉพาะถ้าจะ deploy บน Vercel/serverless ตอนนี้ไฟล์ทั้งหมดเขียนลงดิสก์ (`lib/upload.ts` เป็นจุดเดียวที่ต้องแก้)
 6. **ความเร็ว/ความแม่นของการตรวจ**: นักเขียนที่ยังไม่ได้รับความเชื่อถือต้องรอผลก่อนได้ response ปกติ 2-20 วินาที แต่วันที่ทดสอบ (2026-10-29) Gemini ช้าเป็นช่วงๆ บางครั้งถึง 45 วินาทีแล้วหมดเวลา (บท/ตอนจะไปรอแอดมิน) ถ้าเป็นปัญหาให้เปลี่ยนเป็นตรวจเบื้องหลังแล้วให้หน้าจัดการตอนแสดง "กำลังตรวจ" ใช้ `gemini-3.1-flash-lite` เพราะตอบเร็วที่สุดตอนทดสอบ โมเดลใหญ่กว่า (`gemini-3.8-flash`) ช้า 15-90 วินาทีหรือได้ 503ถ้าต้องการความแม่นกว่าให้ตั้ง `GEMINI_MODEL` แล้วลองกับเนื้อหาจริง เรื่องที่ตั้งเป็น 18+ ไปแล้วนักเขียนเปลี่ยนกลับเองไม่ได้ ต้องให้แอดมินแก้ใน DB (ยังไม่มีปุ่ม)
-7. **เล็กน้อยที่เจอระหว่างทำ** (ยังไม่ได้แก้): แถบหมวดหมู่ใต้แบนเนอร์และแถวต่างๆ ไม่มีตัวบอกว่าเลื่อนได้บนมือถือนอกจากการ์ดที่โผล่ขอบขวา, แผง Aa ยังไม่มีในหน้าอ่านการ์ตูน (ตามที่สั่ง), อันดับยังเป็นแบบรวมตลอดกาล (รายสัปดาห์ต้องมีตารางวิวรายวัน)
+7. **หน้าโปรไฟล์ที่อาจทำต่อ**: ชื่อในรายการแฟนตัวยงยังไม่ลิงก์ไปโปรไฟล์ของคนนั้น (ตอนนี้ผู้อ่านมีโปรไฟล์แล้ว ทำได้ แต่ต้องคิดเรื่องความเป็นส่วนตัวก่อน) ผู้ใช้ทุกคนใน DB เครื่องนี้ยังเป็น `user_xxxx` จึงเห็นกล่องแนะนำตั้งชื่อ ถ้าจะพรีเซนต์ควรตั้ง @username ให้บัญชีตัวอย่างก่อน รูปที่อัปโหลดแล้วเปลี่ยนใหม่ ไฟล์เก่าใน `public/uploads/` ไม่ถูกลบ
+8. **เล็กน้อยที่เจอระหว่างทำ** (ยังไม่ได้แก้): แถบหมวดหมู่ใต้แบนเนอร์และแถวต่างๆ ไม่มีตัวบอกว่าเลื่อนได้บนมือถือนอกจากการ์ดที่โผล่ขอบขวา, แผง Aa ยังไม่มีในหน้าอ่านการ์ตูน (ตามที่สั่ง), อันดับยังเป็นแบบรวมตลอดกาล (รายสัปดาห์ต้องมีตารางวิวรายวัน)
 
 ## ตรวจตามขอบเขตโปรเจกต์ที่เสนออาจารย์ (ตรวจจากโค้ด 2026-10-23)
 
 | # | หัวข้อ | สถานะ | หน้าที่ใช้โชว์ | ไฟล์หลัก |
 |---|---|---|---|---|
 | 1 | อ่านนิยายและสลับตอน | ✅ | `/novel/[id]`, `/read/[chapterId]`, `/comic/[id]/read/[episodeId]` | `app/read/[chapterId]/page.tsx`, `app/comic/[id]/read/[episodeId]/page.tsx` |
-| 2 | ที่คั่นหน้าและประวัติการอ่าน | ✅ | `/bookmarks`, `/history` | `api/bookmarks`, `api/history`, `lib/readingHistory.ts`, `components/BookmarkButton.tsx` |
+| 2 | ที่คั่นหน้าและประวัติการอ่าน | ✅ | `/profile?tab=bookmarks`, `/profile?tab=history` |`api/bookmarks`, `api/history`, `lib/readingHistory.ts`, `components/BookmarkButton.tsx` |
 | 3 | เติมเหรียญ | ✅ | `/coins` → `/admin?tab=payments` | `api/coins/topup`, `api/admin/topups/[id]`, `components/admin/PaymentsPanel.tsx` |
 | 4 | กระเป๋าเหรียญ | ✅ | `/coins`, `/author?tab=wallet` | `api/coins`, `components/author/WalletPanel.tsx` |
 | 5 | ซื้อตอนด้วยเหรียญ | ✅ | `/read/[chapterId]` (ตอนที่มีราคา) | `lib/coins.ts` (`purchaseItem`, `canAccess`), `components/Paywall.tsx`, `api/purchases` |
@@ -339,7 +352,7 @@ npx tsx scripts/add_moderation.ts # ตรวจเนื้อหาด้ว�
 | 11 | จัดอันดับและแนะนำ | ✅ (อันดับรวมตลอดกาล) | `/ranking`, `/` (แนะนำสำหรับคุณ + ยอดนิยม), ล่างหน้า `/novel/[id]` (เรื่องที่คล้ายกัน), `/search` (เรียงตาม) | `lib/ranking.ts`, `app/ranking/page.tsx`, `components/StoryCard.tsx` |
 | 12 | ตรวจสอบเนื้อหาเบื้องต้นด้วย API | ✅ (บท/ตอน + ยืนยันอายุ) | ลงตอนใหม่ที่ `/author` → `/admin?tab=moderation`, เปิดเรื่อง 18+ | `lib/moderation.ts`, `lib/ageGate.ts`, `components/admin/ModerationPanel.tsx`, `components/AgeGate.tsx` |
 | 13 | รักษาความปลอดภัย | ✅ | `/login` (ล็อกอินผิดเกิน 5 ครั้ง), เปิดตอนที่ยังไม่ซื้อ | `lib/auth.ts`, `lib/loginThrottle.ts`, `lib/upload.ts`, `lib/visibility.ts`, `tests/e2e/security.test.mjs` |
-| 14 | ทดสอบระบบและปรับ UX/UI | ⚠️ | `npm run test:e2e` (176 เทสต์) | `tests/e2e/` |
+| 14 | ทดสอบระบบและปรับ UX/UI | ⚠️ | `npm run test:e2e` (184 เทสต์) | `tests/e2e/` |
 
 **สิ่งที่ขาด**:
 - ~~ยอดวิวไม่เคยเพิ่ม~~ **แก้แล้ว 2026-10-23** (ดูหัวข้อ "ยอดวิว" ในสถาปัตยกรรม) ยอดวิวเก่าก่อนวันนั้นของนิยาย/บท/การ์ตูนยังเป็น 0 เพราะไม่มีข้อมูลย้อนหลัง
