@@ -308,6 +308,20 @@ CREATE TABLE IF NOT EXISTS item_reads (
     FOREIGN KEY (episode_id) REFERENCES comic_episodes(id) ON DELETE CASCADE
 );
 
+-- Views per story per day (lib/views.ts), for the daily/weekly/monthly periods on /ranking
+CREATE TABLE IF NOT EXISTS story_views_daily (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    view_date DATE NOT NULL,
+    novel_id VARCHAR(36),
+    comic_id VARCHAR(36),
+    views INT NOT NULL DEFAULT 0,
+    UNIQUE KEY uniq_novel_date (novel_id, view_date),
+    UNIQUE KEY uniq_comic_date (comic_id, view_date),
+    INDEX idx_view_date (view_date),
+    FOREIGN KEY (novel_id) REFERENCES novels(id) ON DELETE CASCADE,
+    FOREIGN KEY (comic_id) REFERENCES comics(id) ON DELETE CASCADE
+);
+
 -- In-app notifications (lib/notifications.ts). message/link are written by the server; type is whitelisted in code
 CREATE TABLE IF NOT EXISTS notifications (
     id VARCHAR(36) PRIMARY KEY,

@@ -84,6 +84,40 @@ test('/ranking orders by the chosen stat and skips drafts', async () => {
     assert.equal((await anon.get('/ranking?type=bad&sort=bad')).status, 200, 'bad params fall back to defaults');
 });
 
+test('/ranking periods only count activity inside the period', async () => {
+    const page = async (sort, period) => {
+        const res = await anon.get(`/ranking?type=novel&sort=${sort}&period=${period}`);
+        assert.equal(res.status, 200);
+        return res.text;
+    };
+    const dated = (days) => `DATE_SUB(CURDATE(), INTERVAL ${days} DAY)`;
+    // 10 days ago is only inside the month, 3 days ago also the week, today all three
+    await db.query(`INSERT INTO story_views_daily (view_date, novel_id, views) VALUES
+        (${dated(10)}, ?, 900000), (${dated(3)}, ?, 700000), (CURDATE(), ?, 500000)`, [c.a, c.b, c.d]);
+    const ranks = async (sort, period) => order(await page(sort, period), ['a', 'b', 'd']);
+    assert.deepEqual(await ranks('views', 'day'), ['d']);
+    assert.deepEqual(await ranks('views', 'week'), ['b', 'd']);
+    assert.deepEqual(await ranks('views', 'month'), ['a', 'b', 'd']);
+    assert.ok((await page('views', 'week')).includes('700,000'), 'rows show the period views, not the total');
+    assert.ok(!(await page('views', 'week')).includes((BIG - 2).toLocaleString()));
+
+    await db.query(`UPDATE purchases SET created_at = ${dated(3)} WHERE chapter_id = ?`, [c.chB]);
+    assert.deepEqual(await ranks('sales', 'day'), []);
+    assert.deepEqual(await ranks('sales', 'week'), ['b']);
+    await db.query(`UPDATE bookmarks SET created_at = ${dated(10)} WHERE novel_id = ?`, [c.d]);
+    assert.deepEqual(await ranks('bookmarks', 'week'), []);
+    assert.deepEqual(await ranks('bookmarks', 'month'), ['d']);
+
+    // Only the rating given in the period counts towards the average
+    await db.query(`UPDATE ratings SET updated_at = ${dated(10)} WHERE novel_id = ? AND user_id = ?`, [c.b, ids.other]);
+    await db.query(`UPDATE ratings SET updated_at = ${dated(10)} WHERE novel_id = ?`, [c.a]);
+    assert.deepEqual(await ranks('rating', 'week'), ['b']);
+    assert.ok((await page('rating', 'week')).includes('5.0'), 'score 5 only, the older 4 is out of the week');
+
+    assert.equal((await anon.get('/ranking?period=bad')).status, 200, 'bad period falls back to all time');
+    assert.deepEqual(order((await anon.get('/ranking?type=novel&sort=views&period=all')).text, ['a', 'b', 'd']), ['a', 'd', 'b'], 'all time is unchanged');
+});
+
 test('detail page shows similar stories from the same category first', async () => {
     const html = (await anon.get(`/novel/${c.a}`)).text;
     assert.ok(html.includes('เรื่องที่คล้ายกัน'));

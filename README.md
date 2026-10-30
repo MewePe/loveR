@@ -65,6 +65,7 @@ npx tsx scripts/add_author_profiles.ts       # โปรไฟล์นักเ
 npx tsx scripts/add_admin_tools.ts           # แบนพร้อมเหตุผล ปรับยอดเหรียญ และประวัติการทำงานของแอดมิน
 npx tsx scripts/add_mature_flag.ts           # ป้าย 18+ ของนิยาย/การ์ตูน
 npx tsx scripts/add_reader_settings.ts       # ตั้งค่าการอ่าน (ปุ่ม Aa) ของผู้ใช้ที่ล็อกอิน
+npx tsx scripts/add_daily_views.ts           # ยอดวิวรายวัน (อันดับรายวัน/สัปดาห์/เดือน)
 ```
 
 ### รัน

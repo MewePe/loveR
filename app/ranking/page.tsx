@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Trophy } from 'lucide-react';
 import AuthorLink from '@/components/AuthorLink';
 import { isContentType } from '@/lib/contentRef';
-import { isSortKey, listStories, RANKING_SORTS, SORTS, StoryRow } from '@/lib/ranking';
+import { isRankingPeriod, isSortKey, listRanking, RANKING_PERIODS, RANKING_SORTS, RankingPeriod, SORTS, StoryRow } from '@/lib/ranking';
 
 const RANKING_SIZE = 50;
 
@@ -23,12 +23,15 @@ function statLine(story: StoryRow) {
     ];
 }
 
-export default async function RankingPage({ searchParams }: { searchParams: Promise<{ type?: string; sort?: string }> }) {
+export default async function RankingPage({ searchParams }: { searchParams: Promise<{ type?: string; sort?: string; period?: string }> }) {
     const params = await searchParams;
     const type = isContentType(params.type) ? params.type : 'novel';
     const sort = isSortKey(RANKING_SORTS, params.sort) ? params.sort : 'views';
-    const stories = await listStories(type, { sort, limit: RANKING_SIZE });
+    const period = isRankingPeriod(params.period) ? params.period : 'all';
+    const stories = await listRanking(type, sort, period, RANKING_SIZE);
     const style = TYPES[type];
+    const href = (next: { type?: string; sort?: string; period?: string }) =>
+        `/ranking?type=${next.type ?? type}&sort=${next.sort ?? sort}&period=${next.period ?? period}`;
 
     return (
         <main className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
@@ -41,7 +44,7 @@ export default async function RankingPage({ searchParams }: { searchParams: Prom
                     {(Object.keys(TYPES) as (keyof typeof TYPES)[]).map((key) => (
                         <Link
                             key={key}
-                            href={`/ranking?type=${key}&sort=${sort}`}
+                            href={href({ type: key })}
                             className={`px-5 py-2 rounded-full font-medium transition ${key === type ? TYPES[key].active : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border dark:border-gray-700'}`}
                         >
                             {TYPES[key].label}
@@ -49,11 +52,11 @@ export default async function RankingPage({ searchParams }: { searchParams: Prom
                     ))}
                 </div>
 
-                <div className="flex gap-2 mb-8 overflow-x-auto pb-1">
+                <div className="flex gap-2 mb-2 overflow-x-auto pb-1">
                     {RANKING_SORTS.map((key) => (
                         <Link
                             key={key}
-                            href={`/ranking?type=${type}&sort=${key}`}
+                            href={href({ sort: key })}
                             className={`shrink-0 px-4 py-1.5 rounded-lg text-sm font-medium transition ${key === sort ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800'}`}
                         >
                             {SORTS[key].label}
@@ -61,8 +64,23 @@ export default async function RankingPage({ searchParams }: { searchParams: Prom
                     ))}
                 </div>
 
+                <div className="flex gap-2 mb-2 overflow-x-auto pb-1">
+                    {(Object.keys(RANKING_PERIODS) as RankingPeriod[]).map((key) => (
+                        <Link
+                            key={key}
+                            href={href({ period: key })}
+                            className={`shrink-0 px-4 py-1.5 rounded-lg text-sm font-medium transition ${key === period ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800'}`}
+                        >
+                            {RANKING_PERIODS[key].label}
+                        </Link>
+                    ))}
+                </div>
+                <p className="mb-6 text-sm text-gray-500 dark:text-gray-400">นับจาก{RANKING_PERIODS[period].note}</p>
+
                 {stories.length === 0 ? (
-                    <div className="text-center py-16 text-gray-500 dark:text-gray-400">ยังไม่มี{style.label}</div>
+                    <div className="text-center py-16 text-gray-500 dark:text-gray-400">
+                        {period === 'all' ? `ยังไม่มี${style.label}` : `ยังไม่มีข้อมูลของ${RANKING_PERIODS[period].note}`}
+                    </div>
                 ) : (
                     <ol className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700 overflow-hidden">
                         {stories.map((story, index) => (

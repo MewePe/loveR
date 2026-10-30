@@ -49,6 +49,15 @@ test('reading an episode counts for the episode and its comic', async () => {
     assert.equal(await views('comics', c.comic), 1);
 });
 
+test('views are also counted per story per day', async () => {
+    const daily = async (column, id) => {
+        const [rows] = await db.query(`SELECT views, view_date = CURDATE() AS today FROM story_views_daily WHERE ${column} = ?`, [id]);
+        return rows.map((r) => [Number(r.views), Number(r.today)]);
+    };
+    assert.deepEqual(await daily('novel_id', c.novel), [[3, 1]], 'one row for the day, not one per view');
+    assert.deepEqual(await daily('comic_id', c.comic), [[1, 1]]);
+});
+
 test('paywall pages do not count', async () => {
     assert.equal((await users.reader.get(`/read/${c.paid}`)).status, 200, 'paywall page');
     assert.equal((await users.reader.get(`/comic/${c.comic}/read/${c.paidEp}`)).status, 200, 'paywall page');

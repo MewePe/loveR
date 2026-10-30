@@ -103,6 +103,7 @@ model comics {
   comments       comments[]
   ratings        ratings[]
   reading_history reading_history[]
+  story_views_daily story_views_daily[]
   comic_categories comic_categories[]
   users          users?           @relation(fields: [author_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "comics_ibfk_1")
   categories     categories?      @relation(fields: [category_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "comics_ibfk_2")
@@ -150,6 +151,7 @@ model novels {
   comments    comments[]
   ratings     ratings[]
   reading_history reading_history[]
+  story_views_daily story_views_daily[]
   novel_categories novel_categories[]
   users       users?         @relation(fields: [author_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "novels_ibfk_1")
   categories  categories?    @relation(fields: [category_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "novels_ibfk_2")
@@ -367,6 +369,20 @@ model reading_history {
   @@index([comic_id], map: "comic_id")
   @@index([chapter_id], map: "chapter_id")
   @@index([episode_id], map: "episode_id")
+}
+
+model story_views_daily {
+  id        BigInt   @id @default(autoincrement())
+  view_date DateTime @db.Date
+  novel_id  String?  @db.VarChar(36)
+  comic_id  String?  @db.VarChar(36)
+  views     Int      @default(0)
+  novels    novels?  @relation(fields: [novel_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "story_views_daily_ibfk_1")
+  comics    comics?  @relation(fields: [comic_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "story_views_daily_ibfk_2")
+
+  @@unique([novel_id, view_date], map: "uniq_novel_date")
+  @@unique([comic_id, view_date], map: "uniq_comic_date")
+  @@index([view_date], map: "idx_view_date")
 }
 
 model item_reads {
