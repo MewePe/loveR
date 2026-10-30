@@ -5,6 +5,7 @@ import { RowDataPacket } from 'mysql2';
 import { canAccess, AccessItem } from '@/lib/coins';
 import { canViewContent, isOwnerOrAdmin } from '@/lib/visibility';
 import { needsAgeGate } from '@/lib/ageGate';
+import { cleanChapterContent } from '@/lib/chapterContent';
 
 // Chapters are created via POST /api/novels/[id]/chapters (which checks ownership)
 export async function GET(req: Request) {
@@ -37,8 +38,14 @@ export async function GET(req: Request) {
             if (await needsAgeGate(session?.user, chapter)) {
                 return NextResponse.json({ error: 'เนื้อหานี้สำหรับผู้มีอายุ 18 ปีขึ้นไป กรุณายืนยันอายุก่อน', age_required: true }, { status: 403 });
             }
-            const [content] = await pool.query<RowDataPacket[]>('SELECT content FROM chapters WHERE id = ?', [chapterId]);
-            return NextResponse.json({ ...chapter, content: content[0]?.content ?? null, locked: false });
+            const [content] = await pool.query<RowDataPacket[]>('SELECT content, content_format FROM chapters WHERE id = ?', [chapterId]);
+            const body = content[0]?.content ?? null;
+            return NextResponse.json({
+                ...chapter,
+                content: body === null ? null : cleanChapterContent(body, content[0].content_format),
+                content_format: content[0]?.content_format ?? 'PLAIN',
+                locked: false,
+            });
         }
 
         if (novelId) {

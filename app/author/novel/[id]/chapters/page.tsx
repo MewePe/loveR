@@ -1,5 +1,6 @@
 "use client";
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Plus, Edit, Trash2, Save, X, GripVertical, Eye } from 'lucide-react';
@@ -7,11 +8,22 @@ import { useConfirm } from '@/components/ConfirmDialog';
 import { useToast } from '@/components/Toast';
 import { ModerationBadge } from '@/components/ModerationNotice';
 import { showModerationResult } from '@/components/author/moderationToast';
+import { ChapterDraft, clearDraft, loadDraft, saveDraft } from '@/components/chapter-editor/drafts';
+import { plainToHtml } from '@/lib/chapterFormat';
+
+// Only authors need the editor's code, and only once they open the form
+const ChapterEditor = dynamic(() => import('@/components/chapter-editor/ChapterEditor'), {
+    ssr: false,
+    loading: () => <div className="min-h-96 rounded-lg border bg-gray-50 dark:bg-gray-700/40 animate-pulse" />,
+});
+
+const DRAFT_DELAY_MS = 1500;
 
 interface Chapter {
     id: string;
     title: string;
     content: string;
+    content_format: 'PLAIN' | 'HTML';
     chapter_order: number;
     views: number;
     price: number;
@@ -29,7 +41,8 @@ interface Novel {
 export default function ChapterManagement() {
     const toast = useToast();
     const confirm = useConfirm();
-    const { status } = useSession();
+    const { status, data: session } = useSession();
+    const userId = session?.user?.id ?? '';
     const router = useRouter();
     const params = useParams();
     const novelId = params.id as string;
@@ -41,6 +54,14 @@ export default function ChapterManagement() {
     const [editingChapter, setEditingChapter] = useState<Chapter | null>(null);
     const [formData, setFormData] = useState({ title: '', content: '', price: 0 });
     const [saving, setSaving] = useState(false);
+    const [contentEmpty, setContentEmpty] = useState(true);
+    const [editorKey, setEditorKey] = useState(0); // new key = the editor reloads formData.content
+    const [dirty, setDirty] = useState(false);
+    const [draftOffer, setDraftOffer] = useState<ChapterDraft | null>(null);
+    const [draftStatus, setDraftStatus] = useState('');
+    // The latest values for saving a draft when the form closes
+    const formRef = useRef(formData);
+    formRef.current = formData;
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -71,20 +92,72 @@ export default function ChapterManagement() {
         }
     }, [status, router, fetchData]);
 
-    function openCreateModal() {
-        setEditingChapter(null);
-        setFormData({ title: '', content: '', price: 0 });
+    const editingId = editingChapter?.id ?? null;
+
+    const writeDraft = useCallback(() => {
+        const saved = saveDraft(userId, novelId, editingId, { ...formRef.current, savedAt: Date.now() });
+        setDraftStatus(saved
+            ? `บันทึกฉบับร่างในเครื่องนี้แล้ว ${new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}`
+            : 'บันทึกฉบับร่างไม่สำเร็จ');
+    }, [userId, novelId, editingId]);
+
+    // Autosave after a pause in typing. Waits while a saved draft is on offer, so it can't be overwritten unseen.
+    useEffect(() => {
+        if (!showModal || !dirty || draftOffer || !userId) return;
+        const timer = setTimeout(writeDraft, DRAFT_DELAY_MS);
+        return () => clearTimeout(timer);
+    }, [showModal, dirty, draftOffer, userId, formData, writeDraft]);
+
+    function openForm(chapter: Chapter | null, form: typeof formData) {
+        setEditingChapter(chapter);
+        setFormData(form);
+        setContentEmpty(!form.content);
+        setDirty(false);
+        setDraftStatus('');
+        const draft = userId ? loadDraft(userId, novelId, chapter?.id ?? null) : null;
+        setDraftOffer(draft && draft.content !== form.content ? draft : null);
+        setEditorKey((key) => key + 1);
         setShowModal(true);
     }
 
+    function openCreateModal() {
+        openForm(null, { title: '', content: '', price: 0 });
+    }
+
     function openEditModal(chapter: Chapter) {
-        setEditingChapter(chapter);
-        setFormData({ title: chapter.title, content: chapter.content || '', price: chapter.price || 0 });
-        setShowModal(true);
+        const content = chapter.content_format === 'HTML' ? chapter.content : plainToHtml(chapter.content || '');
+        openForm(chapter, { title: chapter.title, content: chapter.content ? content : '', price: chapter.price || 0 });
+    }
+
+    function updateForm(changes: Partial<typeof formData>) {
+        setFormData((form) => ({ ...form, ...changes }));
+        setDirty(true);
+    }
+
+    function closeModal() {
+        if (dirty && !draftOffer && userId) writeDraft();
+        setShowModal(false);
+    }
+
+    function restoreDraft() {
+        if (!draftOffer) return;
+        setFormData({ title: draftOffer.title, content: draftOffer.content, price: Number(draftOffer.price) || 0 });
+        setContentEmpty(!draftOffer.content);
+        setDraftOffer(null);
+        setEditorKey((key) => key + 1);
+    }
+
+    function discardDraft() {
+        clearDraft(userId, novelId, editingId);
+        setDraftOffer(null);
     }
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
+        if (contentEmpty) {
+            toast.error('กรุณากรอกเนื้อหา');
+            return;
+        }
         setSaving(true);
 
         try {
@@ -95,13 +168,15 @@ export default function ChapterManagement() {
             const res = await fetch(url, {
                 method: editingChapter ? 'PATCH' : 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData),
+                body: JSON.stringify({ ...formData, contentFormat: 'HTML' }),
                 credentials: 'include',
             });
 
             if (res.ok) {
                 const data = await res.json().catch(() => ({}));
                 showModerationResult(toast, data.moderation, editingChapter ? 'แก้ไขบทสำเร็จ' : 'เพิ่มบทสำเร็จ');
+                clearDraft(userId, novelId, editingId);
+                setDirty(false);
                 setShowModal(false);
                 fetchData();
             } else {
@@ -235,20 +310,28 @@ export default function ChapterManagement() {
 
             {/* Modal */}
             {showModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-                        <div className="p-6 border-b dark:border-gray-700 flex items-center justify-between">
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 sm:p-4">
+                    <div className="bg-white dark:bg-gray-800 sm:rounded-2xl w-full max-w-3xl h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto">
+                        <div className="p-4 sm:p-6 border-b dark:border-gray-700 flex items-center justify-between">
                             <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                                 {editingChapter ? 'แก้ไขบท' : 'เพิ่มบทใหม่'}
                             </h2>
                             <button
-                                onClick={() => setShowModal(false)}
+                                onClick={closeModal}
+                                aria-label="ปิด"
                                 className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                             >
                                 <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                             </button>
                         </div>
-                        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
+                            {draftOffer && (
+                                <div role="status" className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-3 text-sm text-amber-900 dark:text-amber-200">
+                                    <span className="flex-1 min-w-48">พบฉบับร่างที่ยังไม่ได้บันทึก เมื่อ {new Date(draftOffer.savedAt).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                                    <button type="button" onClick={restoreDraft} className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition">กู้คืน</button>
+                                    <button type="button" onClick={discardDraft} className="px-3 py-1.5 rounded-lg border border-amber-400 dark:border-amber-600 font-medium hover:bg-amber-100 dark:hover:bg-amber-900/40 transition">ทิ้งฉบับร่าง</button>
+                                </div>
+                            )}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                     ชื่อบท
@@ -257,7 +340,7 @@ export default function ChapterManagement() {
                                     type="text"
                                     required
                                     value={formData.title}
-                                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                                    onChange={(e) => updateForm({ title: e.target.value })}
                                     className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
                                     placeholder="เช่น บทที่ 1: จุดเริ่มต้น"
                                 />
@@ -272,28 +355,26 @@ export default function ChapterManagement() {
                                     max={10000}
                                     step={1}
                                     value={formData.price}
-                                    onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                                    onChange={(e) => updateForm({ price: Number(e.target.value) })}
                                     className="w-40 px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
                                 />
                                 <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">0 = อ่านฟรี (1 เหรียญ = 1 บาท)</span>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                <span className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                     เนื้อหา
-                                </label>
-                                <textarea
-                                    required
-                                    rows={15}
-                                    value={formData.content}
-                                    onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                                    className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
-                                    placeholder="เขียนเนื้อหาบทที่นี่..."
+                                </span>
+                                <ChapterEditor
+                                    key={editorKey}
+                                    initialHtml={formData.content}
+                                    onChange={(content, empty) => { updateForm({ content }); setContentEmpty(empty); }}
+                                    status={draftStatus}
                                 />
                             </div>
                             <div className="flex gap-3 pt-4">
                                 <button
                                     type="button"
-                                    onClick={() => setShowModal(false)}
+                                    onClick={closeModal}
                                     className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
                                 >
                                     ยกเลิก

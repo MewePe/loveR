@@ -1,3 +1,4 @@
+import { chapterPlainText } from '@/lib/chapterContent';
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { auth } from '@/lib/auth';
@@ -25,6 +26,9 @@ function parseAnalysis(value: unknown): ModerationAnalysis {
     }
 }
 
+const EXCERPT_LENGTH = 600;
+const EXCERPT_SOURCE = 6000; // characters read to get that much text: HTML chapters have tags in between
+
 // GET /api/admin/moderation?status=PENDING|CLEARED|APPROVED|REJECTED|all&page= → { items, total, page, pageSize }
 // Each item has the API's verdict and Thai analysis, the chapter/episode and story, and for comics every page
 // (url + number) so the admin can look at the flagged ones; chapters get a text excerpt.
@@ -50,7 +54,7 @@ export async function GET(req: Request) {
                     COALESCE(ch.moderation_status, ep.moderation_status) AS item_status,
                     COALESCE(n.title, c.title) AS story_title,
                     COALESCE(n.is_mature, c.is_mature) AS story_mature,
-                    LEFT(ch.content, 600) AS excerpt,
+                    LEFT(ch.content, ${EXCERPT_SOURCE}) AS excerpt, ch.content_format,
                     u.name AS author_name, r.name AS reporter_name, rv.name AS reviewer_name
              FROM moderation_checks m
              LEFT JOIN chapters ch ON ch.id = m.chapter_id
@@ -81,6 +85,7 @@ export async function GET(req: Request) {
             ...r,
             declared_mature: !!r.declared_mature,
             story_mature: r.story_mature === null ? null : !!r.story_mature,
+            excerpt: r.excerpt === null ? null : chapterPlainText(r.excerpt, r.content_format).slice(0, EXCERPT_LENGTH),
             item_number: r.item_number === null ? null : Number(r.item_number),
             // Stuck checks show as waiting, with no verdict
             status: r.status === 'CHECKING' ? 'PENDING' : r.status,

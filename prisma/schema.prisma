@@ -36,6 +36,8 @@ model chapters {
   id            String   @id @db.VarChar(36)
   title         String   @db.VarChar(255)
   content       String?  @db.LongText
+  /// PLAIN (shown as text) or HTML (from the editor, sanitized by lib/chapterContent.ts)
+  content_format chapters_content_format @default(PLAIN)
   chapter_order Int?
   novel_id      String?  @db.VarChar(36)
   views         Int?     @default(0)
@@ -417,6 +419,11 @@ model ratings {
   @@unique([user_id, comic_id], map: "uniq_user_comic")
   @@index([novel_id], map: "idx_novel")
   @@index([comic_id], map: "idx_comic")
+}
+
+enum chapters_content_format {
+  PLAIN
+  HTML
 }
 
 enum coin_topups_status {

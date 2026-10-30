@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS chapters (
     id VARCHAR(36) PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     content LONGTEXT,
+    content_format ENUM('PLAIN', 'HTML') NOT NULL DEFAULT 'PLAIN', -- PLAIN = shown as text, HTML = from the editor (lib/chapterContent.ts)
     chapter_order INT,
     novel_id VARCHAR(36),
     views INT DEFAULT 0,

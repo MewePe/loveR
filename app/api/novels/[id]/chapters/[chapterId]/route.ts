@@ -4,8 +4,10 @@ import { auth } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
 import { parsePrice } from '@/lib/coins';
 import { mockDirective, moderateItem } from '@/lib/moderation';
+import { chapterPlainText, cleanChapterContent, parseContentFormat, sameChapterText } from '@/lib/chapterContent';
 
 // PATCH - Update a chapter. A new title or text is checked again (lib/moderation.ts) and hidden until it passes.
+// Without contentFormat the chapter keeps its current format.
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string; chapterId: string }> }) {
     const { id: novelId, chapterId } = await params;
     const session = await auth();
@@ -37,22 +39,30 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         return NextResponse.json({ error: 'ราคาต้องเป็นจำนวนเต็ม 0-10000 เหรียญ' }, { status: 400 });
     }
 
-    const [current] = await pool.query<RowDataPacket[]>('SELECT title, content FROM chapters WHERE id = ? AND novel_id = ?', [chapterId, novelId]);
+    const format = parseContentFormat(body.contentFormat);
+    if (format === null) {
+        return NextResponse.json({ error: 'รูปแบบเนื้อหาไม่ถูกต้อง' }, { status: 400 });
+    }
+
+    const [current] = await pool.query<RowDataPacket[]>('SELECT title, content, content_format FROM chapters WHERE id = ? AND novel_id = ?', [chapterId, novelId]);
     if (!current[0]) {
         return NextResponse.json({ error: 'ไม่พบบทนี้' }, { status: 404 });
     }
+    const contentFormat = format ?? current[0].content_format;
+    const stored = cleanChapterContent(content, contentFormat);
+    const text = chapterPlainText(stored, contentFormat);
 
     try {
         await pool.query(
-            'UPDATE chapters SET title = ?, content = ?, price = ? WHERE id = ? AND novel_id = ?',
-            [title, content, price, chapterId, novelId]
+            'UPDATE chapters SET title = ?, content = ?, content_format = ?, price = ? WHERE id = ? AND novel_id = ?',
+            [title, stored, contentFormat, price, chapterId, novelId]
         );
-        // Only a price change needs no new check
-        const changed = title !== current[0].title || content !== (current[0].content ?? '');
+        // A price or formatting change needs no new check
+        const changed = title !== current[0].title || !sameChapterText(text, chapterPlainText(current[0].content, current[0].content_format));
         const moderation = changed
             ? await moderateItem(
                 { itemType: 'chapter', itemId: chapterId, title, story: novels[0] as { id: string; title: string; author_id: string; status: string; is_mature: number } },
-                { text: content }, 'EDIT', mockDirective(req)
+                { text }, 'EDIT', mockDirective(req)
             )
             : null;
 

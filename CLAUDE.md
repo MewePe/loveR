@@ -60,6 +60,7 @@ npx tsx scripts/add_mature_flag.ts # คอลัมน์ is_mature (18+) ใ�
 npx tsx scripts/add_reader_settings.ts # คอลัมน์ users.reader_settings (ตั้งค่าการอ่าน Aa) (รันซ้ำได้)
 npx tsx scripts/add_moderation.ts # ตรวจเนื้อหาด้วย API + ยืนยันอายุ: moderation_status ใน chapters/comic_episodes (ของเดิมเป็น APPROVED), users.birth_date, ตาราง moderation_checks (รันซ้ำได้)
 npx tsx scripts/add_daily_views.ts # ตาราง story_views_daily (อันดับรายวัน/สัปดาห์/เดือน) (รันซ้ำได้)
+npx tsx scripts/add_chapter_format.ts # คอลัมน์ chapters.content_format (ตัวแก้ไขข้อความจัดรูปแบบ, ของเดิมเป็น PLAIN) (รันซ้ำได้)
 ```
 
 `reset_db.ts` และ `drop_old_db.ts` ลบข้อมูล
@@ -91,7 +92,15 @@ npx tsx scripts/add_daily_views.ts # ตาราง story_views_daily (อั�
 
 **API routes** (`app/api/**/route.ts`) เขียนตามรูปแบบเดียวกัน: `const session = await auth()` แล้วเช็ก role หรือความเป็นเจ้าของ รัน SQL แล้วคืน `NextResponse.json(...)` กรณี error คืน `{ error }` พร้อม status route ฝั่งแอดมินใน `app/api/admin/` เช็ก `session?.user?.role !== 'ADMIN'` เองทุกไฟล์ (middleware ไม่ได้ทำหน้าที่ตรวจสิทธิ์) params ของ dynamic route มี type เป็น `{ params: Promise<{ id: string }> }` และต้อง await (Next 15)
 
-**เนื้อหาบทนิยาย** เป็น plain text (ผู้เขียนพิมพ์ใน textarea) แสดงด้วย `whitespace-pre-line` **ห้ามแสดงด้วย `dangerouslySetInnerHTML`** เพราะผู้เขียนจะฝังสคริปต์ให้ไปรันในเบราว์เซอร์ผู้อ่านได้ (เช่น สั่งซื้อตอนด้วยเหรียญของผู้อ่าน)
+**เนื้อหาบทนิยาย** มี 2 แบบตาม `chapters.content_format`:
+- `PLAIN` (บทเก่า และ client ที่ไม่ส่ง `contentFormat`) แสดงเป็นข้อความด้วย `whitespace-pre-line` **ห้ามแสดงเป็น HTML** แม้ข้อความจะมี `<` ก็เป็นตัวอักษรธรรมดา
+- `HTML` (จากตัวแก้ไข) **ทุกครั้งที่บันทึกและทุกครั้งที่ส่งออกจาก server ต้องผ่าน `sanitizeChapterHtml()`** (`lib/chapterContent.ts`, ใช้ sanitize-html) เพราะผู้เขียนจะฝังสคริปต์ให้ไปรันในเบราว์เซอร์ผู้อ่านได้ (เช่น สั่งซื้อตอนด้วยเหรียญของผู้อ่าน) `dangerouslySetInnerHTML` ของเนื้อหาบทมีที่เดียวคือ `components/reader/ChapterBody.tsx` ส่วน API ใช้ `cleanChapterContent()`
+- **แท็กที่อนุญาต**: p br hr strong em u s span mark a ol ul li ไม่มี `style`/`class` แอตทริบิวต์ค่าอยู่ใน whitelist เท่านั้น (`data-align`, `data-indent`, `data-color`, `data-highlight` ใน `lib/chapterFormat.ts` ซึ่งไม่มี import ใช้ใน client ได้) ลิงก์รับเฉพาะ http(s) แบบเต็ม และถูกตั้ง `target="_blank" rel="noopener noreferrer nofollow ugc"` เอง **ห้ามเพิ่มขนาดหรือแบบอักษร** เพราะเป็นของปุ่ม Aa
+- **สีเก็บเป็นชื่อ ไม่ใช่ค่าสี** ค่าจริงอยู่ที่ `.chapter-rich` ใน `globals.css` แยกตามธีม ทุกสีตัวอักษรต้องได้ contrast ≥ 4.5:1 บนพื้นขาว ซีเปีย มืด และบนไฮไลต์ทุกสี ถ้าเพิ่มสีต้องเช็กใหม่
+- **ตัวแก้ไข** `components/chapter-editor/ChapterEditor.tsx` (Tiptap, โหลดด้วย `next/dynamic` ตอนเปิดฟอร์ม) สีและการจัดย่อหน้าเป็น extension ของเราใน `extensions.ts` ค้นหาและแทนที่ก็เขียนเอง (ProseMirror plugin) แถบเครื่องมือบนมือถือเลื่อนซ้ายขวา จึงใช้แถบใต้เครื่องมือแทน popover ไม่งั้นจะถูกตัด วางจาก Word/เว็บผ่าน `cleanPastedHtml()` ส่วนสไตล์ถูก schema ทิ้งเอง และ `useEditorState` ต้องอยู่ใน component ที่ render หลัง editor พร้อมแล้ว (ถ้าเริ่มจาก null จะค้างเป็นกล่องโหลด)
+- **ฉบับร่างอัตโนมัติ** เก็บใน localStorage เครื่องนี้เท่านั้น (`components/chapter-editor/drafts.ts`, คีย์ต่อผู้ใช้/เรื่อง/บท) ไม่บันทึกผ่าน API เพราะจะเปลี่ยนสิ่งที่ผู้อ่านเห็นและเริ่มตรวจเนื้อหาทุกครั้ง ถ้ามีฉบับร่างจะถามกู้คืน/ทิ้งตอนเปิดฟอร์ม และลบเมื่อบันทึกสำเร็จ
+- **ตรวจเนื้อหา**: ส่ง `chapterPlainText()` เท่านั้น (ข้อความที่ผ่าน sanitize แล้ว พร้อมที่อยู่ลิงก์ในวงเล็บ เพราะลิงก์พนันต้องถูกตรวจ) เปลี่ยนแค่รูปแบบหรือเปิดบทเก่าแล้วบันทึกไม่ตรวจซ้ำ (`sameChapterText()`) mock `echo` ใช้ดูข้อความที่จะส่งจริงในเทสต์ ตัวอย่างในคิวแอดมินก็เป็นข้อความล้วน
+- เทสต์อยู่ใน `tests/e2e/chapter-editor.test.mjs` (ฝั่ง API) ส่วนตัวแก้ไขในเบราว์เซอร์ตรวจด้วย Chrome headless ไม่มีในชุดเทสต์
 
 **Pages** เกือบทั้งหมดเป็น client component (`"use client"`) ที่ดึงข้อมูลจาก `/api/*` ส่วน `components/Providers.tsx` ครอบแอปด้วย `SessionProvider` + `next-themes` (dark mode แบบ `attribute="class"` ใช้คลาส `dark:` ของ Tailwind v4) + `ConfirmProvider` + `ToastProvider`
 
@@ -281,6 +290,10 @@ npx tsx scripts/add_daily_views.ts # ตาราง story_views_daily (อั�
 
 **สถานะ branch**: ทุกอย่างอยู่บน `main` และ push ขึ้น `origin/main` แล้ว ไม่มีงานค้างในเครื่อง
 
+**งานวันที่ 2026-10-30** (push แล้ว): อันดับตามช่วงเวลา (`efec53e`) และตัวแก้ไขข้อความจัดรูปแบบของบทนิยาย เทสต์ผ่าน 196/196
+- ตัวแก้ไขตรวจด้วย Chrome headless 320/390/1280px × สว่าง/มืด ครบทุกปุ่ม การวางจาก Word จำลองด้วย ClipboardEvent ยังไม่ได้ลองวางจาก Word จริงและยังไม่ได้ลองบนมือถือจริง
+- เจอครั้งเดียว: ฟอร์มแก้ไขบทเปิดมาช่องเนื้อหาว่างที่จอ 390px แต่เปิดซ้ำ 80 รอบไม่เกิดอีก ยังไม่รู้สาเหตุ ถ้าเจออีกให้ดูว่า API คืน `content` มาหรือไม่ (ฟอร์มไม่ให้บันทึกตอนเนื้อหาว่าง จึงไม่ทับบทเดิม)
+
 **งานวันที่ 2026-10-29** (push แล้วทั้งหมด): ตรวจเนื้อหาด้วย Gemini + คิวตรวจของแอดมิน + ยืนยันอายุ 18+ (`7b2f91f`) และหน้าโปรไฟล์แบบเดียวกันทุกคน + หน้าแก้ไขโปรไฟล์ (commit ถัดมา) เทสต์ผ่าน 184/184 (รวม 2 เทสต์ที่เรียก Gemini จริง)
 - **หน้าโปรไฟล์ตรวจด้วย Chrome headless แล้ว** (โปรไฟล์ตัวเอง/คนอื่น/นักเขียน, แท็บบุ๊กมาร์ก/ประวัติ/เหรียญ, หน้าแก้ไข × 320/390/1280px × สว่าง/มืด ไม่มีหน้าไหนเลื่อนซ้ายขวา) แต่ยังไม่ได้ลองอัปโปรไฟล์/ปกจริงผ่านหน้าเว็บ และยังไม่ได้ลองช่อง @username แบบพิมพ์จริงในเบราว์เซอร์ (API และกฎผ่านเทสต์แล้ว)
 - **ยังไม่ได้ตรวจในเบราว์เซอร์**: หน้า "คิวตรวจเนื้อหา" ในแอดมิน หน้ายืนยันอายุ 18+ และตัวเลือกระดับเนื้อหา (ทั่วไป/18+) ในฟอร์มสร้างเรื่อง รวมถึงหน้า `/admin` ที่ปรับเมื่อ 2026-10-28
@@ -301,7 +314,7 @@ npx tsx scripts/add_daily_views.ts # ตาราง story_views_daily (อั�
 - ยอดวิวเพิ่งเริ่มนับ 2026-10-23 ข้อมูลเก่าเป็น 0 ถ้าจะพรีเซนต์อันดับ/กราฟ ควรเปิดอ่านหลายเรื่องให้มีข้อมูลก่อน
 
 **อัปเดตเครื่องอื่น/DB อื่นให้ตรงกับ `main`** (ทุกสคริปต์รันซ้ำได้ ถ้าเคยรันแล้วจะข้ามเอง):
-1. `git pull` แล้ว `npm install` (2026-10-21 อัปเกรด `next` เป็น 15.5.28 และ dependency อื่นจาก `npm audit fix`)
+1. `git pull` แล้ว `npm install` (2026-10-30 เพิ่ม Tiptap, sanitize-html, htmlparser2; 2026-10-21 อัปเกรด `next` เป็น 15.5.28 และ dependency อื่นจาก `npm audit fix`)
 2. รัน migration ตามลำดับ:
    ```bash
    npx tsx scripts/add_login_attempts.ts      # จำกัดการล็อกอินผิด
@@ -317,9 +330,10 @@ npx tsx scripts/add_daily_views.ts # ตาราง story_views_daily (อั�
    npx tsx scripts/add_reader_settings.ts     # ตั้งค่าการอ่าน (ปุ่ม Aa)
    npx tsx scripts/add_moderation.ts          # ตรวจเนื้อหาด้วย API + ยืนยันอายุ 18+
    npx tsx scripts/add_daily_views.ts         # ยอดวิวรายวัน (อันดับตามช่วงเวลา)
+   npx tsx scripts/add_chapter_format.ts      # รูปแบบเนื้อหาบท (ไม่รันจะสร้าง/แก้ไขบทไม่ได้)
    ```
    DB ที่เก่ากว่านั้นให้รันสคริปต์ก่อนหน้าตามลำดับใน README ก่อน ส่วน DB ใหม่ใช้ `schema.sql` ได้เลยไม่ต้องรันพวกนี้
-3. ลบ `.next` แล้วเปิด `npm run dev` ใหม่ จากนั้นรัน `npm run test:e2e` เพื่อเช็ก (186 เทสต์ ต้องผ่านทั้งหมด ยกเว้น 2 เทสต์ใน `moderation-gemini.test.mjs` ที่อาจ skip เมื่อ Gemini ไม่ว่าง)
+3. ลบ `.next` แล้วเปิด `npm run dev` ใหม่ จากนั้นรัน `npm run test:e2e` เพื่อเช็ก (196 เทสต์ ต้องผ่านทั้งหมด ยกเว้น 2 เทสต์ใน `moderation-gemini.test.mjs` ที่อาจ skip เมื่อ Gemini ไม่ว่าง)
 
 **ผู้ดูแลต้องทำเอง**:
 - กรอก "ข้อมูลการชำระเงิน" ที่ `/admin` → ตั้งค่า (เครื่องนี้ยังเป็นข้อความตัวอย่างอยู่) ถ้ายังไม่กรอก ผู้อ่านจะเติมเหรียญไม่ได้
@@ -355,7 +369,7 @@ npx tsx scripts/add_daily_views.ts # ตาราง story_views_daily (อั�
 | 11 | จัดอันดับและแนะนำ | ✅ (รายวัน/สัปดาห์/เดือน/ทั้งหมด) | `/ranking`, `/` (แนะนำสำหรับคุณ + ยอดนิยม), ล่างหน้า `/novel/[id]` (เรื่องที่คล้ายกัน), `/search` (เรียงตาม) | `lib/ranking.ts`, `app/ranking/page.tsx`, `components/StoryCard.tsx` |
 | 12 | ตรวจสอบเนื้อหาเบื้องต้นด้วย API | ✅ (บท/ตอน + ยืนยันอายุ) | ลงตอนใหม่ที่ `/author` → `/admin?tab=moderation`, เปิดเรื่อง 18+ | `lib/moderation.ts`, `lib/ageGate.ts`, `components/admin/ModerationPanel.tsx`, `components/AgeGate.tsx` |
 | 13 | รักษาความปลอดภัย | ✅ | `/login` (ล็อกอินผิดเกิน 5 ครั้ง), เปิดตอนที่ยังไม่ซื้อ | `lib/auth.ts`, `lib/loginThrottle.ts`, `lib/upload.ts`, `lib/visibility.ts`, `tests/e2e/security.test.mjs` |
-| 14 | ทดสอบระบบและปรับ UX/UI | ⚠️ | `npm run test:e2e` (186 เทสต์) | `tests/e2e/` |
+| 14 | ทดสอบระบบและปรับ UX/UI | ⚠️ | `npm run test:e2e` (196 เทสต์) | `tests/e2e/` |
 
 **สิ่งที่ขาด**:
 - ~~ยอดวิวไม่เคยเพิ่ม~~ **แก้แล้ว 2026-10-23** (ดูหัวข้อ "ยอดวิว" ในสถาปัตยกรรม) ยอดวิวเก่าก่อนวันนั้นของนิยาย/บท/การ์ตูนยังเป็น 0 เพราะไม่มีข้อมูลย้อนหลัง

@@ -17,6 +17,7 @@ import { needsAgeGate } from '@/lib/ageGate';
 import AgeGate from '@/components/AgeGate';
 import MislabelReportButton from '@/components/MislabelReportButton';
 import ModerationNotice from '@/components/ModerationNotice';
+import ChapterBody from '@/components/reader/ChapterBody';
 
 // Content is loaded separately, only after the access check, so a locked chapter's text is never
 // fetched for the request (React dev mode also serializes awaited query results into the page).
@@ -32,8 +33,8 @@ async function getChapter(id: string) {
 }
 
 async function getChapterContent(id: string) {
-    const [rows] = await pool.query<RowDataPacket[]>('SELECT content FROM chapters WHERE id = ?', [id]);
-    return rows[0]?.content as string | null;
+    const [rows] = await pool.query<RowDataPacket[]>('SELECT content, content_format FROM chapters WHERE id = ?', [id]);
+    return { content: (rows[0]?.content ?? null) as string | null, format: rows[0]?.content_format };
 }
 
 // The logged-in reader's saved "Aa" settings, or null (then the browser's are used). Never breaks the page.
@@ -79,7 +80,7 @@ export default async function ReadChapter({ params }: { params: Promise<{ chapte
     const isOwner = isOwnerOrAdmin(session?.user, chapter.author_id);
 
     const { prev, next } = await getAdjacentChapters(chapter.novel_id, chapter.chapter_order, !isOwner);
-    const content = unlocked ? await getChapterContent(chapter.id) : null;
+    const body = unlocked ? await getChapterContent(chapter.id) : null;
     if (unlocked) {
         await recordView('novel', chapter.id, session?.user?.id, chapter.author_id);
         if (session?.user?.id) await recordRead(session.user.id, 'novel', chapter.novel_id, chapter.id);
@@ -105,12 +106,8 @@ export default async function ReadChapter({ params }: { params: Promise<{ chapte
             {/* Content */}
             <div className="reader-column mx-auto px-6 py-12 md:py-20">
                 <ModerationNotice status={chapter.moderation_status} className="mb-8" />
-                {unlocked ? (
-                    // Rendered as plain text (never as HTML): chapter content is author input, and HTML here
-                    // would let an author run scripts in readers' browsers
-                    <div className="reading-content reader-text whitespace-pre-line text-gray-800 dark:text-gray-100">
-                        {content || ''}
-                    </div>
+                {body ? (
+                    <ChapterBody content={body.content} format={body.format} />
                 ) : (
                     <Paywall kind="chapter" itemId={chapter.id} price={chapter.price} loggedIn={!!session?.user} />
                 )}

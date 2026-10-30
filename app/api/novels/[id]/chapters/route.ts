@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { parsePrice } from '@/lib/coins';
 import { canViewContent, isOwnerOrAdmin } from '@/lib/visibility';
 import { mockDirective, moderateItem } from '@/lib/moderation';
+import { chapterPlainText, cleanChapterContent, parseContentFormat } from '@/lib/chapterContent';
 
 // GET - Fetch all chapters for a novel. Content is only included for the author/admin (editor view), who also get
 // every chapter with its moderation_status (and the admin's reason when rejected); readers only get APPROVED ones.
@@ -29,7 +30,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
                    FROM chapters WHERE novel_id = ? AND moderation_status = 'APPROVED' ORDER BY chapter_order ASC, created_at ASC`,
             [novelId]
         );
-        return NextResponse.json(chapters);
+        return NextResponse.json(isOwner
+            ? chapters.map((c) => ({ ...c, content: cleanChapterContent(c.content ?? '', c.content_format) }))
+            : chapters);
     } catch (error) {
         console.error('Database error:', error);
         return NextResponse.json({ error: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่' }, { status: 500 });
@@ -68,6 +71,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (price === null) {
         return NextResponse.json({ error: 'ราคาต้องเป็นจำนวนเต็ม 0-10000 เหรียญ' }, { status: 400 });
     }
+    const format = parseContentFormat(body.contentFormat);
+    if (format === null) {
+        return NextResponse.json({ error: 'รูปแบบเนื้อหาไม่ถูกต้อง' }, { status: 400 });
+    }
+    const contentFormat = format ?? 'PLAIN';
+    const stored = cleanChapterContent(content ?? '', contentFormat);
     const id = uuidv4();
 
     // Get next chapter order
@@ -79,13 +88,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     try {
         await pool.query(
-            `INSERT INTO chapters (id, title, content, chapter_order, novel_id, price, moderation_status) VALUES (?, ?, ?, ?, ?, ?, 'PENDING')`,
-            [id, title, content ?? '', nextOrder, novelId, price]
+            `INSERT INTO chapters (id, title, content, content_format, chapter_order, novel_id, price, moderation_status) VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING')`,
+            [id, title, stored, contentFormat, nextOrder, novelId, price]
         );
         // Readers are notified about the chapter when it is published (moderateItem / admin approval)
         const moderation = await moderateItem(
             { itemType: 'chapter', itemId: id, title, story: novels[0] as { id: string; title: string; author_id: string; status: string; is_mature: number } },
-            { text: content ?? '' }, 'SUBMIT', mockDirective(req)
+            { text: chapterPlainText(stored, contentFormat) }, 'SUBMIT', mockDirective(req)
         );
 
         return NextResponse.json({ id, title, chapter_order: nextOrder, moderation });

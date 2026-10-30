@@ -6,6 +6,7 @@ import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { v4 as uuidv4 } from 'uuid';
 import { notify, notifyAdmins, notifyNewItem, short } from '@/lib/notifications';
 import { IMAGE_CONTENT_TYPES, PRIVATE_COMIC_URL_PREFIX, readPrivateComicPage } from '@/lib/upload';
+import { chapterPlainText } from '@/lib/chapterContent';
 import {
     CheckSource, CheckStatus, ISSUE_CATEGORIES, ItemModerationStatus, ModerationAnalysis, ModerationIssue,
     SEVERE_VERDICTS, VERDICT_LABEL, Verdict, isOneOf,
@@ -39,7 +40,7 @@ const REPORTS_PER_HOUR = 10;
 
 // Tests (and only tests) can fake the API result with this header so they never call Gemini or need real
 // unsafe content: e.g. "safe", "mature", "explicit:2,3" (pages 2 and 3), "minor", "illegal", "refused", "error".
-// Ignored in production builds.
+// "echo" is "safe" with the text that would have been sent as the summary. Ignored in production builds.
 export const MOCK_HEADER = 'x-moderation-mock';
 export function mockDirective(req: Request) {
     if (process.env.NODE_ENV === 'production') return null;
@@ -242,8 +243,9 @@ async function buildBatches(title: string, content: ModerationContent): Promise<
 }
 
 // Fake API result for tests (see MOCK_HEADER). "error" goes through the same failure path as a real outage.
-function mockCall(directive: string): () => Promise<{ verdict: Verdict; summary: string; issues: ModerationIssue[] }> {
+function mockCall(directive: string, parts: Part[]): () => Promise<{ verdict: Verdict; summary: string; issues: ModerationIssue[] }> {
     const [kind, pageList] = directive.trim().toLowerCase().split(':');
+    if (kind === 'echo') return async () => ({ verdict: 'SAFE', summary: parts.map((p) => ('text' in p ? p.text : '')).join('\n'), issues: [] });
     const pages = (pageList ?? '').split(',').map(Number).filter((n) => Number.isInteger(n) && n > 0);
     const verdict = ({ safe: 'SAFE', mature: 'MATURE', explicit: 'EXPLICIT', illegal: 'ILLEGAL', minor: 'MINOR' } as Record<string, Verdict>)[kind];
     return async () => {
@@ -265,7 +267,7 @@ export async function analyse(title: string, content: ModerationContent, mock: s
     for (const batch of batches) {
         const prefix = batch.label ? `${batch.label}: ` : '';
         try {
-            const r = mock !== null ? await mockCall(mock)() : await callGemini(batch.parts, batch.timeoutMs);
+            const r = mock !== null ? await mockCall(mock, batch.parts)() : await callGemini(batch.parts, batch.timeoutMs);
             verdicts.push(r.verdict);
             if (r.summary) summaries.push(prefix + r.summary);
             issues.push(...r.issues);
@@ -427,8 +429,8 @@ export async function moderateItem(t: ModerationTarget, content: ModerationConte
 // The whole current content of a chapter/episode (for reader reports)
 async function loadContent(itemType: ItemType, itemId: string): Promise<ModerationContent> {
     if (itemType === 'chapter') {
-        const [rows] = await pool.query<RowDataPacket[]>('SELECT content FROM chapters WHERE id = ?', [itemId]);
-        return { text: rows[0]?.content ?? '' };
+        const [rows] = await pool.query<RowDataPacket[]>('SELECT content, content_format FROM chapters WHERE id = ?', [itemId]);
+        return { text: chapterPlainText(rows[0]?.content, rows[0]?.content_format) };
     }
     const [rows] = await pool.query<RowDataPacket[]>('SELECT image_url, page_order FROM comic_pages WHERE episode_id = ? ORDER BY page_order', [itemId]);
     return { pages: rows.map((r) => ({ url: r.image_url as string, number: Number(r.page_order) })) };
