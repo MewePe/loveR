@@ -7,7 +7,9 @@
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
-    "test:e2e": "node --test --test-concurrency=1 \"tests/e2e/*.test.mjs\""
+    "test:e2e": "node --test --test-concurrency=1 \"tests/e2e/*.test.mjs\"",
+    "demo:seed": "tsx scripts/demo/seed.ts",
+    "demo:remove": "tsx scripts/demo/remove.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
@@ -41,6 +43,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.5.28",
     "prisma": "^5.22.0",
+    "sharp": "^0.35.5",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5"
